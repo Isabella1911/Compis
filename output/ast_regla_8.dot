@@ -1,0 +1,8 @@
+digraph AST {
+  rankdir=TB;
+  ranksep=0.8;
+  labelloc=t;
+  label="Regla 8: PLUS";
+  fontsize=14;
+  0 [label="\\+"];
+}

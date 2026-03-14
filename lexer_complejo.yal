@@ -1,0 +1,44 @@
+(* lexer_complejo.yal *)
+(* Analizador léxico para un mini-lenguaje con identificadores, números, keywords *)
+
+{
+// Header del analizador
+#include <string>
+}
+
+let digito = ['0'-'9']
+let letra = ['a'-'z' 'A'-'Z']
+let digits = digito+
+let id = letra (letra | digito)*
+let whitespace = [' ' '\t']+
+
+rule tokens =
+  whitespace          { return lexbuf }
+| ['\n']              { return EOL }
+| digits              { return NUMBER }
+| "if"                { return IF }
+| "else"              { return ELSE }
+| "while"             { return WHILE }
+| "return"            { return RETURN }
+| id                  { return ID }
+| '+'                 { return PLUS }
+| '-'                 { return MINUS }
+| '*'                 { return TIMES }
+| '/'                 { return DIV }
+| '='                 { return ASSIGN }
+| "=="                { return EQ }
+| "!="                { return NEQ }
+| '<'                 { return LT }
+| '>'                 { return GT }
+| "<="                { return LEQ }
+| ">="                { return GEQ }
+| '('                 { return LPAREN }
+| ')'                 { return RPAREN }
+| '{'                 { return LBRACE }
+| '}'                 { return RBRACE }
+| ';'                 { return SEMICOLON }
+| ','                 { return COMMA }
+
+{
+// Trailer
+}

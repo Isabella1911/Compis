@@ -1,0 +1,1623 @@
+/*
+ * Analizador Lexico generado automaticamente desde YALex
+ * Compilar: g++ -std=c++17 -o lexer_complejo lexer_complejo.cpp
+ * Uso: ./lexer_complejo <archivo_entrada>
+ *
+ * Interfaz para parser:
+ *   Token getNextToken()  - retorna el siguiente token
+ *   Los tokens tienen: tipo, lexema, linea, columna
+ */
+
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <sstream>
+
+// ========== HEADER DEL USUARIO ==========
+// Header del analizador
+#include <string>
+// ========== FIN HEADER ==========
+
+// ========== TIPOS DE TOKEN ==========
+enum TokenType {
+    TOK_lexbuf = 0,
+    TOK_EOL = 1,
+    TOK_NUMBER = 2,
+    TOK_IF = 3,
+    TOK_ELSE = 4,
+    TOK_WHILE = 5,
+    TOK_RETURN = 6,
+    TOK_ID = 7,
+    TOK_PLUS = 8,
+    TOK_MINUS = 9,
+    TOK_TIMES = 10,
+    TOK_DIV = 11,
+    TOK_ASSIGN = 12,
+    TOK_EQ = 13,
+    TOK_NEQ = 14,
+    TOK_LT = 15,
+    TOK_GT = 16,
+    TOK_LEQ = 17,
+    TOK_GEQ = 18,
+    TOK_LPAREN = 19,
+    TOK_RPAREN = 20,
+    TOK_LBRACE = 21,
+    TOK_RBRACE = 22,
+    TOK_SEMICOLON = 23,
+    TOK_COMMA = 24
+};
+
+const int NUM_TOKEN_TYPES = 25;
+
+const char* TOKEN_TYPE_NAMES[] = {
+    "lexbuf",
+    "EOL",
+    "NUMBER",
+    "IF",
+    "ELSE",
+    "WHILE",
+    "RETURN",
+    "ID",
+    "PLUS",
+    "MINUS",
+    "TIMES",
+    "DIV",
+    "ASSIGN",
+    "EQ",
+    "NEQ",
+    "LT",
+    "GT",
+    "LEQ",
+    "GEQ",
+    "LPAREN",
+    "RPAREN",
+    "LBRACE",
+    "RBRACE",
+    "SEMICOLON",
+    "COMMA"
+};
+
+const char* TOKEN_ACTIONS[] = {
+    "return lexbuf",
+    "return EOL",
+    "return NUMBER",
+    "return IF",
+    "return ELSE",
+    "return WHILE",
+    "return RETURN",
+    "return ID",
+    "return PLUS",
+    "return MINUS",
+    "return TIMES",
+    "return DIV",
+    "return ASSIGN",
+    "return EQ",
+    "return NEQ",
+    "return LT",
+    "return GT",
+    "return LEQ",
+    "return GEQ",
+    "return LPAREN",
+    "return RPAREN",
+    "return LBRACE",
+    "return RBRACE",
+    "return SEMICOLON",
+    "return COMMA"
+};
+
+// ========== STRUCT TOKEN ==========
+struct Token {
+    TokenType tipo;
+    std::string lexema;
+    int linea;
+    int columna;
+
+    // Token especial para fin de archivo
+    bool esFinArchivo() const { return tipo == (TokenType)-1; }
+
+    std::string toString() const {
+        if (esFinArchivo()) return "EOF";
+        std::string lp;
+        for (char c : lexema) {
+            if (c == '\n') lp += "\\n";
+            else if (c == '\t') lp += "\\t";
+            else if (c == '\r') lp += "\\r";
+            else lp += c;
+        }
+        return std::string(TOKEN_TYPE_NAMES[tipo]) + " '" + lp + "' [" + std::to_string(linea) + ":" + std::to_string(columna) + "]";
+    }
+};
+
+// ========== TABLAS DEL AFD MINIMIZADO ==========
+const int NUM_ESTADOS = 40;
+const int NUM_SIMBOLOS = 79;
+const int ESTADO_INICIAL = 39;
+
+static int char_to_sym[256];
+static int transicion[40][79];
+static int token_aceptado[40];
+static bool tablas_inicializadas = false;
+
+void init_tablas() {
+    if (tablas_inicializadas) return;
+    tablas_inicializadas = true;
+
+    for (int i = 0; i < 256; i++) char_to_sym[i] = -1;
+    char_to_sym[9] = 0; // \t
+    char_to_sym[10] = 1; // \n
+    char_to_sym[32] = 2; // espacio
+    char_to_sym[33] = 3; // '!'
+    char_to_sym[40] = 4; // '('
+    char_to_sym[41] = 5; // ')'
+    char_to_sym[42] = 6; // '*'
+    char_to_sym[43] = 7; // '+'
+    char_to_sym[44] = 8; // ','
+    char_to_sym[45] = 9; // '-'
+    char_to_sym[47] = 10; // '/'
+    char_to_sym[48] = 11; // '0'
+    char_to_sym[49] = 12; // '1'
+    char_to_sym[50] = 13; // '2'
+    char_to_sym[51] = 14; // '3'
+    char_to_sym[52] = 15; // '4'
+    char_to_sym[53] = 16; // '5'
+    char_to_sym[54] = 17; // '6'
+    char_to_sym[55] = 18; // '7'
+    char_to_sym[56] = 19; // '8'
+    char_to_sym[57] = 20; // '9'
+    char_to_sym[59] = 21; // ';'
+    char_to_sym[60] = 22; // '<'
+    char_to_sym[61] = 23; // '='
+    char_to_sym[62] = 24; // '>'
+    char_to_sym[65] = 25; // 'A'
+    char_to_sym[66] = 26; // 'B'
+    char_to_sym[67] = 27; // 'C'
+    char_to_sym[68] = 28; // 'D'
+    char_to_sym[69] = 29; // 'E'
+    char_to_sym[70] = 30; // 'F'
+    char_to_sym[71] = 31; // 'G'
+    char_to_sym[72] = 32; // 'H'
+    char_to_sym[73] = 33; // 'I'
+    char_to_sym[74] = 34; // 'J'
+    char_to_sym[75] = 35; // 'K'
+    char_to_sym[76] = 36; // 'L'
+    char_to_sym[77] = 37; // 'M'
+    char_to_sym[78] = 38; // 'N'
+    char_to_sym[79] = 39; // 'O'
+    char_to_sym[80] = 40; // 'P'
+    char_to_sym[81] = 41; // 'Q'
+    char_to_sym[82] = 42; // 'R'
+    char_to_sym[83] = 43; // 'S'
+    char_to_sym[84] = 44; // 'T'
+    char_to_sym[85] = 45; // 'U'
+    char_to_sym[86] = 46; // 'V'
+    char_to_sym[87] = 47; // 'W'
+    char_to_sym[88] = 48; // 'X'
+    char_to_sym[89] = 49; // 'Y'
+    char_to_sym[90] = 50; // 'Z'
+    char_to_sym[97] = 51; // 'a'
+    char_to_sym[98] = 52; // 'b'
+    char_to_sym[99] = 53; // 'c'
+    char_to_sym[100] = 54; // 'd'
+    char_to_sym[101] = 55; // 'e'
+    char_to_sym[102] = 56; // 'f'
+    char_to_sym[103] = 57; // 'g'
+    char_to_sym[104] = 58; // 'h'
+    char_to_sym[105] = 59; // 'i'
+    char_to_sym[106] = 60; // 'j'
+    char_to_sym[107] = 61; // 'k'
+    char_to_sym[108] = 62; // 'l'
+    char_to_sym[109] = 63; // 'm'
+    char_to_sym[110] = 64; // 'n'
+    char_to_sym[111] = 65; // 'o'
+    char_to_sym[112] = 66; // 'p'
+    char_to_sym[113] = 67; // 'q'
+    char_to_sym[114] = 68; // 'r'
+    char_to_sym[115] = 69; // 's'
+    char_to_sym[116] = 70; // 't'
+    char_to_sym[117] = 71; // 'u'
+    char_to_sym[118] = 72; // 'v'
+    char_to_sym[119] = 73; // 'w'
+    char_to_sym[120] = 74; // 'x'
+    char_to_sym[121] = 75; // 'y'
+    char_to_sym[122] = 76; // 'z'
+    char_to_sym[123] = 77; // '{'
+    char_to_sym[125] = 78; // '}'
+
+    for (int i = 0; i < NUM_ESTADOS; i++)
+        for (int j = 0; j < NUM_SIMBOLOS; j++)
+            transicion[i][j] = -1;
+
+    transicion[15][23] = 5;
+    transicion[16][23] = 7;
+    transicion[17][23] = 8;
+    transicion[18][11] = 18;
+    transicion[18][12] = 18;
+    transicion[18][13] = 18;
+    transicion[18][14] = 18;
+    transicion[18][15] = 18;
+    transicion[18][16] = 18;
+    transicion[18][17] = 18;
+    transicion[18][18] = 18;
+    transicion[18][19] = 18;
+    transicion[18][20] = 18;
+    transicion[19][11] = 36;
+    transicion[19][12] = 36;
+    transicion[19][13] = 36;
+    transicion[19][14] = 36;
+    transicion[19][15] = 36;
+    transicion[19][16] = 36;
+    transicion[19][17] = 36;
+    transicion[19][18] = 36;
+    transicion[19][19] = 36;
+    transicion[19][20] = 36;
+    transicion[19][25] = 36;
+    transicion[19][26] = 36;
+    transicion[19][27] = 36;
+    transicion[19][28] = 36;
+    transicion[19][29] = 36;
+    transicion[19][30] = 36;
+    transicion[19][31] = 36;
+    transicion[19][32] = 36;
+    transicion[19][33] = 36;
+    transicion[19][34] = 36;
+    transicion[19][35] = 36;
+    transicion[19][36] = 36;
+    transicion[19][37] = 36;
+    transicion[19][38] = 36;
+    transicion[19][39] = 36;
+    transicion[19][40] = 36;
+    transicion[19][41] = 36;
+    transicion[19][42] = 36;
+    transicion[19][43] = 36;
+    transicion[19][44] = 36;
+    transicion[19][45] = 36;
+    transicion[19][46] = 36;
+    transicion[19][47] = 36;
+    transicion[19][48] = 36;
+    transicion[19][49] = 36;
+    transicion[19][50] = 36;
+    transicion[19][51] = 36;
+    transicion[19][52] = 36;
+    transicion[19][53] = 36;
+    transicion[19][54] = 36;
+    transicion[19][55] = 36;
+    transicion[19][56] = 36;
+    transicion[19][57] = 36;
+    transicion[19][58] = 36;
+    transicion[19][59] = 36;
+    transicion[19][60] = 36;
+    transicion[19][61] = 36;
+    transicion[19][62] = 36;
+    transicion[19][63] = 36;
+    transicion[19][64] = 36;
+    transicion[19][65] = 36;
+    transicion[19][66] = 36;
+    transicion[19][67] = 36;
+    transicion[19][68] = 36;
+    transicion[19][69] = 36;
+    transicion[19][70] = 36;
+    transicion[19][71] = 36;
+    transicion[19][72] = 36;
+    transicion[19][73] = 36;
+    transicion[19][74] = 36;
+    transicion[19][75] = 36;
+    transicion[19][76] = 36;
+    transicion[20][11] = 36;
+    transicion[20][12] = 36;
+    transicion[20][13] = 36;
+    transicion[20][14] = 36;
+    transicion[20][15] = 36;
+    transicion[20][16] = 36;
+    transicion[20][17] = 36;
+    transicion[20][18] = 36;
+    transicion[20][19] = 36;
+    transicion[20][20] = 36;
+    transicion[20][25] = 36;
+    transicion[20][26] = 36;
+    transicion[20][27] = 36;
+    transicion[20][28] = 36;
+    transicion[20][29] = 36;
+    transicion[20][30] = 36;
+    transicion[20][31] = 36;
+    transicion[20][32] = 36;
+    transicion[20][33] = 36;
+    transicion[20][34] = 36;
+    transicion[20][35] = 36;
+    transicion[20][36] = 36;
+    transicion[20][37] = 36;
+    transicion[20][38] = 36;
+    transicion[20][39] = 36;
+    transicion[20][40] = 36;
+    transicion[20][41] = 36;
+    transicion[20][42] = 36;
+    transicion[20][43] = 36;
+    transicion[20][44] = 36;
+    transicion[20][45] = 36;
+    transicion[20][46] = 36;
+    transicion[20][47] = 36;
+    transicion[20][48] = 36;
+    transicion[20][49] = 36;
+    transicion[20][50] = 36;
+    transicion[20][51] = 36;
+    transicion[20][52] = 36;
+    transicion[20][53] = 36;
+    transicion[20][54] = 36;
+    transicion[20][55] = 36;
+    transicion[20][56] = 36;
+    transicion[20][57] = 36;
+    transicion[20][58] = 36;
+    transicion[20][59] = 36;
+    transicion[20][60] = 36;
+    transicion[20][61] = 36;
+    transicion[20][62] = 36;
+    transicion[20][63] = 36;
+    transicion[20][64] = 36;
+    transicion[20][65] = 36;
+    transicion[20][66] = 36;
+    transicion[20][67] = 36;
+    transicion[20][68] = 36;
+    transicion[20][69] = 36;
+    transicion[20][70] = 36;
+    transicion[20][71] = 36;
+    transicion[20][72] = 36;
+    transicion[20][73] = 36;
+    transicion[20][74] = 36;
+    transicion[20][75] = 36;
+    transicion[20][76] = 36;
+    transicion[21][11] = 36;
+    transicion[21][12] = 36;
+    transicion[21][13] = 36;
+    transicion[21][14] = 36;
+    transicion[21][15] = 36;
+    transicion[21][16] = 36;
+    transicion[21][17] = 36;
+    transicion[21][18] = 36;
+    transicion[21][19] = 36;
+    transicion[21][20] = 36;
+    transicion[21][25] = 36;
+    transicion[21][26] = 36;
+    transicion[21][27] = 36;
+    transicion[21][28] = 36;
+    transicion[21][29] = 36;
+    transicion[21][30] = 36;
+    transicion[21][31] = 36;
+    transicion[21][32] = 36;
+    transicion[21][33] = 36;
+    transicion[21][34] = 36;
+    transicion[21][35] = 36;
+    transicion[21][36] = 36;
+    transicion[21][37] = 36;
+    transicion[21][38] = 36;
+    transicion[21][39] = 36;
+    transicion[21][40] = 36;
+    transicion[21][41] = 36;
+    transicion[21][42] = 36;
+    transicion[21][43] = 36;
+    transicion[21][44] = 36;
+    transicion[21][45] = 36;
+    transicion[21][46] = 36;
+    transicion[21][47] = 36;
+    transicion[21][48] = 36;
+    transicion[21][49] = 36;
+    transicion[21][50] = 36;
+    transicion[21][51] = 36;
+    transicion[21][52] = 36;
+    transicion[21][53] = 36;
+    transicion[21][54] = 36;
+    transicion[21][55] = 36;
+    transicion[21][56] = 36;
+    transicion[21][57] = 36;
+    transicion[21][58] = 36;
+    transicion[21][59] = 36;
+    transicion[21][60] = 36;
+    transicion[21][61] = 36;
+    transicion[21][62] = 36;
+    transicion[21][63] = 36;
+    transicion[21][64] = 36;
+    transicion[21][65] = 36;
+    transicion[21][66] = 36;
+    transicion[21][67] = 36;
+    transicion[21][68] = 36;
+    transicion[21][69] = 36;
+    transicion[21][70] = 36;
+    transicion[21][71] = 36;
+    transicion[21][72] = 36;
+    transicion[21][73] = 36;
+    transicion[21][74] = 36;
+    transicion[21][75] = 36;
+    transicion[21][76] = 36;
+    transicion[22][11] = 36;
+    transicion[22][12] = 36;
+    transicion[22][13] = 36;
+    transicion[22][14] = 36;
+    transicion[22][15] = 36;
+    transicion[22][16] = 36;
+    transicion[22][17] = 36;
+    transicion[22][18] = 36;
+    transicion[22][19] = 36;
+    transicion[22][20] = 36;
+    transicion[22][25] = 36;
+    transicion[22][26] = 36;
+    transicion[22][27] = 36;
+    transicion[22][28] = 36;
+    transicion[22][29] = 36;
+    transicion[22][30] = 36;
+    transicion[22][31] = 36;
+    transicion[22][32] = 36;
+    transicion[22][33] = 36;
+    transicion[22][34] = 36;
+    transicion[22][35] = 36;
+    transicion[22][36] = 36;
+    transicion[22][37] = 36;
+    transicion[22][38] = 36;
+    transicion[22][39] = 36;
+    transicion[22][40] = 36;
+    transicion[22][41] = 36;
+    transicion[22][42] = 36;
+    transicion[22][43] = 36;
+    transicion[22][44] = 36;
+    transicion[22][45] = 36;
+    transicion[22][46] = 36;
+    transicion[22][47] = 36;
+    transicion[22][48] = 36;
+    transicion[22][49] = 36;
+    transicion[22][50] = 36;
+    transicion[22][51] = 36;
+    transicion[22][52] = 36;
+    transicion[22][53] = 36;
+    transicion[22][54] = 36;
+    transicion[22][55] = 36;
+    transicion[22][56] = 36;
+    transicion[22][57] = 36;
+    transicion[22][58] = 36;
+    transicion[22][59] = 36;
+    transicion[22][60] = 36;
+    transicion[22][61] = 36;
+    transicion[22][62] = 36;
+    transicion[22][63] = 36;
+    transicion[22][64] = 36;
+    transicion[22][65] = 36;
+    transicion[22][66] = 36;
+    transicion[22][67] = 36;
+    transicion[22][68] = 36;
+    transicion[22][69] = 36;
+    transicion[22][70] = 36;
+    transicion[22][71] = 36;
+    transicion[22][72] = 36;
+    transicion[22][73] = 36;
+    transicion[22][74] = 36;
+    transicion[22][75] = 36;
+    transicion[22][76] = 36;
+    transicion[23][11] = 36;
+    transicion[23][12] = 36;
+    transicion[23][13] = 36;
+    transicion[23][14] = 36;
+    transicion[23][15] = 36;
+    transicion[23][16] = 36;
+    transicion[23][17] = 36;
+    transicion[23][18] = 36;
+    transicion[23][19] = 36;
+    transicion[23][20] = 36;
+    transicion[23][25] = 36;
+    transicion[23][26] = 36;
+    transicion[23][27] = 36;
+    transicion[23][28] = 36;
+    transicion[23][29] = 36;
+    transicion[23][30] = 36;
+    transicion[23][31] = 36;
+    transicion[23][32] = 36;
+    transicion[23][33] = 36;
+    transicion[23][34] = 36;
+    transicion[23][35] = 36;
+    transicion[23][36] = 36;
+    transicion[23][37] = 36;
+    transicion[23][38] = 36;
+    transicion[23][39] = 36;
+    transicion[23][40] = 36;
+    transicion[23][41] = 36;
+    transicion[23][42] = 36;
+    transicion[23][43] = 36;
+    transicion[23][44] = 36;
+    transicion[23][45] = 36;
+    transicion[23][46] = 36;
+    transicion[23][47] = 36;
+    transicion[23][48] = 36;
+    transicion[23][49] = 36;
+    transicion[23][50] = 36;
+    transicion[23][51] = 36;
+    transicion[23][52] = 36;
+    transicion[23][53] = 36;
+    transicion[23][54] = 36;
+    transicion[23][55] = 20;
+    transicion[23][56] = 36;
+    transicion[23][57] = 36;
+    transicion[23][58] = 36;
+    transicion[23][59] = 36;
+    transicion[23][60] = 36;
+    transicion[23][61] = 36;
+    transicion[23][62] = 36;
+    transicion[23][63] = 36;
+    transicion[23][64] = 36;
+    transicion[23][65] = 36;
+    transicion[23][66] = 36;
+    transicion[23][67] = 36;
+    transicion[23][68] = 36;
+    transicion[23][69] = 36;
+    transicion[23][70] = 36;
+    transicion[23][71] = 36;
+    transicion[23][72] = 36;
+    transicion[23][73] = 36;
+    transicion[23][74] = 36;
+    transicion[23][75] = 36;
+    transicion[23][76] = 36;
+    transicion[24][11] = 36;
+    transicion[24][12] = 36;
+    transicion[24][13] = 36;
+    transicion[24][14] = 36;
+    transicion[24][15] = 36;
+    transicion[24][16] = 36;
+    transicion[24][17] = 36;
+    transicion[24][18] = 36;
+    transicion[24][19] = 36;
+    transicion[24][20] = 36;
+    transicion[24][25] = 36;
+    transicion[24][26] = 36;
+    transicion[24][27] = 36;
+    transicion[24][28] = 36;
+    transicion[24][29] = 36;
+    transicion[24][30] = 36;
+    transicion[24][31] = 36;
+    transicion[24][32] = 36;
+    transicion[24][33] = 36;
+    transicion[24][34] = 36;
+    transicion[24][35] = 36;
+    transicion[24][36] = 36;
+    transicion[24][37] = 36;
+    transicion[24][38] = 36;
+    transicion[24][39] = 36;
+    transicion[24][40] = 36;
+    transicion[24][41] = 36;
+    transicion[24][42] = 36;
+    transicion[24][43] = 36;
+    transicion[24][44] = 36;
+    transicion[24][45] = 36;
+    transicion[24][46] = 36;
+    transicion[24][47] = 36;
+    transicion[24][48] = 36;
+    transicion[24][49] = 36;
+    transicion[24][50] = 36;
+    transicion[24][51] = 36;
+    transicion[24][52] = 36;
+    transicion[24][53] = 36;
+    transicion[24][54] = 36;
+    transicion[24][55] = 21;
+    transicion[24][56] = 36;
+    transicion[24][57] = 36;
+    transicion[24][58] = 36;
+    transicion[24][59] = 36;
+    transicion[24][60] = 36;
+    transicion[24][61] = 36;
+    transicion[24][62] = 36;
+    transicion[24][63] = 36;
+    transicion[24][64] = 36;
+    transicion[24][65] = 36;
+    transicion[24][66] = 36;
+    transicion[24][67] = 36;
+    transicion[24][68] = 36;
+    transicion[24][69] = 36;
+    transicion[24][70] = 36;
+    transicion[24][71] = 36;
+    transicion[24][72] = 36;
+    transicion[24][73] = 36;
+    transicion[24][74] = 36;
+    transicion[24][75] = 36;
+    transicion[24][76] = 36;
+    transicion[25][11] = 36;
+    transicion[25][12] = 36;
+    transicion[25][13] = 36;
+    transicion[25][14] = 36;
+    transicion[25][15] = 36;
+    transicion[25][16] = 36;
+    transicion[25][17] = 36;
+    transicion[25][18] = 36;
+    transicion[25][19] = 36;
+    transicion[25][20] = 36;
+    transicion[25][25] = 36;
+    transicion[25][26] = 36;
+    transicion[25][27] = 36;
+    transicion[25][28] = 36;
+    transicion[25][29] = 36;
+    transicion[25][30] = 36;
+    transicion[25][31] = 36;
+    transicion[25][32] = 36;
+    transicion[25][33] = 36;
+    transicion[25][34] = 36;
+    transicion[25][35] = 36;
+    transicion[25][36] = 36;
+    transicion[25][37] = 36;
+    transicion[25][38] = 36;
+    transicion[25][39] = 36;
+    transicion[25][40] = 36;
+    transicion[25][41] = 36;
+    transicion[25][42] = 36;
+    transicion[25][43] = 36;
+    transicion[25][44] = 36;
+    transicion[25][45] = 36;
+    transicion[25][46] = 36;
+    transicion[25][47] = 36;
+    transicion[25][48] = 36;
+    transicion[25][49] = 36;
+    transicion[25][50] = 36;
+    transicion[25][51] = 36;
+    transicion[25][52] = 36;
+    transicion[25][53] = 36;
+    transicion[25][54] = 36;
+    transicion[25][55] = 36;
+    transicion[25][56] = 19;
+    transicion[25][57] = 36;
+    transicion[25][58] = 36;
+    transicion[25][59] = 36;
+    transicion[25][60] = 36;
+    transicion[25][61] = 36;
+    transicion[25][62] = 36;
+    transicion[25][63] = 36;
+    transicion[25][64] = 36;
+    transicion[25][65] = 36;
+    transicion[25][66] = 36;
+    transicion[25][67] = 36;
+    transicion[25][68] = 36;
+    transicion[25][69] = 36;
+    transicion[25][70] = 36;
+    transicion[25][71] = 36;
+    transicion[25][72] = 36;
+    transicion[25][73] = 36;
+    transicion[25][74] = 36;
+    transicion[25][75] = 36;
+    transicion[25][76] = 36;
+    transicion[26][11] = 36;
+    transicion[26][12] = 36;
+    transicion[26][13] = 36;
+    transicion[26][14] = 36;
+    transicion[26][15] = 36;
+    transicion[26][16] = 36;
+    transicion[26][17] = 36;
+    transicion[26][18] = 36;
+    transicion[26][19] = 36;
+    transicion[26][20] = 36;
+    transicion[26][25] = 36;
+    transicion[26][26] = 36;
+    transicion[26][27] = 36;
+    transicion[26][28] = 36;
+    transicion[26][29] = 36;
+    transicion[26][30] = 36;
+    transicion[26][31] = 36;
+    transicion[26][32] = 36;
+    transicion[26][33] = 36;
+    transicion[26][34] = 36;
+    transicion[26][35] = 36;
+    transicion[26][36] = 36;
+    transicion[26][37] = 36;
+    transicion[26][38] = 36;
+    transicion[26][39] = 36;
+    transicion[26][40] = 36;
+    transicion[26][41] = 36;
+    transicion[26][42] = 36;
+    transicion[26][43] = 36;
+    transicion[26][44] = 36;
+    transicion[26][45] = 36;
+    transicion[26][46] = 36;
+    transicion[26][47] = 36;
+    transicion[26][48] = 36;
+    transicion[26][49] = 36;
+    transicion[26][50] = 36;
+    transicion[26][51] = 36;
+    transicion[26][52] = 36;
+    transicion[26][53] = 36;
+    transicion[26][54] = 36;
+    transicion[26][55] = 36;
+    transicion[26][56] = 36;
+    transicion[26][57] = 36;
+    transicion[26][58] = 36;
+    transicion[26][59] = 36;
+    transicion[26][60] = 36;
+    transicion[26][61] = 36;
+    transicion[26][62] = 36;
+    transicion[26][63] = 36;
+    transicion[26][64] = 22;
+    transicion[26][65] = 36;
+    transicion[26][66] = 36;
+    transicion[26][67] = 36;
+    transicion[26][68] = 36;
+    transicion[26][69] = 36;
+    transicion[26][70] = 36;
+    transicion[26][71] = 36;
+    transicion[26][72] = 36;
+    transicion[26][73] = 36;
+    transicion[26][74] = 36;
+    transicion[26][75] = 36;
+    transicion[26][76] = 36;
+    transicion[27][11] = 36;
+    transicion[27][12] = 36;
+    transicion[27][13] = 36;
+    transicion[27][14] = 36;
+    transicion[27][15] = 36;
+    transicion[27][16] = 36;
+    transicion[27][17] = 36;
+    transicion[27][18] = 36;
+    transicion[27][19] = 36;
+    transicion[27][20] = 36;
+    transicion[27][25] = 36;
+    transicion[27][26] = 36;
+    transicion[27][27] = 36;
+    transicion[27][28] = 36;
+    transicion[27][29] = 36;
+    transicion[27][30] = 36;
+    transicion[27][31] = 36;
+    transicion[27][32] = 36;
+    transicion[27][33] = 36;
+    transicion[27][34] = 36;
+    transicion[27][35] = 36;
+    transicion[27][36] = 36;
+    transicion[27][37] = 36;
+    transicion[27][38] = 36;
+    transicion[27][39] = 36;
+    transicion[27][40] = 36;
+    transicion[27][41] = 36;
+    transicion[27][42] = 36;
+    transicion[27][43] = 36;
+    transicion[27][44] = 36;
+    transicion[27][45] = 36;
+    transicion[27][46] = 36;
+    transicion[27][47] = 36;
+    transicion[27][48] = 36;
+    transicion[27][49] = 36;
+    transicion[27][50] = 36;
+    transicion[27][51] = 36;
+    transicion[27][52] = 36;
+    transicion[27][53] = 36;
+    transicion[27][54] = 36;
+    transicion[27][55] = 36;
+    transicion[27][56] = 36;
+    transicion[27][57] = 36;
+    transicion[27][58] = 36;
+    transicion[27][59] = 36;
+    transicion[27][60] = 36;
+    transicion[27][61] = 36;
+    transicion[27][62] = 24;
+    transicion[27][63] = 36;
+    transicion[27][64] = 36;
+    transicion[27][65] = 36;
+    transicion[27][66] = 36;
+    transicion[27][67] = 36;
+    transicion[27][68] = 36;
+    transicion[27][69] = 36;
+    transicion[27][70] = 36;
+    transicion[27][71] = 36;
+    transicion[27][72] = 36;
+    transicion[27][73] = 36;
+    transicion[27][74] = 36;
+    transicion[27][75] = 36;
+    transicion[27][76] = 36;
+    transicion[28][11] = 36;
+    transicion[28][12] = 36;
+    transicion[28][13] = 36;
+    transicion[28][14] = 36;
+    transicion[28][15] = 36;
+    transicion[28][16] = 36;
+    transicion[28][17] = 36;
+    transicion[28][18] = 36;
+    transicion[28][19] = 36;
+    transicion[28][20] = 36;
+    transicion[28][25] = 36;
+    transicion[28][26] = 36;
+    transicion[28][27] = 36;
+    transicion[28][28] = 36;
+    transicion[28][29] = 36;
+    transicion[28][30] = 36;
+    transicion[28][31] = 36;
+    transicion[28][32] = 36;
+    transicion[28][33] = 36;
+    transicion[28][34] = 36;
+    transicion[28][35] = 36;
+    transicion[28][36] = 36;
+    transicion[28][37] = 36;
+    transicion[28][38] = 36;
+    transicion[28][39] = 36;
+    transicion[28][40] = 36;
+    transicion[28][41] = 36;
+    transicion[28][42] = 36;
+    transicion[28][43] = 36;
+    transicion[28][44] = 36;
+    transicion[28][45] = 36;
+    transicion[28][46] = 36;
+    transicion[28][47] = 36;
+    transicion[28][48] = 36;
+    transicion[28][49] = 36;
+    transicion[28][50] = 36;
+    transicion[28][51] = 36;
+    transicion[28][52] = 36;
+    transicion[28][53] = 36;
+    transicion[28][54] = 36;
+    transicion[28][55] = 36;
+    transicion[28][56] = 36;
+    transicion[28][57] = 36;
+    transicion[28][58] = 36;
+    transicion[28][59] = 36;
+    transicion[28][60] = 36;
+    transicion[28][61] = 36;
+    transicion[28][62] = 36;
+    transicion[28][63] = 36;
+    transicion[28][64] = 36;
+    transicion[28][65] = 36;
+    transicion[28][66] = 36;
+    transicion[28][67] = 36;
+    transicion[28][68] = 26;
+    transicion[28][69] = 36;
+    transicion[28][70] = 36;
+    transicion[28][71] = 36;
+    transicion[28][72] = 36;
+    transicion[28][73] = 36;
+    transicion[28][74] = 36;
+    transicion[28][75] = 36;
+    transicion[28][76] = 36;
+    transicion[29][11] = 36;
+    transicion[29][12] = 36;
+    transicion[29][13] = 36;
+    transicion[29][14] = 36;
+    transicion[29][15] = 36;
+    transicion[29][16] = 36;
+    transicion[29][17] = 36;
+    transicion[29][18] = 36;
+    transicion[29][19] = 36;
+    transicion[29][20] = 36;
+    transicion[29][25] = 36;
+    transicion[29][26] = 36;
+    transicion[29][27] = 36;
+    transicion[29][28] = 36;
+    transicion[29][29] = 36;
+    transicion[29][30] = 36;
+    transicion[29][31] = 36;
+    transicion[29][32] = 36;
+    transicion[29][33] = 36;
+    transicion[29][34] = 36;
+    transicion[29][35] = 36;
+    transicion[29][36] = 36;
+    transicion[29][37] = 36;
+    transicion[29][38] = 36;
+    transicion[29][39] = 36;
+    transicion[29][40] = 36;
+    transicion[29][41] = 36;
+    transicion[29][42] = 36;
+    transicion[29][43] = 36;
+    transicion[29][44] = 36;
+    transicion[29][45] = 36;
+    transicion[29][46] = 36;
+    transicion[29][47] = 36;
+    transicion[29][48] = 36;
+    transicion[29][49] = 36;
+    transicion[29][50] = 36;
+    transicion[29][51] = 36;
+    transicion[29][52] = 36;
+    transicion[29][53] = 36;
+    transicion[29][54] = 36;
+    transicion[29][55] = 36;
+    transicion[29][56] = 36;
+    transicion[29][57] = 36;
+    transicion[29][58] = 36;
+    transicion[29][59] = 36;
+    transicion[29][60] = 36;
+    transicion[29][61] = 36;
+    transicion[29][62] = 36;
+    transicion[29][63] = 36;
+    transicion[29][64] = 36;
+    transicion[29][65] = 36;
+    transicion[29][66] = 36;
+    transicion[29][67] = 36;
+    transicion[29][68] = 36;
+    transicion[29][69] = 23;
+    transicion[29][70] = 36;
+    transicion[29][71] = 36;
+    transicion[29][72] = 36;
+    transicion[29][73] = 36;
+    transicion[29][74] = 36;
+    transicion[29][75] = 36;
+    transicion[29][76] = 36;
+    transicion[30][11] = 36;
+    transicion[30][12] = 36;
+    transicion[30][13] = 36;
+    transicion[30][14] = 36;
+    transicion[30][15] = 36;
+    transicion[30][16] = 36;
+    transicion[30][17] = 36;
+    transicion[30][18] = 36;
+    transicion[30][19] = 36;
+    transicion[30][20] = 36;
+    transicion[30][25] = 36;
+    transicion[30][26] = 36;
+    transicion[30][27] = 36;
+    transicion[30][28] = 36;
+    transicion[30][29] = 36;
+    transicion[30][30] = 36;
+    transicion[30][31] = 36;
+    transicion[30][32] = 36;
+    transicion[30][33] = 36;
+    transicion[30][34] = 36;
+    transicion[30][35] = 36;
+    transicion[30][36] = 36;
+    transicion[30][37] = 36;
+    transicion[30][38] = 36;
+    transicion[30][39] = 36;
+    transicion[30][40] = 36;
+    transicion[30][41] = 36;
+    transicion[30][42] = 36;
+    transicion[30][43] = 36;
+    transicion[30][44] = 36;
+    transicion[30][45] = 36;
+    transicion[30][46] = 36;
+    transicion[30][47] = 36;
+    transicion[30][48] = 36;
+    transicion[30][49] = 36;
+    transicion[30][50] = 36;
+    transicion[30][51] = 36;
+    transicion[30][52] = 36;
+    transicion[30][53] = 36;
+    transicion[30][54] = 36;
+    transicion[30][55] = 36;
+    transicion[30][56] = 36;
+    transicion[30][57] = 36;
+    transicion[30][58] = 36;
+    transicion[30][59] = 27;
+    transicion[30][60] = 36;
+    transicion[30][61] = 36;
+    transicion[30][62] = 36;
+    transicion[30][63] = 36;
+    transicion[30][64] = 36;
+    transicion[30][65] = 36;
+    transicion[30][66] = 36;
+    transicion[30][67] = 36;
+    transicion[30][68] = 36;
+    transicion[30][69] = 36;
+    transicion[30][70] = 36;
+    transicion[30][71] = 36;
+    transicion[30][72] = 36;
+    transicion[30][73] = 36;
+    transicion[30][74] = 36;
+    transicion[30][75] = 36;
+    transicion[30][76] = 36;
+    transicion[31][11] = 36;
+    transicion[31][12] = 36;
+    transicion[31][13] = 36;
+    transicion[31][14] = 36;
+    transicion[31][15] = 36;
+    transicion[31][16] = 36;
+    transicion[31][17] = 36;
+    transicion[31][18] = 36;
+    transicion[31][19] = 36;
+    transicion[31][20] = 36;
+    transicion[31][25] = 36;
+    transicion[31][26] = 36;
+    transicion[31][27] = 36;
+    transicion[31][28] = 36;
+    transicion[31][29] = 36;
+    transicion[31][30] = 36;
+    transicion[31][31] = 36;
+    transicion[31][32] = 36;
+    transicion[31][33] = 36;
+    transicion[31][34] = 36;
+    transicion[31][35] = 36;
+    transicion[31][36] = 36;
+    transicion[31][37] = 36;
+    transicion[31][38] = 36;
+    transicion[31][39] = 36;
+    transicion[31][40] = 36;
+    transicion[31][41] = 36;
+    transicion[31][42] = 36;
+    transicion[31][43] = 36;
+    transicion[31][44] = 36;
+    transicion[31][45] = 36;
+    transicion[31][46] = 36;
+    transicion[31][47] = 36;
+    transicion[31][48] = 36;
+    transicion[31][49] = 36;
+    transicion[31][50] = 36;
+    transicion[31][51] = 36;
+    transicion[31][52] = 36;
+    transicion[31][53] = 36;
+    transicion[31][54] = 36;
+    transicion[31][55] = 36;
+    transicion[31][56] = 36;
+    transicion[31][57] = 36;
+    transicion[31][58] = 36;
+    transicion[31][59] = 36;
+    transicion[31][60] = 36;
+    transicion[31][61] = 36;
+    transicion[31][62] = 29;
+    transicion[31][63] = 36;
+    transicion[31][64] = 36;
+    transicion[31][65] = 36;
+    transicion[31][66] = 36;
+    transicion[31][67] = 36;
+    transicion[31][68] = 36;
+    transicion[31][69] = 36;
+    transicion[31][70] = 36;
+    transicion[31][71] = 36;
+    transicion[31][72] = 36;
+    transicion[31][73] = 36;
+    transicion[31][74] = 36;
+    transicion[31][75] = 36;
+    transicion[31][76] = 36;
+    transicion[32][11] = 36;
+    transicion[32][12] = 36;
+    transicion[32][13] = 36;
+    transicion[32][14] = 36;
+    transicion[32][15] = 36;
+    transicion[32][16] = 36;
+    transicion[32][17] = 36;
+    transicion[32][18] = 36;
+    transicion[32][19] = 36;
+    transicion[32][20] = 36;
+    transicion[32][25] = 36;
+    transicion[32][26] = 36;
+    transicion[32][27] = 36;
+    transicion[32][28] = 36;
+    transicion[32][29] = 36;
+    transicion[32][30] = 36;
+    transicion[32][31] = 36;
+    transicion[32][32] = 36;
+    transicion[32][33] = 36;
+    transicion[32][34] = 36;
+    transicion[32][35] = 36;
+    transicion[32][36] = 36;
+    transicion[32][37] = 36;
+    transicion[32][38] = 36;
+    transicion[32][39] = 36;
+    transicion[32][40] = 36;
+    transicion[32][41] = 36;
+    transicion[32][42] = 36;
+    transicion[32][43] = 36;
+    transicion[32][44] = 36;
+    transicion[32][45] = 36;
+    transicion[32][46] = 36;
+    transicion[32][47] = 36;
+    transicion[32][48] = 36;
+    transicion[32][49] = 36;
+    transicion[32][50] = 36;
+    transicion[32][51] = 36;
+    transicion[32][52] = 36;
+    transicion[32][53] = 36;
+    transicion[32][54] = 36;
+    transicion[32][55] = 36;
+    transicion[32][56] = 36;
+    transicion[32][57] = 36;
+    transicion[32][58] = 36;
+    transicion[32][59] = 36;
+    transicion[32][60] = 36;
+    transicion[32][61] = 36;
+    transicion[32][62] = 36;
+    transicion[32][63] = 36;
+    transicion[32][64] = 36;
+    transicion[32][65] = 36;
+    transicion[32][66] = 36;
+    transicion[32][67] = 36;
+    transicion[32][68] = 36;
+    transicion[32][69] = 36;
+    transicion[32][70] = 36;
+    transicion[32][71] = 28;
+    transicion[32][72] = 36;
+    transicion[32][73] = 36;
+    transicion[32][74] = 36;
+    transicion[32][75] = 36;
+    transicion[32][76] = 36;
+    transicion[33][11] = 36;
+    transicion[33][12] = 36;
+    transicion[33][13] = 36;
+    transicion[33][14] = 36;
+    transicion[33][15] = 36;
+    transicion[33][16] = 36;
+    transicion[33][17] = 36;
+    transicion[33][18] = 36;
+    transicion[33][19] = 36;
+    transicion[33][20] = 36;
+    transicion[33][25] = 36;
+    transicion[33][26] = 36;
+    transicion[33][27] = 36;
+    transicion[33][28] = 36;
+    transicion[33][29] = 36;
+    transicion[33][30] = 36;
+    transicion[33][31] = 36;
+    transicion[33][32] = 36;
+    transicion[33][33] = 36;
+    transicion[33][34] = 36;
+    transicion[33][35] = 36;
+    transicion[33][36] = 36;
+    transicion[33][37] = 36;
+    transicion[33][38] = 36;
+    transicion[33][39] = 36;
+    transicion[33][40] = 36;
+    transicion[33][41] = 36;
+    transicion[33][42] = 36;
+    transicion[33][43] = 36;
+    transicion[33][44] = 36;
+    transicion[33][45] = 36;
+    transicion[33][46] = 36;
+    transicion[33][47] = 36;
+    transicion[33][48] = 36;
+    transicion[33][49] = 36;
+    transicion[33][50] = 36;
+    transicion[33][51] = 36;
+    transicion[33][52] = 36;
+    transicion[33][53] = 36;
+    transicion[33][54] = 36;
+    transicion[33][55] = 36;
+    transicion[33][56] = 36;
+    transicion[33][57] = 36;
+    transicion[33][58] = 30;
+    transicion[33][59] = 36;
+    transicion[33][60] = 36;
+    transicion[33][61] = 36;
+    transicion[33][62] = 36;
+    transicion[33][63] = 36;
+    transicion[33][64] = 36;
+    transicion[33][65] = 36;
+    transicion[33][66] = 36;
+    transicion[33][67] = 36;
+    transicion[33][68] = 36;
+    transicion[33][69] = 36;
+    transicion[33][70] = 36;
+    transicion[33][71] = 36;
+    transicion[33][72] = 36;
+    transicion[33][73] = 36;
+    transicion[33][74] = 36;
+    transicion[33][75] = 36;
+    transicion[33][76] = 36;
+    transicion[34][11] = 36;
+    transicion[34][12] = 36;
+    transicion[34][13] = 36;
+    transicion[34][14] = 36;
+    transicion[34][15] = 36;
+    transicion[34][16] = 36;
+    transicion[34][17] = 36;
+    transicion[34][18] = 36;
+    transicion[34][19] = 36;
+    transicion[34][20] = 36;
+    transicion[34][25] = 36;
+    transicion[34][26] = 36;
+    transicion[34][27] = 36;
+    transicion[34][28] = 36;
+    transicion[34][29] = 36;
+    transicion[34][30] = 36;
+    transicion[34][31] = 36;
+    transicion[34][32] = 36;
+    transicion[34][33] = 36;
+    transicion[34][34] = 36;
+    transicion[34][35] = 36;
+    transicion[34][36] = 36;
+    transicion[34][37] = 36;
+    transicion[34][38] = 36;
+    transicion[34][39] = 36;
+    transicion[34][40] = 36;
+    transicion[34][41] = 36;
+    transicion[34][42] = 36;
+    transicion[34][43] = 36;
+    transicion[34][44] = 36;
+    transicion[34][45] = 36;
+    transicion[34][46] = 36;
+    transicion[34][47] = 36;
+    transicion[34][48] = 36;
+    transicion[34][49] = 36;
+    transicion[34][50] = 36;
+    transicion[34][51] = 36;
+    transicion[34][52] = 36;
+    transicion[34][53] = 36;
+    transicion[34][54] = 36;
+    transicion[34][55] = 36;
+    transicion[34][56] = 36;
+    transicion[34][57] = 36;
+    transicion[34][58] = 36;
+    transicion[34][59] = 36;
+    transicion[34][60] = 36;
+    transicion[34][61] = 36;
+    transicion[34][62] = 36;
+    transicion[34][63] = 36;
+    transicion[34][64] = 36;
+    transicion[34][65] = 36;
+    transicion[34][66] = 36;
+    transicion[34][67] = 36;
+    transicion[34][68] = 36;
+    transicion[34][69] = 36;
+    transicion[34][70] = 32;
+    transicion[34][71] = 36;
+    transicion[34][72] = 36;
+    transicion[34][73] = 36;
+    transicion[34][74] = 36;
+    transicion[34][75] = 36;
+    transicion[34][76] = 36;
+    transicion[35][11] = 36;
+    transicion[35][12] = 36;
+    transicion[35][13] = 36;
+    transicion[35][14] = 36;
+    transicion[35][15] = 36;
+    transicion[35][16] = 36;
+    transicion[35][17] = 36;
+    transicion[35][18] = 36;
+    transicion[35][19] = 36;
+    transicion[35][20] = 36;
+    transicion[35][25] = 36;
+    transicion[35][26] = 36;
+    transicion[35][27] = 36;
+    transicion[35][28] = 36;
+    transicion[35][29] = 36;
+    transicion[35][30] = 36;
+    transicion[35][31] = 36;
+    transicion[35][32] = 36;
+    transicion[35][33] = 36;
+    transicion[35][34] = 36;
+    transicion[35][35] = 36;
+    transicion[35][36] = 36;
+    transicion[35][37] = 36;
+    transicion[35][38] = 36;
+    transicion[35][39] = 36;
+    transicion[35][40] = 36;
+    transicion[35][41] = 36;
+    transicion[35][42] = 36;
+    transicion[35][43] = 36;
+    transicion[35][44] = 36;
+    transicion[35][45] = 36;
+    transicion[35][46] = 36;
+    transicion[35][47] = 36;
+    transicion[35][48] = 36;
+    transicion[35][49] = 36;
+    transicion[35][50] = 36;
+    transicion[35][51] = 36;
+    transicion[35][52] = 36;
+    transicion[35][53] = 36;
+    transicion[35][54] = 36;
+    transicion[35][55] = 34;
+    transicion[35][56] = 36;
+    transicion[35][57] = 36;
+    transicion[35][58] = 36;
+    transicion[35][59] = 36;
+    transicion[35][60] = 36;
+    transicion[35][61] = 36;
+    transicion[35][62] = 36;
+    transicion[35][63] = 36;
+    transicion[35][64] = 36;
+    transicion[35][65] = 36;
+    transicion[35][66] = 36;
+    transicion[35][67] = 36;
+    transicion[35][68] = 36;
+    transicion[35][69] = 36;
+    transicion[35][70] = 36;
+    transicion[35][71] = 36;
+    transicion[35][72] = 36;
+    transicion[35][73] = 36;
+    transicion[35][74] = 36;
+    transicion[35][75] = 36;
+    transicion[35][76] = 36;
+    transicion[36][11] = 36;
+    transicion[36][12] = 36;
+    transicion[36][13] = 36;
+    transicion[36][14] = 36;
+    transicion[36][15] = 36;
+    transicion[36][16] = 36;
+    transicion[36][17] = 36;
+    transicion[36][18] = 36;
+    transicion[36][19] = 36;
+    transicion[36][20] = 36;
+    transicion[36][25] = 36;
+    transicion[36][26] = 36;
+    transicion[36][27] = 36;
+    transicion[36][28] = 36;
+    transicion[36][29] = 36;
+    transicion[36][30] = 36;
+    transicion[36][31] = 36;
+    transicion[36][32] = 36;
+    transicion[36][33] = 36;
+    transicion[36][34] = 36;
+    transicion[36][35] = 36;
+    transicion[36][36] = 36;
+    transicion[36][37] = 36;
+    transicion[36][38] = 36;
+    transicion[36][39] = 36;
+    transicion[36][40] = 36;
+    transicion[36][41] = 36;
+    transicion[36][42] = 36;
+    transicion[36][43] = 36;
+    transicion[36][44] = 36;
+    transicion[36][45] = 36;
+    transicion[36][46] = 36;
+    transicion[36][47] = 36;
+    transicion[36][48] = 36;
+    transicion[36][49] = 36;
+    transicion[36][50] = 36;
+    transicion[36][51] = 36;
+    transicion[36][52] = 36;
+    transicion[36][53] = 36;
+    transicion[36][54] = 36;
+    transicion[36][55] = 36;
+    transicion[36][56] = 36;
+    transicion[36][57] = 36;
+    transicion[36][58] = 36;
+    transicion[36][59] = 36;
+    transicion[36][60] = 36;
+    transicion[36][61] = 36;
+    transicion[36][62] = 36;
+    transicion[36][63] = 36;
+    transicion[36][64] = 36;
+    transicion[36][65] = 36;
+    transicion[36][66] = 36;
+    transicion[36][67] = 36;
+    transicion[36][68] = 36;
+    transicion[36][69] = 36;
+    transicion[36][70] = 36;
+    transicion[36][71] = 36;
+    transicion[36][72] = 36;
+    transicion[36][73] = 36;
+    transicion[36][74] = 36;
+    transicion[36][75] = 36;
+    transicion[36][76] = 36;
+    transicion[37][0] = 37;
+    transicion[37][2] = 37;
+    transicion[38][23] = 6;
+    transicion[39][0] = 37;
+    transicion[39][1] = 0;
+    transicion[39][2] = 37;
+    transicion[39][3] = 38;
+    transicion[39][4] = 9;
+    transicion[39][5] = 10;
+    transicion[39][6] = 3;
+    transicion[39][7] = 1;
+    transicion[39][8] = 14;
+    transicion[39][9] = 2;
+    transicion[39][10] = 4;
+    transicion[39][11] = 18;
+    transicion[39][12] = 18;
+    transicion[39][13] = 18;
+    transicion[39][14] = 18;
+    transicion[39][15] = 18;
+    transicion[39][16] = 18;
+    transicion[39][17] = 18;
+    transicion[39][18] = 18;
+    transicion[39][19] = 18;
+    transicion[39][20] = 18;
+    transicion[39][21] = 13;
+    transicion[39][22] = 16;
+    transicion[39][23] = 15;
+    transicion[39][24] = 17;
+    transicion[39][25] = 36;
+    transicion[39][26] = 36;
+    transicion[39][27] = 36;
+    transicion[39][28] = 36;
+    transicion[39][29] = 36;
+    transicion[39][30] = 36;
+    transicion[39][31] = 36;
+    transicion[39][32] = 36;
+    transicion[39][33] = 36;
+    transicion[39][34] = 36;
+    transicion[39][35] = 36;
+    transicion[39][36] = 36;
+    transicion[39][37] = 36;
+    transicion[39][38] = 36;
+    transicion[39][39] = 36;
+    transicion[39][40] = 36;
+    transicion[39][41] = 36;
+    transicion[39][42] = 36;
+    transicion[39][43] = 36;
+    transicion[39][44] = 36;
+    transicion[39][45] = 36;
+    transicion[39][46] = 36;
+    transicion[39][47] = 36;
+    transicion[39][48] = 36;
+    transicion[39][49] = 36;
+    transicion[39][50] = 36;
+    transicion[39][51] = 36;
+    transicion[39][52] = 36;
+    transicion[39][53] = 36;
+    transicion[39][54] = 36;
+    transicion[39][55] = 31;
+    transicion[39][56] = 36;
+    transicion[39][57] = 36;
+    transicion[39][58] = 36;
+    transicion[39][59] = 25;
+    transicion[39][60] = 36;
+    transicion[39][61] = 36;
+    transicion[39][62] = 36;
+    transicion[39][63] = 36;
+    transicion[39][64] = 36;
+    transicion[39][65] = 36;
+    transicion[39][66] = 36;
+    transicion[39][67] = 36;
+    transicion[39][68] = 35;
+    transicion[39][69] = 36;
+    transicion[39][70] = 36;
+    transicion[39][71] = 36;
+    transicion[39][72] = 36;
+    transicion[39][73] = 33;
+    transicion[39][74] = 36;
+    transicion[39][75] = 36;
+    transicion[39][76] = 36;
+    transicion[39][77] = 11;
+    transicion[39][78] = 12;
+
+    for (int i = 0; i < NUM_ESTADOS; i++) token_aceptado[i] = -1;
+    token_aceptado[0] = 1; // EOL
+    token_aceptado[1] = 8; // PLUS
+    token_aceptado[2] = 9; // MINUS
+    token_aceptado[3] = 10; // TIMES
+    token_aceptado[4] = 11; // DIV
+    token_aceptado[5] = 13; // EQ
+    token_aceptado[6] = 14; // NEQ
+    token_aceptado[7] = 17; // LEQ
+    token_aceptado[8] = 18; // GEQ
+    token_aceptado[9] = 19; // LPAREN
+    token_aceptado[10] = 20; // RPAREN
+    token_aceptado[11] = 21; // LBRACE
+    token_aceptado[12] = 22; // RBRACE
+    token_aceptado[13] = 23; // SEMICOLON
+    token_aceptado[14] = 24; // COMMA
+    token_aceptado[15] = 12; // ASSIGN
+    token_aceptado[16] = 15; // LT
+    token_aceptado[17] = 16; // GT
+    token_aceptado[18] = 2; // NUMBER
+    token_aceptado[19] = 3; // IF
+    token_aceptado[20] = 4; // ELSE
+    token_aceptado[21] = 5; // WHILE
+    token_aceptado[22] = 6; // RETURN
+    token_aceptado[23] = 7; // ID
+    token_aceptado[24] = 7; // ID
+    token_aceptado[25] = 7; // ID
+    token_aceptado[26] = 7; // ID
+    token_aceptado[27] = 7; // ID
+    token_aceptado[28] = 7; // ID
+    token_aceptado[29] = 7; // ID
+    token_aceptado[30] = 7; // ID
+    token_aceptado[31] = 7; // ID
+    token_aceptado[32] = 7; // ID
+    token_aceptado[33] = 7; // ID
+    token_aceptado[34] = 7; // ID
+    token_aceptado[35] = 7; // ID
+    token_aceptado[36] = 7; // ID
+    token_aceptado[37] = 0; // lexbuf
+}
+
+// ========== CLASE LEXER ==========
+class Lexer {
+private:
+    std::string entrada;
+    size_t pos;
+    int linea;
+    int columna;
+
+    bool esTokenSkip(int token_id) const {
+        std::string accion = TOKEN_ACTIONS[token_id];
+        // Tokens de whitespace/newline se saltan
+        return accion.find("return lexbuf") != std::string::npos ||
+               accion.find("return EOL") != std::string::npos;
+    }
+
+public:
+    Lexer() : pos(0), linea(1), columna(1) {
+        init_tablas();
+    }
+
+    Lexer(const std::string& texto) : entrada(texto), pos(0), linea(1), columna(1) {
+        init_tablas();
+    }
+
+    void setInput(const std::string& texto) {
+        entrada = texto;
+        pos = 0;
+        linea = 1;
+        columna = 1;
+    }
+
+    // Retorna el siguiente token.
+    // Al llegar al final retorna un token con tipo = (TokenType)-1
+    Token getNextToken() {
+        while (pos < entrada.size()) {
+            int estado_actual = ESTADO_INICIAL;
+            size_t inicio = pos;
+            int inicio_linea = linea;
+            int inicio_col = columna;
+            size_t ultimo_aceptado_pos = pos;
+            int ultimo_token = -1;
+
+            // Avanzar en el AFD buscando el lexema mas largo
+            size_t i = pos;
+            while (i < entrada.size()) {
+                int sym = char_to_sym[(unsigned char)entrada[i]];
+                if (sym < 0) break;
+                int siguiente = transicion[estado_actual][sym];
+                if (siguiente < 0) break;
+                estado_actual = siguiente;
+                i++;
+                if (token_aceptado[estado_actual] >= 0) {
+                    ultimo_aceptado_pos = i;
+                    ultimo_token = token_aceptado[estado_actual];
+                }
+            }
+
+            if (ultimo_token >= 0 && ultimo_aceptado_pos > pos) {
+                std::string lexema = entrada.substr(pos, ultimo_aceptado_pos - pos);
+
+                // Actualizar posicion
+                for (size_t k = pos; k < ultimo_aceptado_pos; k++) {
+                    if (entrada[k] == '\n') { linea++; columna = 1; }
+                    else columna++;
+                }
+                pos = ultimo_aceptado_pos;
+
+                // Si es token de skip (whitespace), continuar al siguiente
+                if (esTokenSkip(ultimo_token)) continue;
+
+                // Retornar el token
+                return Token{(TokenType)ultimo_token, lexema, inicio_linea, inicio_col};
+            } else {
+                // Error lexico
+                std::cerr << "ERROR LEXICO: '" << entrada[pos]
+                          << "' (ASCII " << (int)(unsigned char)entrada[pos]
+                          << ") en linea " << linea << ", columna " << columna << std::endl;
+                if (entrada[pos] == '\n') { linea++; columna = 1; }
+                else columna++;
+                pos++;
+            }
+        }
+
+        // Fin de archivo
+        return Token{(TokenType)-1, "", linea, columna};
+    }
+
+    // Tokeniza todo el input y retorna un vector de tokens
+    std::vector<Token> tokenizar() {
+        std::vector<Token> tokens;
+        while (true) {
+            Token tok = getNextToken();
+            if (tok.esFinArchivo()) break;
+            tokens.push_back(tok);
+        }
+        return tokens;
+    }
+
+    int getLinea() const { return linea; }
+    int getColumna() const { return columna; }
+    bool finArchivo() const { return pos >= entrada.size(); }
+};
+
+// ========== MAIN ==========
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        std::cerr << "Uso: " << argv[0] << " <archivo_entrada>" << std::endl;
+        return 1;
+    }
+
+    std::ifstream f(argv[1]);
+    if (!f.is_open()) {
+        std::cerr << "Error: No se pudo abrir '" << argv[1] << "'" << std::endl;
+        return 1;
+    }
+
+    std::ostringstream ss;
+    ss << f.rdbuf();
+    std::string entrada = ss.str();
+    f.close();
+
+    Lexer lexer(entrada);
+    std::vector<Token> tokens = lexer.tokenizar();
+
+    std::cout << "=== ANALIZADOR LEXICO ===" << std::endl;
+    std::cout << "Archivo: " << argv[1] << std::endl;
+    std::cout << "Tokens encontrados: " << tokens.size() << std::endl;
+    std::cout << std::endl;
+
+    for (const Token& tok : tokens) {
+        std::cout << tok.toString() << std::endl;
+    }
+
+    std::cout << std::endl << "Analisis lexico completado." << std::endl;
+    return 0;
+}
+
+// ========== TRAILER DEL USUARIO ==========
+// Trailer
+// ========== FIN TRAILER ==========
