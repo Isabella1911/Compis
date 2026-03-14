@@ -30,6 +30,7 @@
 #include <cassert>
 #include <iomanip>
 
+<<<<<<< HEAD
 #ifdef _WIN32
 #include <direct.h>
 #define MKDIR(dir) _mkdir(dir)
@@ -38,6 +39,8 @@
 #define MKDIR(dir) mkdir(dir, 0755)
 #endif
 
+=======
+>>>>>>> 4529c07e2d8f5b7983350befec0b475f0f20fbe2
 
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  SECCIÓN 1 — Estructuras de datos                          ║
@@ -741,6 +744,7 @@ AFN construir_afn_combinado(const std::vector<ReglaLexica>& reglas) {
 // ╚══════════════════════════════════════════════════════════════╝
 
 void generar_analizador_lexico(const ArchivoYalex& yalex, AFD& afd_min, const std::string& nombre_salida) {
+<<<<<<< HEAD
     std::ofstream o(nombre_salida+".cpp");
 
     // ── Encabezado ──
@@ -1057,6 +1061,71 @@ void generar_analizador_lexico(const ArchivoYalex& yalex, AFD& afd_min, const st
 
     o.close();
     std::cout << "  Generado: " << nombre_salida << ".cpp\n";
+=======
+    std::ofstream out(nombre_salida+".cpp");
+    out<<"/*\n * Analizador Lexico generado desde YALex\n";
+    out<<" * Compilar: g++ -std=c++17 -o "<<nombre_salida<<" "<<nombre_salida<<".cpp\n";
+    out<<" * Uso: ./"<<nombre_salida<<" <archivo_entrada>\n */\n\n";
+    out<<"#include <iostream>\n#include <fstream>\n#include <string>\n#include <sstream>\n\n";
+    if(!yalex.header.empty())out<<"// === HEADER ===\n"<<yalex.header<<"\n// === FIN HEADER ===\n\n";
+
+    out<<"const char* TOKEN_NAMES[] = {\n";
+    for(size_t i=0;i<yalex.reglas.size();i++){out<<"    \""<<yalex.reglas[i].nombre_token<<"\"";if(i+1<yalex.reglas.size())out<<",";out<<"\n";}
+    out<<"};\n\n";
+
+    out<<"const char* TOKEN_ACTIONS[] = {\n";
+    for(size_t i=0;i<yalex.reglas.size();i++){std::string e;for(char c:yalex.reglas[i].accion){if(c=='"')e+="\\\"";else if(c=='\\')e+="\\\\";else if(c=='\n')e+="\\n";else e+=c;}out<<"    \""<<e<<"\"";if(i+1<yalex.reglas.size())out<<",";out<<"\n";}
+    out<<"};\n\n";
+
+    std::vector<std::string>syms(afd_min.alfabeto.begin(),afd_min.alfabeto.end());
+    std::map<std::string,int>si;for(size_t i=0;i<syms.size();i++)si[syms[i]]=(int)i;
+
+    out<<"const int NUM_ESTADOS = "<<afd_min.estados.size()<<";\n";
+    out<<"const int NUM_SIMBOLOS = "<<syms.size()<<";\n";
+    out<<"const int ESTADO_INICIAL = "<<afd_min.estado_inicial->id<<";\n\n";
+    out<<"int char_to_sym[256];\nvoid init_char_to_sym() {\n    for(int i=0;i<256;i++)char_to_sym[i]=-1;\n";
+    for(size_t i=0;i<syms.size();i++)if(syms[i].size()==1)out<<"    char_to_sym["<<(int)(unsigned char)syms[i][0]<<"]="<<i<<";\n";
+    out<<"}\n\n";
+
+    out<<"int transicion["<<afd_min.estados.size()<<"]["<<syms.size()<<"];\n";
+    out<<"int token_aceptado["<<afd_min.estados.size()<<"];\n\n";
+    out<<"void init_tablas() {\n";
+    out<<"    for(int i=0;i<NUM_ESTADOS;i++)for(int j=0;j<NUM_SIMBOLOS;j++)transicion[i][j]=-1;\n";
+    for(auto&up:afd_min.estados){auto*e=up.get();for(auto&[s,d]:e->transiciones){auto it=si.find(s);if(it!=si.end())out<<"    transicion["<<e->id<<"]["<<it->second<<"]="<<d->id<<";\n";}}
+    out<<"    for(int i=0;i<NUM_ESTADOS;i++)token_aceptado[i]=-1;\n";
+    for(auto&up:afd_min.estados){auto*e=up.get();if(e->es_final&&e->token_id>=0)out<<"    token_aceptado["<<e->id<<"]="<<e->token_id<<";\n";}
+    out<<"}\n\n";
+
+    out<<"void analizar(const std::string& entrada) {\n";
+    out<<"    init_char_to_sym(); init_tablas();\n";
+    out<<"    size_t pos=0; int linea=1,columna=1;\n";
+    out<<"    while(pos<entrada.size()) {\n";
+    out<<"        int ea=ESTADO_INICIAL; size_t uap=pos; int ut=-1; size_t i=pos;\n";
+    out<<"        while(i<entrada.size()){int sy=char_to_sym[(unsigned char)entrada[i]];if(sy<0)break;int sg=transicion[ea][sy];if(sg<0)break;ea=sg;i++;if(token_aceptado[ea]>=0){uap=i;ut=token_aceptado[ea];}}\n";
+    out<<"        if(ut>=0&&uap>pos){\n";
+    out<<"            std::string lex=entrada.substr(pos,uap-pos);\n";
+    out<<"            std::string ac=TOKEN_ACTIONS[ut];\n";
+    out<<"            if(std::string(ac).find(\"return lexbuf\")==std::string::npos&&std::string(ac).find(\"return EOL\")==std::string::npos){\n";
+    out<<"                std::string lp;for(char c:lex){if(c=='\\n')lp+=\"\\\\n\";else if(c=='\\t')lp+=\"\\\\t\";else lp+=c;}\n";
+    out<<"                std::cout<<\"Token: \"<<TOKEN_NAMES[ut]<<\"  Lexema: '\"<<lp<<\"'  Linea: \"<<linea<<\"  Col: \"<<columna<<\"\\n\";\n";
+    out<<"            }\n";
+    out<<"            for(size_t k=pos;k<uap;k++){if(entrada[k]=='\\n'){linea++;columna=1;}else columna++;}\n";
+    out<<"            pos=uap;\n";
+    out<<"        } else {\n";
+    out<<"            std::cerr<<\"ERROR LEXICO: '\"<<entrada[pos]<<\"' (\"<<(int)(unsigned char)entrada[pos]<<\") linea \"<<linea<<\" col \"<<columna<<\"\\n\";\n";
+    out<<"            if(entrada[pos]=='\\n'){linea++;columna=1;}else columna++; pos++;\n";
+    out<<"        }\n    }\n";
+    out<<"    std::cout<<\"\\nAnalisis lexico completado.\\n\";\n}\n\n";
+
+    out<<"int main(int argc,char*argv[]){\n";
+    out<<"    if(argc!=2){std::cerr<<\"Uso: \"<<argv[0]<<\" <archivo>\\n\";return 1;}\n";
+    out<<"    std::ifstream f(argv[1]);if(!f.is_open()){std::cerr<<\"Error: \"<<argv[1]<<\"\\n\";return 1;}\n";
+    out<<"    std::ostringstream ss;ss<<f.rdbuf();std::string e=ss.str();\n";
+    out<<"    std::cout<<\"=== ANALIZADOR LEXICO ===\\n\";analizar(e);return 0;\n}\n";
+    if(!yalex.trailer.empty())out<<"\n// === TRAILER ===\n// "<<yalex.trailer<<"\n";
+    out.close();
+    std::cout<<"  Generado: "<<nombre_salida<<".cpp\n";
+>>>>>>> 4529c07e2d8f5b7983350befec0b475f0f20fbe2
 }
 
 
@@ -1069,6 +1138,7 @@ int main(int argc, char* argv[]) {
     std::string archivo_yal=argv[1], nombre_salida="lexer_generado";
     for(int i=2;i<argc;i++)if(std::string(argv[i])=="-o"&&i+1<argc){nombre_salida=argv[++i];}
 
+<<<<<<< HEAD
     // Crear carpeta output/ para los .dot
     std::string dot_dir = "output";
     MKDIR(dot_dir.c_str());
@@ -1076,6 +1146,11 @@ int main(int argc, char* argv[]) {
 
     std::cout<<"╔══════════════════════════════════════════════════════╗\n";
     std::cout<<"║   GENERADOR DE ANALIZADORES LÉXICOS                 ║\n";
+=======
+    std::cout<<"╔══════════════════════════════════════════════════════╗\n";
+    std::cout<<"║   GENERADOR DE ANALIZADORES LÉXICOS                 ║\n";
+    std::cout<<"║   Fases 1-2: Parser + Expansión + Mega-regex        ║\n";
+>>>>>>> 4529c07e2d8f5b7983350befec0b475f0f20fbe2
     std::cout<<"╚══════════════════════════════════════════════════════╝\n\n";
 
     // ── FASE 1 ──
@@ -1090,10 +1165,17 @@ int main(int argc, char* argv[]) {
     std::cout<<"\n--- Árboles de expresión por regla ---\n";
     for(size_t i=0;i<yalex.reglas.size();i++){
         auto ast=regex_a_ast(yalex.reglas[i].regex_expandida);
+<<<<<<< HEAD
         if(ast)dibujar_ast(ast,dp+"ast_regla_"+std::to_string(i),"Regla "+std::to_string(i)+": "+yalex.reglas[i].nombre_token);
     }
 
     // AST combinado
+=======
+        if(ast)dibujar_ast(ast,"ast_regla_"+std::to_string(i),"Regla "+std::to_string(i)+": "+yalex.reglas[i].nombre_token);
+    }
+
+    // AST combinado (mega-regex con marcadores)
+>>>>>>> 4529c07e2d8f5b7983350befec0b475f0f20fbe2
     std::cout<<"\n--- Árbol de expresión combinado (mega-regex) ---\n";
     {
         std::shared_ptr<NodoAST> combinado=nullptr;
@@ -1105,7 +1187,11 @@ int main(int argc, char* argv[]) {
             if(!combinado)combinado=con_marker;
             else combinado=std::make_shared<NodoAST>("|",combinado,con_marker);
         }
+<<<<<<< HEAD
         if(combinado)dibujar_ast(combinado,dp+"ast_combinado","Arbol de Expresion Combinado");
+=======
+        if(combinado)dibujar_ast(combinado,"ast_combinado","Arbol de Expresion Combinado");
+>>>>>>> 4529c07e2d8f5b7983350befec0b475f0f20fbe2
     }
 
     // ── FASE 3: Autómatas ──
@@ -1115,19 +1201,33 @@ int main(int argc, char* argv[]) {
 
     AFN afn=construir_afn_combinado(yalex.reglas);
     std::cout<<"  AFN: "<<afn.estados.size()<<" estados, "<<afn.estados_finales.size()<<" finales, "<<afn.alfabeto.size()<<" símbolos\n";
+<<<<<<< HEAD
     dibujar_afn(afn,dp+"afn_combinado"); std::cout<<"  "<<dp<<"afn_combinado.dot\n";
 
     AFD afd=construir_afd_subconjuntos(afn);
     std::cout<<"  AFD: "<<afd.estados.size()<<" estados\n";
     dibujar_afd(afd,dp+"afd_lexer"); std::cout<<"  "<<dp<<"afd_lexer.dot\n";
+=======
+    dibujar_afn(afn,"afn_combinado"); std::cout<<"  afn_combinado.dot\n";
+
+    AFD afd=construir_afd_subconjuntos(afn);
+    std::cout<<"  AFD: "<<afd.estados.size()<<" estados\n";
+    dibujar_afd(afd,"afd_lexer"); std::cout<<"  afd_lexer.dot\n";
+>>>>>>> 4529c07e2d8f5b7983350befec0b475f0f20fbe2
 
     AFD afd_min=minimizar_afd(afd);
     std::cout<<"  AFD min: "<<afd_min.estados.size()<<" estados";
     if(afd.estados.size()>0)std::cout<<" (reducción: "<<std::fixed<<std::setprecision(1)<<100.0*(double)(afd.estados.size()-afd_min.estados.size())/afd.estados.size()<<"%)";
     std::cout<<"\n";
+<<<<<<< HEAD
     dibujar_afd(afd_min,dp+"afd_min_lexer"); std::cout<<"  "<<dp<<"afd_min_lexer.dot\n";
 
     // ── FASE 4: Generación de código ──
+=======
+    dibujar_afd(afd_min,"afd_min_lexer"); std::cout<<"  afd_min_lexer.dot\n";
+
+    // ── Generación ──
+>>>>>>> 4529c07e2d8f5b7983350befec0b475f0f20fbe2
     std::cout<<"\n--- Generando analizador léxico ---\n";
     generar_analizador_lexico(yalex,afd_min,nombre_salida);
 
@@ -1135,9 +1235,16 @@ int main(int argc, char* argv[]) {
     std::cout<<"║  COMPLETADO                                         ║\n";
     std::cout<<"╚══════════════════════════════════════════════════════╝\n";
     std::cout<<"Archivos generados:\n";
+<<<<<<< HEAD
     std::cout<<"  "<<nombre_salida<<".cpp  (analizador léxico)\n";
     std::cout<<"  "<<dot_dir<<"/         (archivos .dot)\n";
     std::cout<<"\nPara generar imágenes:\n";
     std::cout<<"  python visualizar.py "<<dot_dir<<"\n";
     return 0;
 }
+=======
+    for(size_t i=0;i<yalex.reglas.size();i++)std::cout<<"  ast_regla_"<<i<<".dot\n";
+    std::cout<<"  ast_combinado.dot\n  afn_combinado.dot\n  afd_lexer.dot\n  afd_min_lexer.dot\n  "<<nombre_salida<<".cpp\n";
+    return 0;
+}
+>>>>>>> 4529c07e2d8f5b7983350befec0b475f0f20fbe2
