@@ -30,28 +30,17 @@ def check_deps():
         return False
  
 def render_dot(dot_path, formato="png"):
-    """Renderiza un .dot a imagen usando pydot."""
-    import pydot
-    out_path = dot_path.replace(".dot", f".{formato}")
+    import graphviz
+    with open(dot_path, "r", encoding="utf-8", errors="replace") as f:
+        source = f.read()
+    out_base = dot_path.replace(".dot", "")
     try:
-        graphs = pydot.graph_from_dot_file(dot_path, encoding="utf-8")
-        if not graphs:
-            return None, "No se pudo parsear el archivo .dot"
-        graph = graphs[0]
-        if formato == "png":
-            graph.write_png(out_path)
-        elif formato == "pdf":
-            graph.write_pdf(out_path)
-        elif formato == "svg":
-            graph.write_svg(out_path)
-        else:
-            graph.write_png(out_path)
- 
+        src = graphviz.Source(source)
+        src.render(out_base, format=formato, cleanup=True)
+        out_path = f"{out_base}.{formato}"
         if os.path.exists(out_path):
-            size = os.path.getsize(out_path)
-            return out_path, size
-        else:
-            return None, "Archivo de salida no generado"
+            return out_path, os.path.getsize(out_path)
+        return None, "Archivo no generado"
     except Exception as e:
         return None, str(e)
  
@@ -98,8 +87,9 @@ def main():
  
     # Buscar directorio por defecto
     if directorio is None:
-        if os.path.isdir("output"):
-            directorio = "output"
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        if os.path.isdir(os.path.join(script_dir, "output")):
+            directorio = os.path.join(script_dir, "output")
         else:
             directorio = "."
  

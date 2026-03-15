@@ -32,4 +32,5 @@ Ejecutar el lexer sobre un archivo de texto
 
 **paso 5**
 pip install graphviz
+idealmente tambien se instala graphviz y se agrega al PATH: https://graphviz.org/download/
 python3 visualizar.py .

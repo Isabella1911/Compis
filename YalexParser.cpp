@@ -30,17 +30,6 @@
 #include <cassert>
 #include <iomanip>
 
-<<<<<<< HEAD
-#ifdef _WIN32
-#include <direct.h>
-#define MKDIR(dir) _mkdir(dir)
-#else
-#include <sys/stat.h>
-#define MKDIR(dir) mkdir(dir, 0755)
-#endif
-
-=======
->>>>>>> 4529c07e2d8f5b7983350befec0b475f0f20fbe2
 
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  SECCIÓN 1 — Estructuras de datos                          ║
@@ -744,324 +733,6 @@ AFN construir_afn_combinado(const std::vector<ReglaLexica>& reglas) {
 // ╚══════════════════════════════════════════════════════════════╝
 
 void generar_analizador_lexico(const ArchivoYalex& yalex, AFD& afd_min, const std::string& nombre_salida) {
-<<<<<<< HEAD
-    std::ofstream o(nombre_salida+".cpp");
-
-    // ── Encabezado ──
-    o << "/*\n";
-    o << " * Analizador Lexico generado automaticamente desde YALex\n";
-    o << " * Compilar: g++ -std=c++17 -o " << nombre_salida << " " << nombre_salida << ".cpp\n";
-    o << " * Uso: ./" << nombre_salida << " <archivo_entrada>\n";
-    o << " *\n";
-    o << " * Interfaz para parser:\n";
-    o << " *   Token getNextToken()  - retorna el siguiente token\n";
-    o << " *   Los tokens tienen: tipo, lexema, linea, columna\n";
-    o << " */\n\n";
-
-    o << "#include <iostream>\n";
-    o << "#include <fstream>\n";
-    o << "#include <string>\n";
-    o << "#include <vector>\n";
-    o << "#include <sstream>\n\n";
-
-    // ── Header del usuario ──
-    if (!yalex.header.empty()) {
-        o << "// ========== HEADER DEL USUARIO ==========\n";
-        o << yalex.header << "\n";
-        o << "// ========== FIN HEADER ==========\n\n";
-    }
-
-    // ── Enum de tipos de token ──
-    o << "// ========== TIPOS DE TOKEN ==========\n";
-    o << "enum TokenType {\n";
-    // Recolectar nombres únicos
-    std::vector<std::string> nombres_token;
-    std::set<std::string> nombres_vistos;
-    for (size_t i = 0; i < yalex.reglas.size(); i++) {
-        std::string name = yalex.reglas[i].nombre_token;
-        // Sanitizar: solo letras, digitos, _
-        std::string safe;
-        for (char c : name) {
-            if (isalnum(c) || c == '_') safe += c;
-        }
-        if (safe.empty()) safe = "TOKEN_" + std::to_string(i);
-        // Evitar duplicados
-        std::string original = safe;
-        int dup = 1;
-        while (nombres_vistos.count(safe)) {
-            safe = original + "_" + std::to_string(dup++);
-        }
-        nombres_vistos.insert(safe);
-        nombres_token.push_back(safe);
-    }
-
-    for (size_t i = 0; i < nombres_token.size(); i++) {
-        o << "    TOK_" << nombres_token[i] << " = " << i;
-        if (i + 1 < nombres_token.size()) o << ",";
-        o << "\n";
-    }
-    o << "};\n\n";
-
-    o << "const int NUM_TOKEN_TYPES = " << nombres_token.size() << ";\n\n";
-
-    // ── Tabla de nombres (para imprimir) ──
-    o << "const char* TOKEN_TYPE_NAMES[] = {\n";
-    for (size_t i = 0; i < nombres_token.size(); i++) {
-        o << "    \"" << nombres_token[i] << "\"";
-        if (i + 1 < nombres_token.size()) o << ",";
-        o << "\n";
-    }
-    o << "};\n\n";
-
-    // ── Acciones originales (para lógica de skip) ──
-    o << "const char* TOKEN_ACTIONS[] = {\n";
-    for (size_t i = 0; i < yalex.reglas.size(); i++) {
-        std::string esc;
-        for (char c : yalex.reglas[i].accion) {
-            if (c == '"') esc += "\\\"";
-            else if (c == '\\') esc += "\\\\";
-            else if (c == '\n') esc += "\\n";
-            else esc += c;
-        }
-        o << "    \"" << esc << "\"";
-        if (i + 1 < yalex.reglas.size()) o << ",";
-        o << "\n";
-    }
-    o << "};\n\n";
-
-    // ── Struct Token ──
-    o << "// ========== STRUCT TOKEN ==========\n";
-    o << "struct Token {\n";
-    o << "    TokenType tipo;\n";
-    o << "    std::string lexema;\n";
-    o << "    int linea;\n";
-    o << "    int columna;\n";
-    o << "\n";
-    o << "    // Token especial para fin de archivo\n";
-    o << "    bool esFinArchivo() const { return tipo == (TokenType)-1; }\n";
-    o << "\n";
-    o << "    std::string toString() const {\n";
-    o << "        if (esFinArchivo()) return \"EOF\";\n";
-    o << "        std::string lp;\n";
-    o << "        for (char c : lexema) {\n";
-    o << "            if (c == '\\n') lp += \"\\\\n\";\n";
-    o << "            else if (c == '\\t') lp += \"\\\\t\";\n";
-    o << "            else if (c == '\\r') lp += \"\\\\r\";\n";
-    o << "            else lp += c;\n";
-    o << "        }\n";
-    o << "        return std::string(TOKEN_TYPE_NAMES[tipo]) + \" '\" + lp + \"' [\" + std::to_string(linea) + \":\" + std::to_string(columna) + \"]\";\n";
-    o << "    }\n";
-    o << "};\n\n";
-
-    // ── Tablas del AFD ──
-    std::vector<std::string> syms(afd_min.alfabeto.begin(), afd_min.alfabeto.end());
-    std::map<std::string, int> sym_idx;
-    for (size_t i = 0; i < syms.size(); i++) sym_idx[syms[i]] = (int)i;
-
-    o << "// ========== TABLAS DEL AFD MINIMIZADO ==========\n";
-    o << "const int NUM_ESTADOS = " << afd_min.estados.size() << ";\n";
-    o << "const int NUM_SIMBOLOS = " << syms.size() << ";\n";
-    o << "const int ESTADO_INICIAL = " << afd_min.estado_inicial->id << ";\n\n";
-
-    o << "static int char_to_sym[256];\n";
-    o << "static int transicion[" << afd_min.estados.size() << "][" << syms.size() << "];\n";
-    o << "static int token_aceptado[" << afd_min.estados.size() << "];\n";
-    o << "static bool tablas_inicializadas = false;\n\n";
-
-    o << "void init_tablas() {\n";
-    o << "    if (tablas_inicializadas) return;\n";
-    o << "    tablas_inicializadas = true;\n\n";
-    o << "    for (int i = 0; i < 256; i++) char_to_sym[i] = -1;\n";
-    for (size_t i = 0; i < syms.size(); i++) {
-        if (syms[i].size() == 1) {
-            int ascii = (int)(unsigned char)syms[i][0];
-            o << "    char_to_sym[" << ascii << "] = " << i << ";";
-            // Comentario con el carácter
-            if (ascii == 9) o << " // \\t";
-            else if (ascii == 10) o << " // \\n";
-            else if (ascii == 13) o << " // \\r";
-            else if (ascii == 32) o << " // espacio";
-            else if (ascii >= 33 && ascii <= 126) o << " // '" << syms[i][0] << "'";
-            o << "\n";
-        }
-    }
-
-    o << "\n    for (int i = 0; i < NUM_ESTADOS; i++)\n";
-    o << "        for (int j = 0; j < NUM_SIMBOLOS; j++)\n";
-    o << "            transicion[i][j] = -1;\n\n";
-
-    for (auto& up : afd_min.estados) {
-        auto* e = up.get();
-        for (auto& [s, d] : e->transiciones) {
-            auto it = sym_idx.find(s);
-            if (it != sym_idx.end()) {
-                o << "    transicion[" << e->id << "][" << it->second << "] = " << d->id << ";\n";
-            }
-        }
-    }
-
-    o << "\n    for (int i = 0; i < NUM_ESTADOS; i++) token_aceptado[i] = -1;\n";
-    for (auto& up : afd_min.estados) {
-        auto* e = up.get();
-        if (e->es_final && e->token_id >= 0) {
-            o << "    token_aceptado[" << e->id << "] = " << e->token_id << ";";
-            if (e->token_id < (int)nombres_token.size()) {
-                o << " // " << nombres_token[e->token_id];
-            }
-            o << "\n";
-        }
-    }
-    o << "}\n\n";
-
-    // ── Clase Lexer ──
-    o << "// ========== CLASE LEXER ==========\n";
-    o << "class Lexer {\n";
-    o << "private:\n";
-    o << "    std::string entrada;\n";
-    o << "    size_t pos;\n";
-    o << "    int linea;\n";
-    o << "    int columna;\n";
-    o << "\n";
-    o << "    bool esTokenSkip(int token_id) const {\n";
-    o << "        std::string accion = TOKEN_ACTIONS[token_id];\n";
-    o << "        // Tokens de whitespace/newline se saltan\n";
-    o << "        return accion.find(\"return lexbuf\") != std::string::npos ||\n";
-    o << "               accion.find(\"return EOL\") != std::string::npos;\n";
-    o << "    }\n";
-    o << "\n";
-    o << "public:\n";
-    o << "    Lexer() : pos(0), linea(1), columna(1) {\n";
-    o << "        init_tablas();\n";
-    o << "    }\n";
-    o << "\n";
-    o << "    Lexer(const std::string& texto) : entrada(texto), pos(0), linea(1), columna(1) {\n";
-    o << "        init_tablas();\n";
-    o << "    }\n";
-    o << "\n";
-    o << "    void setInput(const std::string& texto) {\n";
-    o << "        entrada = texto;\n";
-    o << "        pos = 0;\n";
-    o << "        linea = 1;\n";
-    o << "        columna = 1;\n";
-    o << "    }\n";
-    o << "\n";
-    o << "    // Retorna el siguiente token.\n";
-    o << "    // Al llegar al final retorna un token con tipo = (TokenType)-1\n";
-    o << "    Token getNextToken() {\n";
-    o << "        while (pos < entrada.size()) {\n";
-    o << "            int estado_actual = ESTADO_INICIAL;\n";
-    o << "            size_t inicio = pos;\n";
-    o << "            int inicio_linea = linea;\n";
-    o << "            int inicio_col = columna;\n";
-    o << "            size_t ultimo_aceptado_pos = pos;\n";
-    o << "            int ultimo_token = -1;\n";
-    o << "\n";
-    o << "            // Avanzar en el AFD buscando el lexema mas largo\n";
-    o << "            size_t i = pos;\n";
-    o << "            while (i < entrada.size()) {\n";
-    o << "                int sym = char_to_sym[(unsigned char)entrada[i]];\n";
-    o << "                if (sym < 0) break;\n";
-    o << "                int siguiente = transicion[estado_actual][sym];\n";
-    o << "                if (siguiente < 0) break;\n";
-    o << "                estado_actual = siguiente;\n";
-    o << "                i++;\n";
-    o << "                if (token_aceptado[estado_actual] >= 0) {\n";
-    o << "                    ultimo_aceptado_pos = i;\n";
-    o << "                    ultimo_token = token_aceptado[estado_actual];\n";
-    o << "                }\n";
-    o << "            }\n";
-    o << "\n";
-    o << "            if (ultimo_token >= 0 && ultimo_aceptado_pos > pos) {\n";
-    o << "                std::string lexema = entrada.substr(pos, ultimo_aceptado_pos - pos);\n";
-    o << "\n";
-    o << "                // Actualizar posicion\n";
-    o << "                for (size_t k = pos; k < ultimo_aceptado_pos; k++) {\n";
-    o << "                    if (entrada[k] == '\\n') { linea++; columna = 1; }\n";
-    o << "                    else columna++;\n";
-    o << "                }\n";
-    o << "                pos = ultimo_aceptado_pos;\n";
-    o << "\n";
-    o << "                // Si es token de skip (whitespace), continuar al siguiente\n";
-    o << "                if (esTokenSkip(ultimo_token)) continue;\n";
-    o << "\n";
-    o << "                // Retornar el token\n";
-    o << "                return Token{(TokenType)ultimo_token, lexema, inicio_linea, inicio_col};\n";
-    o << "            } else {\n";
-    o << "                // Error lexico\n";
-    o << "                std::cerr << \"ERROR LEXICO: '\" << entrada[pos]\n";
-    o << "                          << \"' (ASCII \" << (int)(unsigned char)entrada[pos]\n";
-    o << "                          << \") en linea \" << linea << \", columna \" << columna << std::endl;\n";
-    o << "                if (entrada[pos] == '\\n') { linea++; columna = 1; }\n";
-    o << "                else columna++;\n";
-    o << "                pos++;\n";
-    o << "            }\n";
-    o << "        }\n";
-    o << "\n";
-    o << "        // Fin de archivo\n";
-    o << "        return Token{(TokenType)-1, \"\", linea, columna};\n";
-    o << "    }\n";
-    o << "\n";
-    o << "    // Tokeniza todo el input y retorna un vector de tokens\n";
-    o << "    std::vector<Token> tokenizar() {\n";
-    o << "        std::vector<Token> tokens;\n";
-    o << "        while (true) {\n";
-    o << "            Token tok = getNextToken();\n";
-    o << "            if (tok.esFinArchivo()) break;\n";
-    o << "            tokens.push_back(tok);\n";
-    o << "        }\n";
-    o << "        return tokens;\n";
-    o << "    }\n";
-    o << "\n";
-    o << "    int getLinea() const { return linea; }\n";
-    o << "    int getColumna() const { return columna; }\n";
-    o << "    bool finArchivo() const { return pos >= entrada.size(); }\n";
-    o << "};\n\n";
-
-    // ── Main ──
-    o << "// ========== MAIN ==========\n";
-    o << "int main(int argc, char* argv[]) {\n";
-    o << "    if (argc != 2) {\n";
-    o << "        std::cerr << \"Uso: \" << argv[0] << \" <archivo_entrada>\" << std::endl;\n";
-    o << "        return 1;\n";
-    o << "    }\n";
-    o << "\n";
-    o << "    std::ifstream f(argv[1]);\n";
-    o << "    if (!f.is_open()) {\n";
-    o << "        std::cerr << \"Error: No se pudo abrir '\" << argv[1] << \"'\" << std::endl;\n";
-    o << "        return 1;\n";
-    o << "    }\n";
-    o << "\n";
-    o << "    std::ostringstream ss;\n";
-    o << "    ss << f.rdbuf();\n";
-    o << "    std::string entrada = ss.str();\n";
-    o << "    f.close();\n";
-    o << "\n";
-    o << "    Lexer lexer(entrada);\n";
-    o << "    std::vector<Token> tokens = lexer.tokenizar();\n";
-    o << "\n";
-    o << "    std::cout << \"=== ANALIZADOR LEXICO ===\" << std::endl;\n";
-    o << "    std::cout << \"Archivo: \" << argv[1] << std::endl;\n";
-    o << "    std::cout << \"Tokens encontrados: \" << tokens.size() << std::endl;\n";
-    o << "    std::cout << std::endl;\n";
-    o << "\n";
-    o << "    for (const Token& tok : tokens) {\n";
-    o << "        std::cout << tok.toString() << std::endl;\n";
-    o << "    }\n";
-    o << "\n";
-    o << "    std::cout << std::endl << \"Analisis lexico completado.\" << std::endl;\n";
-    o << "    return 0;\n";
-    o << "}\n";
-
-    // ── Trailer ──
-    if (!yalex.trailer.empty()) {
-        o << "\n// ========== TRAILER DEL USUARIO ==========\n";
-        o << yalex.trailer << "\n";
-        o << "// ========== FIN TRAILER ==========\n";
-    }
-
-    o.close();
-    std::cout << "  Generado: " << nombre_salida << ".cpp\n";
-=======
     std::ofstream out(nombre_salida+".cpp");
     out<<"/*\n * Analizador Lexico generado desde YALex\n";
     out<<" * Compilar: g++ -std=c++17 -o "<<nombre_salida<<" "<<nombre_salida<<".cpp\n";
@@ -1125,7 +796,6 @@ void generar_analizador_lexico(const ArchivoYalex& yalex, AFD& afd_min, const st
     if(!yalex.trailer.empty())out<<"\n// === TRAILER ===\n// "<<yalex.trailer<<"\n";
     out.close();
     std::cout<<"  Generado: "<<nombre_salida<<".cpp\n";
->>>>>>> 4529c07e2d8f5b7983350befec0b475f0f20fbe2
 }
 
 
@@ -1138,19 +808,9 @@ int main(int argc, char* argv[]) {
     std::string archivo_yal=argv[1], nombre_salida="lexer_generado";
     for(int i=2;i<argc;i++)if(std::string(argv[i])=="-o"&&i+1<argc){nombre_salida=argv[++i];}
 
-<<<<<<< HEAD
-    // Crear carpeta output/ para los .dot
-    std::string dot_dir = "output";
-    MKDIR(dot_dir.c_str());
-    std::string dp = dot_dir + "/"; // prefijo para archivos dot
-
-    std::cout<<"╔══════════════════════════════════════════════════════╗\n";
-    std::cout<<"║   GENERADOR DE ANALIZADORES LÉXICOS                 ║\n";
-=======
     std::cout<<"╔══════════════════════════════════════════════════════╗\n";
     std::cout<<"║   GENERADOR DE ANALIZADORES LÉXICOS                 ║\n";
     std::cout<<"║   Fases 1-2: Parser + Expansión + Mega-regex        ║\n";
->>>>>>> 4529c07e2d8f5b7983350befec0b475f0f20fbe2
     std::cout<<"╚══════════════════════════════════════════════════════╝\n\n";
 
     // ── FASE 1 ──
@@ -1165,17 +825,10 @@ int main(int argc, char* argv[]) {
     std::cout<<"\n--- Árboles de expresión por regla ---\n";
     for(size_t i=0;i<yalex.reglas.size();i++){
         auto ast=regex_a_ast(yalex.reglas[i].regex_expandida);
-<<<<<<< HEAD
-        if(ast)dibujar_ast(ast,dp+"ast_regla_"+std::to_string(i),"Regla "+std::to_string(i)+": "+yalex.reglas[i].nombre_token);
-    }
-
-    // AST combinado
-=======
         if(ast)dibujar_ast(ast,"ast_regla_"+std::to_string(i),"Regla "+std::to_string(i)+": "+yalex.reglas[i].nombre_token);
     }
 
     // AST combinado (mega-regex con marcadores)
->>>>>>> 4529c07e2d8f5b7983350befec0b475f0f20fbe2
     std::cout<<"\n--- Árbol de expresión combinado (mega-regex) ---\n";
     {
         std::shared_ptr<NodoAST> combinado=nullptr;
@@ -1187,11 +840,7 @@ int main(int argc, char* argv[]) {
             if(!combinado)combinado=con_marker;
             else combinado=std::make_shared<NodoAST>("|",combinado,con_marker);
         }
-<<<<<<< HEAD
-        if(combinado)dibujar_ast(combinado,dp+"ast_combinado","Arbol de Expresion Combinado");
-=======
         if(combinado)dibujar_ast(combinado,"ast_combinado","Arbol de Expresion Combinado");
->>>>>>> 4529c07e2d8f5b7983350befec0b475f0f20fbe2
     }
 
     // ── FASE 3: Autómatas ──
@@ -1201,33 +850,19 @@ int main(int argc, char* argv[]) {
 
     AFN afn=construir_afn_combinado(yalex.reglas);
     std::cout<<"  AFN: "<<afn.estados.size()<<" estados, "<<afn.estados_finales.size()<<" finales, "<<afn.alfabeto.size()<<" símbolos\n";
-<<<<<<< HEAD
-    dibujar_afn(afn,dp+"afn_combinado"); std::cout<<"  "<<dp<<"afn_combinado.dot\n";
-
-    AFD afd=construir_afd_subconjuntos(afn);
-    std::cout<<"  AFD: "<<afd.estados.size()<<" estados\n";
-    dibujar_afd(afd,dp+"afd_lexer"); std::cout<<"  "<<dp<<"afd_lexer.dot\n";
-=======
     dibujar_afn(afn,"afn_combinado"); std::cout<<"  afn_combinado.dot\n";
 
     AFD afd=construir_afd_subconjuntos(afn);
     std::cout<<"  AFD: "<<afd.estados.size()<<" estados\n";
     dibujar_afd(afd,"afd_lexer"); std::cout<<"  afd_lexer.dot\n";
->>>>>>> 4529c07e2d8f5b7983350befec0b475f0f20fbe2
 
     AFD afd_min=minimizar_afd(afd);
     std::cout<<"  AFD min: "<<afd_min.estados.size()<<" estados";
     if(afd.estados.size()>0)std::cout<<" (reducción: "<<std::fixed<<std::setprecision(1)<<100.0*(double)(afd.estados.size()-afd_min.estados.size())/afd.estados.size()<<"%)";
     std::cout<<"\n";
-<<<<<<< HEAD
-    dibujar_afd(afd_min,dp+"afd_min_lexer"); std::cout<<"  "<<dp<<"afd_min_lexer.dot\n";
-
-    // ── FASE 4: Generación de código ──
-=======
     dibujar_afd(afd_min,"afd_min_lexer"); std::cout<<"  afd_min_lexer.dot\n";
 
     // ── Generación ──
->>>>>>> 4529c07e2d8f5b7983350befec0b475f0f20fbe2
     std::cout<<"\n--- Generando analizador léxico ---\n";
     generar_analizador_lexico(yalex,afd_min,nombre_salida);
 
@@ -1235,16 +870,7 @@ int main(int argc, char* argv[]) {
     std::cout<<"║  COMPLETADO                                         ║\n";
     std::cout<<"╚══════════════════════════════════════════════════════╝\n";
     std::cout<<"Archivos generados:\n";
-<<<<<<< HEAD
-    std::cout<<"  "<<nombre_salida<<".cpp  (analizador léxico)\n";
-    std::cout<<"  "<<dot_dir<<"/         (archivos .dot)\n";
-    std::cout<<"\nPara generar imágenes:\n";
-    std::cout<<"  python visualizar.py "<<dot_dir<<"\n";
-    return 0;
-}
-=======
     for(size_t i=0;i<yalex.reglas.size();i++)std::cout<<"  ast_regla_"<<i<<".dot\n";
     std::cout<<"  ast_combinado.dot\n  afn_combinado.dot\n  afd_lexer.dot\n  afd_min_lexer.dot\n  "<<nombre_salida<<".cpp\n";
     return 0;
 }
->>>>>>> 4529c07e2d8f5b7983350befec0b475f0f20fbe2
