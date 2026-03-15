@@ -1,9 +1,29 @@
 if (x >= 10) {
-  return x + y;
+  return x + y
 } else {
   while (count != 0) {
     count = count - 1;
   }
 }
  
- 
+ // Simple line comment test
+if (x == 5) {
+    y = x + 10;
+}
+
+while (count < 100) {
+    total = total * 2;
+}
+
+return resultado;
+
+
+if (result != 0) {
+    z = 99;
+}
+
+// Error test - invalid characters below
+@variable
+$valor
+#test
+&operand

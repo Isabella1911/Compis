@@ -11,9 +11,11 @@ let letra = ['a'-'z' 'A'-'Z']
 let digits = digito+
 let id = letra (letra | digito)*
 let whitespace = [' ' '\t']+
+let comentario_linea = "//" [^'\n']*
 
 rule tokens =
   whitespace          { return lexbuf }
+| comentario_linea    { return lexbuf }
 | ['\n']              { return EOL }
 | digits              { return NUMBER }
 | "if"                { return IF }
@@ -21,17 +23,17 @@ rule tokens =
 | "while"             { return WHILE }
 | "return"            { return RETURN }
 | id                  { return ID }
+| "=="                { return EQ }
+| "!="                { return NEQ }
+| "<="                { return LEQ }
+| ">="                { return GEQ }
 | '+'                 { return PLUS }
 | '-'                 { return MINUS }
 | '*'                 { return TIMES }
 | '/'                 { return DIV }
 | '='                 { return ASSIGN }
-| "=="                { return EQ }
-| "!="                { return NEQ }
 | '<'                 { return LT }
 | '>'                 { return GT }
-| "<="                { return LEQ }
-| ">="                { return GEQ }
 | '('                 { return LPAREN }
 | ')'                 { return RPAREN }
 | '{'                 { return LBRACE }
