@@ -2,7 +2,7 @@ digraph AST {
   rankdir=TB;
   ranksep=0.8;
   labelloc=t;
-  label="Regla 20: RPAREN";
+  label="Regla 20: LPAREN";
   fontsize=14;
-  0 [label="\\)"];
+  0 [label="\\("];
 }

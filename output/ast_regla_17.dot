@@ -2,11 +2,7 @@ digraph AST {
   rankdir=TB;
   ranksep=0.8;
   labelloc=t;
-  label="Regla 17: LEQ";
+  label="Regla 17: ASSIGN";
   fontsize=14;
-  0 [label="."];
-  1 [label="<"];
-  0 -> 1;
-  2 [label="="];
-  0 -> 2;
+  0 [label="="];
 }

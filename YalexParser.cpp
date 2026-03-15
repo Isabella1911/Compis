@@ -670,7 +670,7 @@ std::shared_ptr<NodoAST> regex_a_ast(const std::string& rx) {
 // ╚══════════════════════════════════════════════════════════════╝
 
 void dibujar_ast(std::shared_ptr<NodoAST> raiz, const std::string& nombre, const std::string& titulo="") {
-    std::ofstream f(nombre+".dot");
+    std::ofstream f("output/" + nombre + ".dot");
     f<<"digraph AST {\n  rankdir=TB;\n  ranksep=0.8;\n";
     if(!titulo.empty())f<<"  labelloc=t;\n  label=\""<<dot_escape(titulo)<<"\";\n  fontsize=14;\n";
     int cnt=0;
@@ -685,7 +685,7 @@ void dibujar_ast(std::shared_ptr<NodoAST> raiz, const std::string& nombre, const
 }
 
 void dibujar_afn(AFN& afn, const std::string& nombre) {
-    std::ofstream f(nombre+".dot");
+    std::ofstream f("output/" + nombre + ".dot");
     f<<"digraph AFN {\n  rankdir=LR;\n  inicio [shape=none,label=\"\",width=0,height=0];\n";
     for(auto&up:afn.estados){auto*e=up.get();std::string sh=e->es_final?"doublecircle":"circle";
         std::string lb=std::to_string(e->id);if(e->es_final&&e->token_id>=0)lb+="\\n[T"+std::to_string(e->token_id)+"]";
@@ -696,7 +696,7 @@ void dibujar_afn(AFN& afn, const std::string& nombre) {
 }
 
 void dibujar_afd(AFD& afd, const std::string& nombre) {
-    std::ofstream f(nombre+".dot");
+    std::ofstream f("output/" + nombre + ".dot");
     f<<"digraph AFD {\n  rankdir=LR;\n  inicio_afd [shape=none,label=\"\",width=0,height=0];\n";
     for(auto&up:afd.estados){auto*e=up.get();std::string lb="q"+std::to_string(e->id);
         if(e->es_final&&e->token_id>=0)lb+="\\n[T"+std::to_string(e->token_id)+"]";
@@ -850,17 +850,17 @@ int main(int argc, char* argv[]) {
 
     AFN afn=construir_afn_combinado(yalex.reglas);
     std::cout<<"  AFN: "<<afn.estados.size()<<" estados, "<<afn.estados_finales.size()<<" finales, "<<afn.alfabeto.size()<<" símbolos\n";
-    dibujar_afn(afn,"afn_combinado"); std::cout<<"  afn_combinado.dot\n";
+    dibujar_afn(afn,"afn_combinado"); std::cout<<"  output/afn_combinado.dot\n";
 
     AFD afd=construir_afd_subconjuntos(afn);
     std::cout<<"  AFD: "<<afd.estados.size()<<" estados\n";
-    dibujar_afd(afd,"afd_lexer"); std::cout<<"  afd_lexer.dot\n";
+    dibujar_afd(afd,"afd_lexer"); std::cout<<"  output/afd_lexer.dot\n";
 
     AFD afd_min=minimizar_afd(afd);
     std::cout<<"  AFD min: "<<afd_min.estados.size()<<" estados";
     if(afd.estados.size()>0)std::cout<<" (reducción: "<<std::fixed<<std::setprecision(1)<<100.0*(double)(afd.estados.size()-afd_min.estados.size())/afd.estados.size()<<"%)";
     std::cout<<"\n";
-    dibujar_afd(afd_min,"afd_min_lexer"); std::cout<<"  afd_min_lexer.dot\n";
+    dibujar_afd(afd_min,"afd_min_lexer"); std::cout<<"  output/afd_min_lexer.dot\n";
 
     // ── Generación ──
     std::cout<<"\n--- Generando analizador léxico ---\n";

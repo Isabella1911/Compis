@@ -2,7 +2,11 @@ digraph AST {
   rankdir=TB;
   ranksep=0.8;
   labelloc=t;
-  label="Regla 9: MINUS";
+  label="Regla 9: EQ";
   fontsize=14;
-  0 [label="-"];
+  0 [label="."];
+  1 [label="="];
+  0 -> 1;
+  2 [label="="];
+  0 -> 2;
 }
