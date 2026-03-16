@@ -1,33 +1,34 @@
 #!/usr/bin/env python3
 """
-visualizar.py — Genera imágenes PNG de todos los archivos .dot
-producidos por el generador de analizadores léxicos (YalexParser).
+visualizar.py — Genera imágenes de archivos .dot producidos por YalexParser.
  
 Uso:
-    python3 visualizar.py [directorio] [--formato png|pdf|svg]
+    python3 visualizar.py [directorio] [--formato png|pdf|svg] [--incluir-afn]
  
 Si no se especifica directorio, busca en ./output/
  
 Requisitos:
-    pip install pydot pillow
+    pip install graphviz
 """
  
 import os
 import sys
 import glob
+import shutil
  
 def check_deps():
-    """Verifica que pydot esté instalado."""
+    """Verifica dependencias de Python y ejecutable dot."""
     try:
-        import pydot
-        return True
+        import graphviz  # noqa: F401
     except ImportError:
-        print("Error: pydot no esta instalado.")
-        print("Instalar con: pip install pydot")
-        print("")
-        print("pydot incluye su propio renderizador, NO necesitas")
-        print("instalar Graphviz por separado.")
+        print("Error: graphviz (paquete de Python) no esta instalado.")
+        print("Instalar con: pip install graphviz")
         return False
+    if shutil.which("dot") is None:
+        print("Error: no se encontró 'dot' en PATH.")
+        print("Instala Graphviz y agrega su carpeta bin al PATH.")
+        return False
+    return True
  
 def render_dot(dot_path, formato="png"):
     import graphviz
@@ -44,15 +45,15 @@ def render_dot(dot_path, formato="png"):
     except Exception as e:
         return None, str(e)
  
-def categorizar_dots(archivos):
+def categorizar_dots(archivos, incluir_afn=False):
     """Agrupa los archivos .dot por categoría."""
     cats = {
         "ASTs individuales": [],
         "AST combinado": [],
-        "AFN": [],
         "AFD": [],
         "AFD minimizado": [],
     }
+    afn_omitidos = []
     for f in sorted(archivos):
         nombre = os.path.basename(f)
         if nombre.startswith("ast_regla_"):
@@ -60,25 +61,32 @@ def categorizar_dots(archivos):
         elif nombre.startswith("ast_combinado"):
             cats["AST combinado"].append(f)
         elif nombre.startswith("afn_"):
-            cats["AFN"].append(f)
+            if incluir_afn:
+                cats.setdefault("AFN", []).append(f)
+            else:
+                afn_omitidos.append(f)
         elif nombre.startswith("afd_min"):
             cats["AFD minimizado"].append(f)
         elif nombre.startswith("afd_"):
             cats["AFD"].append(f)
         else:
             cats.setdefault("Otros", []).append(f)
-    return cats
+    return cats, afn_omitidos
  
 def main():
     # Parsear argumentos
     directorio = None
     formato = "png"
+    incluir_afn = False
     args = sys.argv[1:]
     i = 0
     while i < len(args):
         if args[i] == "--formato" and i + 1 < len(args):
             formato = args[i + 1]
             i += 2
+        elif args[i] == "--incluir-afn":
+            incluir_afn = True
+            i += 1
         elif not args[i].startswith("--"):
             directorio = args[i]
             i += 1
@@ -112,7 +120,10 @@ def main():
     print(f"Formato: {formato}")
     print(f"")
  
-    cats = categorizar_dots(archivos)
+    cats, afn_omitidos = categorizar_dots(archivos, incluir_afn=incluir_afn)
+    if afn_omitidos:
+        print(f"Omitiendo AFN ({len(afn_omitidos)}) por defecto. Usa --incluir-afn para renderizarlos.")
+        print("")
     ok = 0
     fail = 0
  

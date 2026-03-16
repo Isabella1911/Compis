@@ -930,12 +930,8 @@ ResultadoLinea infix_to_postfix(const std::string& regex) {
 
         dibujar_ast(ast, "ast_linea_" + nombre_base);
 
-        std::cout << "Construyendo AFN con el algoritmo de Thompson...\n";
         auto afn_ptr = std::make_shared<AFN>(std::move(construir_thompson_afn(ast)));
         if (afn_ptr->estado_inicial) {
-            dibujar_afn(*afn_ptr, "afn_linea_" + nombre_base);
-            std::cout << "AFN construido con " << afn_ptr->estados.size() << " estados\n";
-
             std::cout << "Construyendo AFD con algoritmo de subconjuntos...\n";
             auto afd_ptr = std::make_shared<AFD>(std::move(construir_afd_subconjuntos(*afn_ptr)));
             dibujar_afd(*afd_ptr, "afd_linea_" + nombre_base);

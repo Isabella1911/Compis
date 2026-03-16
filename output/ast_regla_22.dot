@@ -1,8 +1,0 @@
-digraph AST {
-  rankdir=TB;
-  ranksep=0.8;
-  labelloc=t;
-  label="Regla 22: LBRACE";
-  fontsize=14;
-  0 [label="{"];
-}

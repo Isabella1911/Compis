@@ -1,8 +1,0 @@
-digraph AST {
-  rankdir=TB;
-  ranksep=0.8;
-  labelloc=t;
-  label="Regla 15: TIMES";
-  fontsize=14;
-  0 [label="\\*"];
-}

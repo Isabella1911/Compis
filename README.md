@@ -1,36 +1,60 @@
 # Compis
-**paso 1**
-g++ -std=c++17 -o yalex_parser YalexParser.cpp -O2
-esto compila YalexParser.cpp
 
-**paso 2**
-./yalex_parser lexer_complejo.yal -o lexer_compl
-generar un analizador léxico --Lexer simple
+## Requisito previo (Windows PowerShell)
+Agrega MSYS2 al PATH de la sesion para compilar y ejecutar:
 
-./yalex_parser lexer_complejo.yal -o lexer_complejo
---Lexer complejo
+`$env:PATH = "C:\msys64\ucrt64\bin;$env:PATH"`
 
-**paso 3**
-g++ -std=c++17 -o mi_lexer mi_lexer.cpp -O2
---simple
+## Paso 1
+Compilar el generador:
 
-o 
+`g++ -std=c++17 -O2 -o yalex_parser.exe YalexParser.cpp`
 
-g++ -std=c++17 -o lexer_complejo lexer_complejo.cpp -O2
---complejo
+## Paso 2
+Generar analizadores lexicos desde YALex:
 
-Compilar el analizador léxico generado
+Lexer simple:
 
-**paso 4**
-./mi_lexer test_input.txt
--- simple
+`./yalex_parser.exe ejemplo.yal -o mi_lexer`
 
-./lexer_complejo test_complejo.txt
---complejo
+Lexer complejo:
 
-Ejecutar el lexer sobre un archivo de texto
+`./yalex_parser.exe lexer_complejo.yal -o lexer_complejo`
 
-**paso 5**
-pip install graphviz
-idealmente tambien se instala graphviz y se agrega al PATH: https://graphviz.org/download/
-python3 visualizar.py .
+## Paso 3
+Compilar los analizadores generados:
+
+Simple:
+
+`g++ -std=c++17 -O2 -o mi_lexer.exe mi_lexer.cpp`
+
+Complejo:
+
+`g++ -std=c++17 -O2 -o lexer_complejo.exe lexer_complejo.cpp`
+
+## Paso 4
+Ejecutar sobre archivos de prueba:
+
+Simple:
+
+`./mi_lexer.exe test_input.txt`
+
+Complejo:
+
+`./lexer_complejo.exe Test_complejo.txt`
+
+## Paso 5 (visualizacion)
+Instalar dependencias de Python:
+
+`pip install graphviz`
+
+Instalar Graphviz (dot.exe) y agregarlo al PATH:
+https://graphviz.org/download/
+
+Renderizar salida recomendada (SVG):
+
+`python visualizar.py output --formato svg`
+
+Para incluir tambien AFN en el render:
+
+`python visualizar.py output --formato svg --incluir-afn`

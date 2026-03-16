@@ -2,3 +2,7 @@
 *.png
 *.dot
 *.exe
+output/
+.vscode/
+build_yalex.log
+_tmp_test.cpp
