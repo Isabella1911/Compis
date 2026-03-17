@@ -11,6 +11,7 @@ if (x == 5) {
     y = x + 10;
 }
 
+(*Comentario parentesis*)
 while (count < 100) {
     total = total * 2;
 }
