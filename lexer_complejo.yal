@@ -12,12 +12,11 @@ let digits = digito+
 let id = letra (letra | digito)*
 let whitespace = [' ' '\t']+
 let comentario_linea = "//" [^'\n']*
-let comentario_parentesis = "(*"([^'*'] | '*' [^')'])*"*)"
+
 
 rule tokens =
   whitespace          { return lexbuf }
 | comentario_linea    { return lexbuf }
-| comentario_parentesis  { return lexbuf }
 | ['\n']              { return EOL }
 | digits              { return NUMBER }
 | "if"                { return IF }
