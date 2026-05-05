@@ -1,0 +1,19 @@
+/* Definición de parser */
+/* INICIA Sección de TOKENS */
+%token ID PLUS NUMBER WS COMMENT
+IGNORE WS COMMENT
+/* FINALIZA Sección de TOKENS */
+
+%%
+
+/* INICIA Sección de PRODUCCIONES */
+expr:
+    expr PLUS term
+  | term
+;
+
+term:
+    ID
+  | NUMBER
+;
+/* FINALIZA Sección de PRODUCCIONES */
