@@ -20,6 +20,16 @@ static std::string leer_archivo(const std::string& ruta) {
     return ss.str();
 }
 
+// Verifica si una línea comienza (ignorando espacios) con una palabra clave exacta,
+// seguida de espacio, fin de línea, o fin de string.
+static bool lineaEmpiezaCon(const std::string& linea, const std::string& keyword) {
+    std::string t = trim(linea);
+    if (t.size() < keyword.size()) return false;
+    if (t.substr(0, keyword.size()) != keyword) return false;
+    if (t.size() == keyword.size()) return true;
+    return std::isspace((unsigned char)t[keyword.size()]) != 0;
+}
+
 std::string eliminarComentariosYapar(const std::string& contenido) {
     std::string limpio;
     bool enComentario = false;
@@ -77,14 +87,25 @@ void procesarLineaIgnore(const std::string& linea, YaparSpec& spec) {
         return;
     }
 
+    // Verificar que ya haya tokens declarados antes de procesar IGNORE
+    if (spec.tokensDeclarados.empty()) {
+        throw std::runtime_error(
+            "Error en YAPar: se encontró IGNORE antes de declarar tokens con %token"
+        );
+    }
+
     std::string token;
     while (iss >> token) {
         if (token == "$") {
-            throw std::runtime_error("Error en YAPar: no se puede ignorar el símbolo $");
+            throw std::runtime_error(
+                "Error en YAPar: no se puede ignorar el símbolo $"
+            );
         }
         if (spec.tokensDeclarados.count(token) == 0) {
-            throw std::runtime_error("Error en YAPar: el token " + token
-                + " aparece en IGNORE pero no fue declarado con %token");
+            throw std::runtime_error(
+                "Error en YAPar: el token " + token
+                + " aparece en IGNORE pero no fue declarado con %token"
+            );
         }
         spec.tokensIgnorados.insert(token);
     }
@@ -155,7 +176,9 @@ YaparSpec leerYapar(const std::string& ruta) {
 
     size_t separador = contenido.find("%%");
     if (separador == std::string::npos) {
-        throw std::runtime_error("Error en YAPar: no se encontró separador %%");
+        throw std::runtime_error(
+            "Error en YAPar: no se encontró el separador %% entre tokens y producciones"
+        );
     }
 
     std::string seccionTokens = contenido.substr(0, separador);
@@ -169,9 +192,11 @@ YaparSpec leerYapar(const std::string& ruta) {
         linea = trim(linea);
         if (linea.empty()) continue;
 
-        if (linea.find("%token") != std::string::npos) {
+        // Usar comprobación exacta de palabra clave para evitar falsos positivos
+        // (ej: un token llamado IGNOREDTOKEN no debe matchear IGNORE)
+        if (lineaEmpiezaCon(linea, "%token")) {
             procesarLineaToken(linea, spec);
-        } else if (linea.find("IGNORE") != std::string::npos) {
+        } else if (lineaEmpiezaCon(linea, "IGNORE")) {
             procesarLineaIgnore(linea, spec);
         }
     }
@@ -196,6 +221,7 @@ ResultadoLexico filtrarTokensIgnorados(
     for (size_t i = 0; i < entrada.tokens.size(); i++) {
         const Token& token = entrada.tokens[i];
 
+        // El token $ nunca debe eliminarse, aunque esté listado en IGNORE por error
         if (token.id == "$") {
             filtrado.tokens.push_back(token);
             filtrado.posiciones.push_back(entrada.posiciones[i]);
