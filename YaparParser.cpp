@@ -1,0 +1,237 @@
+#include "YaparParser.h"
+#include <fstream>
+#include <sstream>
+#include <algorithm>
+#include <cctype>
+
+static std::string trim(const std::string& s) {
+    size_t a = s.find_first_not_of(" \t\r\n");
+    if (a == std::string::npos) return "";
+    return s.substr(a, s.find_last_not_of(" \t\r\n") - a + 1);
+}
+
+static std::string leer_archivo(const std::string& ruta) {
+    std::ifstream f(ruta);
+    if (!f.is_open()) {
+        throw std::runtime_error("Error: No se pudo abrir archivo YAPar '" + ruta + "'");
+    }
+    std::ostringstream ss;
+    ss << f.rdbuf();
+    return ss.str();
+}
+
+std::string eliminarComentariosYapar(const std::string& contenido) {
+    std::string limpio;
+    bool enComentario = false;
+
+    for (size_t i = 0; i < contenido.size(); i++) {
+        if (!enComentario && i + 1 < contenido.size()
+            && contenido[i] == '/' && contenido[i + 1] == '*') {
+            enComentario = true;
+            i++;
+            continue;
+        }
+
+        if (enComentario && i + 1 < contenido.size()
+            && contenido[i] == '*' && contenido[i + 1] == '/') {
+            enComentario = false;
+            i++;
+            continue;
+        }
+
+        if (!enComentario) {
+            limpio += contenido[i];
+        }
+    }
+
+    if (enComentario) {
+        throw std::runtime_error("Error en YAPar: comentario /* sin cierre */");
+    }
+
+    return limpio;
+}
+
+void procesarLineaToken(const std::string& linea, YaparSpec& spec) {
+    std::istringstream iss(linea);
+    std::string palabra;
+
+    iss >> palabra;
+
+    if (palabra != "%token") {
+        return;
+    }
+
+    std::string token;
+    while (iss >> token) {
+        spec.tokensDeclarados.insert(token);
+    }
+}
+
+void procesarLineaIgnore(const std::string& linea, YaparSpec& spec) {
+    std::istringstream iss(linea);
+    std::string palabra;
+
+    iss >> palabra;
+
+    if (palabra != "IGNORE") {
+        return;
+    }
+
+    std::string token;
+    while (iss >> token) {
+        if (token == "$") {
+            throw std::runtime_error("Error en YAPar: no se puede ignorar el símbolo $");
+        }
+        if (spec.tokensDeclarados.count(token) == 0) {
+            throw std::runtime_error("Error en YAPar: el token " + token
+                + " aparece en IGNORE pero no fue declarado con %token");
+        }
+        spec.tokensIgnorados.insert(token);
+    }
+}
+
+std::vector<Produccion> parsearProducciones(
+    const std::string& contenido,
+    const YaparSpec& spec) {
+
+    std::vector<Produccion> producciones;
+    std::string produccionCompleta;
+
+    for (char c : contenido) {
+        if (c == ';') {
+            produccionCompleta = trim(produccionCompleta);
+            if (!produccionCompleta.empty()) {
+                size_t colonPos = produccionCompleta.find(':');
+                if (colonPos != std::string::npos) {
+                    std::string noTerminal = trim(produccionCompleta.substr(0, colonPos));
+                    std::string alternativas = produccionCompleta.substr(colonPos + 1);
+
+                    std::istringstream altStream(alternativas);
+                    std::string linea;
+                    std::vector<std::string> simbolosActuales;
+
+                    while (std::getline(altStream, linea)) {
+                        linea = trim(linea);
+
+                        if (linea.empty()) continue;
+
+                        if (linea[0] == '|') {
+                            if (!simbolosActuales.empty()) {
+                                producciones.emplace_back(noTerminal, simbolosActuales);
+                                simbolosActuales.clear();
+                            }
+                            linea = trim(linea.substr(1));
+                        }
+
+                        if (!linea.empty()) {
+                            std::istringstream symStream(linea);
+                            std::string sym;
+                            while (symStream >> sym) {
+                                if (sym != "|") {
+                                    simbolosActuales.push_back(sym);
+                                }
+                            }
+                        }
+                    }
+
+                    if (!simbolosActuales.empty()) {
+                        producciones.emplace_back(noTerminal, simbolosActuales);
+                    }
+                }
+            }
+            produccionCompleta.clear();
+        } else {
+            produccionCompleta += c;
+        }
+    }
+
+    return producciones;
+}
+
+YaparSpec leerYapar(const std::string& ruta) {
+    std::string contenido = leer_archivo(ruta);
+
+    contenido = eliminarComentariosYapar(contenido);
+
+    size_t separador = contenido.find("%%");
+    if (separador == std::string::npos) {
+        throw std::runtime_error("Error en YAPar: no se encontró separador %%");
+    }
+
+    std::string seccionTokens = contenido.substr(0, separador);
+    std::string seccionProducciones = contenido.substr(separador + 2);
+
+    YaparSpec spec;
+
+    std::istringstream tokenStream(seccionTokens);
+    std::string linea;
+    while (std::getline(tokenStream, linea)) {
+        linea = trim(linea);
+        if (linea.empty()) continue;
+
+        if (linea.find("%token") != std::string::npos) {
+            procesarLineaToken(linea, spec);
+        } else if (linea.find("IGNORE") != std::string::npos) {
+            procesarLineaIgnore(linea, spec);
+        }
+    }
+
+    spec.producciones = parsearProducciones(seccionProducciones, spec);
+
+    if (spec.producciones.empty()) {
+        throw std::runtime_error("Error en YAPar: no se encontraron producciones");
+    }
+
+    spec.simboloInicial = spec.producciones[0].izquierda;
+
+    return spec;
+}
+
+ResultadoLexico filtrarTokensIgnorados(
+    const ResultadoLexico& entrada,
+    const std::set<std::string>& ignorados) {
+
+    ResultadoLexico filtrado;
+
+    for (size_t i = 0; i < entrada.tokens.size(); i++) {
+        const Token& token = entrada.tokens[i];
+
+        if (token.id == "$") {
+            filtrado.tokens.push_back(token);
+            filtrado.posiciones.push_back(entrada.posiciones[i]);
+            continue;
+        }
+
+        if (ignorados.count(token.id) > 0) {
+            continue;
+        }
+
+        filtrado.tokens.push_back(token);
+        filtrado.posiciones.push_back(entrada.posiciones[i]);
+    }
+
+    if (filtrado.tokens.empty() || filtrado.tokens.back().id != "$") {
+        filtrado.tokens.push_back({"$", "$"});
+        filtrado.posiciones.push_back({-1, -1});
+    }
+
+    return filtrado;
+}
+
+Gramatica construirGramatica(const YaparSpec& spec) {
+    Gramatica g;
+
+    g.terminales = spec.tokensDeclarados;
+    g.terminales.insert("$");
+
+    for (const auto& prod : spec.producciones) {
+        g.noTerminales.insert(prod.izquierda);
+    }
+
+    g.producciones = spec.producciones;
+    g.simboloInicial = spec.simboloInicial;
+
+    validarGramatica(g);
+
+    return g;
+}
