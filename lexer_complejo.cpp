@@ -1,7 +1,8 @@
 /*
  * Analizador Lexico generado desde YALex
- * Compilar: g++ -std=c++17 -o lexer_complejo lexer_complejo.cpp
- * Uso: ./lexer_complejo <archivo_entrada>
+ * Compilar standalone: g++ -std=c++17 -o lexer_complejo lexer_complejo.cpp
+ * Compilar con orquestador: g++ -std=c++17 -DCOMPILAR_CON_ORQUESTADOR lexer_complejo.cpp orquestador.cpp ...
+ * Uso standalone: ./lexer_complejo <archivo_entrada>
  */
 
 #include <iostream>
@@ -1577,12 +1578,14 @@ void analizar(const std::string& entrada) {
     std::cout<<"\nAnalisis lexico completado.\n";
 }
 
+#ifndef COMPILAR_CON_ORQUESTADOR
 int main(int argc,char*argv[]){
     if(argc!=2){std::cerr<<"Uso: "<<argv[0]<<" <archivo>\n";return 1;}
     std::ifstream f(argv[1]);if(!f.is_open()){std::cerr<<"Error: "<<argv[1]<<"\n";return 1;}
     std::ostringstream ss;ss<<f.rdbuf();std::string e=ss.str();
     std::cout<<"=== ANALIZADOR LEXICO ===\n";analizar(e);return 0;
 }
+#endif
 
 // === TRAILER ===
 // Trailer

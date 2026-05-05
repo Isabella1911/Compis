@@ -241,8 +241,6 @@ static std::string expandir_conjunto_yalex(const std::string& contenido_set, boo
 }
 
 static std::string expandir_wildcard_global() {
-    // Comodín global "_" fuera de sets.
-    // Reutiliza la misma convención de wildcard usada dentro de conjuntos.
     return expandir_conjunto_yalex("_", false);
 }
 
@@ -269,7 +267,6 @@ static std::string expandir_definicion(
     if (raw_it == raw_map.end()) { std::cerr << "Advertencia: '" << nombre << "' no definido.\n"; return nombre; }
     en_expansion.insert(nombre);
 
-    // Pre-expandir dependencias
     std::string src = trim(raw_it->second);
     size_t i = 0;
     while (i < src.size()) {
@@ -456,7 +453,6 @@ ArchivoYalex parsear_yalex(const std::string& ruta) {
 // ╚══════════════════════════════════════════════════════════════╝
 
 static std::string construir_mega_regex(const std::vector<ReglaLexica>& reglas) {
-    // (regex_0.#T0#)|(regex_1.#T1#)|...
     std::string mega;
     for (size_t i = 0; i < reglas.size(); i++) {
         if (i > 0) mega += "|";
@@ -470,7 +466,6 @@ void fase2_expandir_y_unificar(ArchivoYalex& yalex) {
     std::cout << "║  FASE 2: EXPANSIÓN DE MACROS Y MEGA-REGEX           ║\n";
     std::cout << "╚══════════════════════════════════════════════════════╝\n\n";
 
-    // 1) Expandir todas las definiciones let recursivamente
     std::cout << "--- Expansión recursiva de definiciones let ---\n\n";
     expandir_todas_definiciones(yalex.definiciones_raw, yalex.definiciones_expandidas);
     for (auto& [nombre, rx] : yalex.definiciones_raw) {
@@ -482,7 +477,6 @@ void fase2_expandir_y_unificar(ArchivoYalex& yalex) {
         }
     }
 
-    // 2) Expandir cada regla léxica
     std::cout << "--- Expansión de patrones de reglas léxicas ---\n\n";
     for (size_t i = 0; i < yalex.reglas.size(); i++) {
         yalex.reglas[i].regex_expandida = expandir_regex_yalex(yalex.reglas[i].regex_original, yalex.definiciones_expandidas);
@@ -491,13 +485,11 @@ void fase2_expandir_y_unificar(ArchivoYalex& yalex) {
         std::cout << "    Expandida: " << yalex.reglas[i].regex_expandida << "\n\n";
     }
 
-    // 3) Mega-regex unificada
     std::cout << "--- Mega-regex unificada ---\n\n";
     yalex.mega_regex = construir_mega_regex(yalex.reglas);
     if (yalex.mega_regex.size() <= 500) std::cout << "  " << yalex.mega_regex << "\n\n";
     else std::cout << "  (" << yalex.mega_regex.size() << " chars, truncado)\n  " << yalex.mega_regex.substr(0,200) << " ...\n\n";
 
-    // Tabla de tokens
     std::cout << "  Tabla de tokens:\n";
     std::cout << "  " << std::string(55, '-') << "\n";
     std::cout << "  " << std::left << std::setw(5) << "ID" << std::setw(18) << "Token" << "Acción\n";
@@ -589,7 +581,6 @@ AFN construir_thompson_afn(std::shared_ptr<NodoAST> ast) {
         if(n->valor=="."){auto l=B(n->izq);auto r=B(n->der);l.fin->agregar_transicion("ε",r.inicio);return{l.inicio,r.fin};}
         if(n->valor=="|"){auto l=B(n->izq);auto r=B(n->der);auto* s=afn.nuevo_estado();auto* f=afn.nuevo_estado();s->agregar_transicion("ε",l.inicio);s->agregar_transicion("ε",r.inicio);l.fin->agregar_transicion("ε",f);r.fin->agregar_transicion("ε",f);return{s,f};}
         if(n->valor=="#"){
-            // Diferencia de lenguajes: L(izq) \ L(der) por producto de AFDs.
             AFN afn_izq=construir_thompson_afn(n->izq);
             AFN afn_der=construir_thompson_afn(n->der);
             AFD afd_izq=construir_afd_subconjuntos(afn_izq);
@@ -628,122 +619,72 @@ AFD construir_afd_subconjuntos(AFN& afn) {
 static void completar_afd(AFD& afd, const std::set<std::string>& alfabeto_universo) {
     afd.alfabeto=alfabeto_universo;
     if(!afd.estado_inicial) return;
-
     EstadoAFD* sink=nullptr;
     auto asegurar_sink=[&]() -> EstadoAFD* {
         if(sink) return sink;
         sink=afd.nuevo_estado({});
-        sink->es_final=false;
-        sink->token_id=-1;
+        sink->es_final=false; sink->token_id=-1;
         for(const auto& s:alfabeto_universo) sink->transiciones[s]=sink;
         return sink;
     };
-
     std::vector<EstadoAFD*> estados_actuales;
     estados_actuales.reserve(afd.estados.size());
     for(auto& up:afd.estados) estados_actuales.push_back(up.get());
-    for(auto* e:estados_actuales){
-        for(const auto& s:alfabeto_universo){
+    for(auto* e:estados_actuales)
+        for(const auto& s:alfabeto_universo)
             if(!e->transiciones.count(s)) e->transiciones[s]=asegurar_sink();
-        }
-    }
 }
 
 static AFD diferencia_afd(AFD& izquierdo, AFD& derecho) {
     std::set<std::string> alfabeto=izquierdo.alfabeto;
     alfabeto.insert(derecho.alfabeto.begin(), derecho.alfabeto.end());
-    completar_afd(izquierdo, alfabeto);
-    completar_afd(derecho, alfabeto);
-
-    AFD diff;
-    diff.alfabeto=alfabeto;
+    completar_afd(izquierdo, alfabeto); completar_afd(derecho, alfabeto);
+    AFD diff; diff.alfabeto=alfabeto;
     if(!izquierdo.estado_inicial || !derecho.estado_inicial) return diff;
-
     std::map<std::pair<int,int>, EstadoAFD*> visitados;
     std::map<EstadoAFD*, std::pair<EstadoAFD*,EstadoAFD*>> origen;
     std::queue<EstadoAFD*> cola;
-
     auto crear_estado=[&](EstadoAFD* li, EstadoAFD* de)->std::pair<EstadoAFD*,bool>{
         std::pair<int,int> key={li->id,de->id};
-        auto it=visitados.find(key);
-        if(it!=visitados.end()) return {it->second,false};
+        auto it=visitados.find(key); if(it!=visitados.end()) return {it->second,false};
         auto* q=diff.nuevo_estado({});
-        q->es_final=li->es_final && !de->es_final;
-        q->token_id=q->es_final?0:-1;
+        q->es_final=li->es_final && !de->es_final; q->token_id=q->es_final?0:-1;
         if(q->es_final) diff.estados_finales.push_back(q);
-        visitados[key]=q;
-        origen[q]={li,de};
-        return {q,true};
+        visitados[key]=q; origen[q]={li,de}; return {q,true};
     };
-
     auto ini=crear_estado(izquierdo.estado_inicial, derecho.estado_inicial);
-    diff.estado_inicial=ini.first;
-    cola.push(ini.first);
-
+    diff.estado_inicial=ini.first; cola.push(ini.first);
     while(!cola.empty()){
-        auto* cur=cola.front(); cola.pop();
-        auto src=origen[cur];
+        auto* cur=cola.front(); cola.pop(); auto src=origen[cur];
         for(const auto& s:alfabeto){
             auto it_l=src.first->transiciones.find(s);
             auto it_r=src.second->transiciones.find(s);
             if(it_l==src.first->transiciones.end() || it_r==src.second->transiciones.end()) continue;
             auto dst=crear_estado(it_l->second, it_r->second);
-            cur->transiciones[s]=dst.first;
-            if(dst.second) cola.push(dst.first);
+            cur->transiciones[s]=dst.first; if(dst.second) cola.push(dst.first);
         }
     }
     return diff;
 }
 
 static AFN convertir_afd_a_afn(const AFD& afd) {
-    AFN r;
-    r.alfabeto=afd.alfabeto;
+    AFN r; r.alfabeto=afd.alfabeto;
     if(!afd.estado_inicial) return r;
-
     std::map<const EstadoAFD*, EstadoAFN*> m;
-    for(const auto& up:afd.estados){
-        auto* n=r.nuevo_estado();
-        n->es_final=false;
-        n->token_id=-1;
-        m[up.get()]=n;
-    }
+    for(const auto& up:afd.estados){auto* n=r.nuevo_estado();n->es_final=false;n->token_id=-1;m[up.get()]=n;}
     r.estado_inicial=m[afd.estado_inicial];
-    for(const auto& up:afd.estados){
-        auto* src=m[up.get()];
-        for(const auto& tr:up->transiciones) src->agregar_transicion(tr.first, m[tr.second]);
-    }
-
-    auto* fin_unico=r.nuevo_estado();
-    fin_unico->es_final=true;
-    fin_unico->token_id=-1;
-    r.estados_finales.push_back(fin_unico);
-    for(const auto& up:afd.estados){
-        if(up->es_final) m[up.get()]->agregar_transicion("ε", fin_unico);
-    }
+    for(const auto& up:afd.estados){auto* src=m[up.get()];for(const auto& tr:up->transiciones)src->agregar_transicion(tr.first,m[tr.second]);}
+    auto* fin_unico=r.nuevo_estado(); fin_unico->es_final=true; fin_unico->token_id=-1; r.estados_finales.push_back(fin_unico);
+    for(const auto& up:afd.estados) if(up->es_final) m[up.get()]->agregar_transicion("ε",fin_unico);
     return r;
 }
 
 static FragmentoAFN importar_fragmento_desde_afn(AFN& destino, const AFN& origen) {
-    if(!origen.estado_inicial || origen.estados_finales.empty()){
-        auto* s=destino.nuevo_estado();
-        auto* f=destino.nuevo_estado();
-        return {s,f};
-    }
-
+    if(!origen.estado_inicial || origen.estados_finales.empty()){auto* s=destino.nuevo_estado();auto* f=destino.nuevo_estado();return {s,f};}
     const EstadoAFN* fin_origen=origen.estados_finales.front();
     std::map<const EstadoAFN*, EstadoAFN*> m;
-    for(const auto& up:origen.estados){
-        auto* n=destino.nuevo_estado();
-        n->es_final=false;
-        n->token_id=-1;
-        m[up.get()]=n;
-    }
-    for(const auto& up:origen.estados){
-        auto* src=m[up.get()];
-        for(const auto& tr:up->transiciones){
-            for(auto* d:tr.second) src->agregar_transicion(tr.first, m[d]);
-        }
-    }
+    for(const auto& up:origen.estados){auto* n=destino.nuevo_estado();n->es_final=false;n->token_id=-1;m[up.get()]=n;}
+    for(const auto& up:origen.estados){auto* src=m[up.get()];for(const auto& tr:up->transiciones)for(auto* d:tr.second)src->agregar_transicion(tr.first,m[d]);}
     for(const auto& s:origen.alfabeto) destino.agregar_simbolo(s);
     return {m[origen.estado_inicial], m[fin_origen]};
 }
@@ -908,8 +849,9 @@ AFN construir_afn_combinado(const std::vector<ReglaLexica>& reglas) {
 void generar_analizador_lexico(const ArchivoYalex& yalex, AFD& afd_min, const std::string& nombre_salida) {
     std::ofstream out(nombre_salida+".cpp");
     out<<"/*\n * Analizador Lexico generado desde YALex\n";
-    out<<" * Compilar: g++ -std=c++17 -o "<<nombre_salida<<" "<<nombre_salida<<".cpp\n";
-    out<<" * Uso: ./"<<nombre_salida<<" <archivo_entrada>\n */\n\n";
+    out<<" * Compilar standalone: g++ -std=c++17 -o "<<nombre_salida<<" "<<nombre_salida<<".cpp\n";
+    out<<" * Compilar con orquestador: g++ -std=c++17 -DCOMPILAR_CON_ORQUESTADOR "<<nombre_salida<<".cpp orquestador.cpp ...\n";
+    out<<" * Uso standalone: ./"<<nombre_salida<<" <archivo_entrada>\n */\n\n";
     out<<"#include <iostream>\n#include <fstream>\n#include <string>\n#include <sstream>\n#include <vector>\n#include \"Token.cpp\"\n\n";
     if(!yalex.header.empty())out<<"// === HEADER ===\n"<<yalex.header<<"\n// === FIN HEADER ===\n\n";
 
@@ -983,11 +925,20 @@ void generar_analizador_lexico(const ArchivoYalex& yalex, AFD& afd_min, const st
     out<<"    std::cout<<\"\\nAnalisis lexico completado.\\n\";\n";
     out<<"}\n\n";
 
+    // ── ÚNICO CAMBIO RESPECTO AL ORIGINAL ────────────────────────────────────
+    // El main del lexer generado se envuelve con una guardia de preprocesador.
+    // Sin la flag: el lexer funciona igual que siempre como standalone.
+    // Con -DCOMPILAR_CON_ORQUESTADOR: el main se suprime y el linker puede
+    // unir este .cpp con orquestador.cpp sin conflicto de main duplicado.
+    out<<"#ifndef COMPILAR_CON_ORQUESTADOR\n";
     out<<"int main(int argc,char*argv[]){\n";
     out<<"    if(argc!=2){std::cerr<<\"Uso: \"<<argv[0]<<\" <archivo>\\n\";return 1;}\n";
     out<<"    std::ifstream f(argv[1]);if(!f.is_open()){std::cerr<<\"Error: \"<<argv[1]<<\"\\n\";return 1;}\n";
     out<<"    std::ostringstream ss;ss<<f.rdbuf();std::string e=ss.str();\n";
     out<<"    std::cout<<\"=== ANALIZADOR LEXICO ===\\n\";analizar(e);return 0;\n}\n";
+    out<<"#endif\n";
+    // ─────────────────────────────────────────────────────────────────────────
+
     if(!yalex.trailer.empty())out<<"\n// === TRAILER ===\n"<<yalex.trailer<<"\n// === FIN TRAILER ===\n";
     out.close();
     std::cout<<"  Generado: "<<nombre_salida<<".cpp\n";
@@ -1011,22 +962,18 @@ int main(int argc, char* argv[]) {
     std::cout<<"║   Fases 1-2: Parser + Expansión + Mega-regex        ║\n";
     std::cout<<"╚══════════════════════════════════════════════════════╝\n\n";
 
-    // ── FASE 1 ──
     ArchivoYalex yalex = parsear_yalex(archivo_yal);
     if(yalex.reglas.empty()){std::cerr<<"Error: No se encontraron reglas.\n";return 1;}
     std::cout<<"\n  Resumen Fase 1: "<<yalex.definiciones_raw.size()<<" defs, "<<yalex.reglas.size()<<" reglas, rule="<<yalex.nombre_regla<<"\n";
 
-    // ── FASE 2 ──
     fase2_expandir_y_unificar(yalex);
 
-    // ASTs individuales por regla
     std::cout<<"\n--- Árboles de expresión por regla ---\n";
     for(size_t i=0;i<yalex.reglas.size();i++){
         auto ast=regex_a_ast(yalex.reglas[i].regex_expandida);
         if(ast)dibujar_ast(ast,"ast_regla_"+std::to_string(i),"Regla "+std::to_string(i)+": "+yalex.reglas[i].nombre_token);
     }
 
-    // AST combinado (mega-regex con marcadores)
     std::cout<<"\n--- Árbol de expresión combinado (mega-regex) ---\n";
     {
         std::shared_ptr<NodoAST> combinado=nullptr;
@@ -1041,7 +988,6 @@ int main(int argc, char* argv[]) {
         if(combinado)dibujar_ast(combinado,"ast_combinado","Arbol de Expresion Combinado");
     }
 
-    // ── FASE 3: Autómatas ──
     std::cout<<"\n╔══════════════════════════════════════════════════════╗\n";
     std::cout<<"║  CONSTRUCCIÓN DE AUTÓMATAS                          ║\n";
     std::cout<<"╚══════════════════════════════════════════════════════╝\n\n";
@@ -1057,7 +1003,6 @@ int main(int argc, char* argv[]) {
     std::cout<<"\n";
     dibujar_afd(afd_min,"afd_min_lexer"); std::cout<<"  output/afd_min_lexer.dot\n";
 
-    // ── Generación ──
     std::cout<<"\n--- Generando analizador léxico ---\n";
     generar_analizador_lexico(yalex,afd_min,nombre_salida);
 
@@ -1069,5 +1014,3 @@ int main(int argc, char* argv[]) {
     std::cout<<"  ast_combinado.dot\n  afd_lexer.dot\n  afd_min_lexer.dot\n  "<<nombre_salida<<".cpp\n";
     return 0;
 }
-
-

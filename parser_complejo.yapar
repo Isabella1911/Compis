@@ -1,0 +1,79 @@
+/* parser_complejo.yapar
+ * Gramática para el mini-lenguaje reconocido por lexer_complejo.yal
+ *
+ * Tokens producidos por el lexer (return lexbuf y EOL son silenciosos,
+ * no llegan al parser, por eso no se declaran aquí).
+ */
+
+%token NUMBER IF ELSE WHILE RETURN ID
+%token EQ NEQ LEQ GEQ PLUS MINUS TIMES DIV
+%token ASSIGN LT GT LPAREN RPAREN LBRACE RBRACE SEMICOLON COMMA
+
+%%
+
+/* Un programa es una lista de sentencias */
+programa:
+    lista_sentencias
+;
+
+lista_sentencias:
+    sentencia lista_sentencias
+  | sentencia
+;
+
+sentencia:
+    sentencia_if
+  | sentencia_while
+  | sentencia_return
+  | sentencia_asignacion
+  | sentencia_expr
+;
+
+sentencia_if:
+    IF LPAREN expr RPAREN bloque
+;
+
+sentencia_while:
+    WHILE LPAREN expr RPAREN bloque
+;
+
+sentencia_return:
+    RETURN expr SEMICOLON
+;
+
+sentencia_asignacion:
+    ID ASSIGN expr SEMICOLON
+;
+
+sentencia_expr:
+    expr SEMICOLON
+;
+
+bloque:
+    LBRACE lista_sentencias RBRACE
+;
+
+/* Expresiones aritméticas y relacionales */
+expr:
+    expr PLUS termino
+  | expr MINUS termino
+  | expr EQ termino
+  | expr NEQ termino
+  | expr LT termino
+  | expr GT termino
+  | expr LEQ termino
+  | expr GEQ termino
+  | termino
+;
+
+termino:
+    termino TIMES factor
+  | termino DIV factor
+  | factor
+;
+
+factor:
+    LPAREN expr RPAREN
+  | ID
+  | NUMBER
+;
