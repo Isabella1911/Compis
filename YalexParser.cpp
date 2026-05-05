@@ -910,7 +910,7 @@ void generar_analizador_lexico(const ArchivoYalex& yalex, AFD& afd_min, const st
     out<<"/*\n * Analizador Lexico generado desde YALex\n";
     out<<" * Compilar: g++ -std=c++17 -o "<<nombre_salida<<" "<<nombre_salida<<".cpp\n";
     out<<" * Uso: ./"<<nombre_salida<<" <archivo_entrada>\n */\n\n";
-    out<<"#include <iostream>\n#include <fstream>\n#include <string>\n#include <sstream>\n\n";
+    out<<"#include <iostream>\n#include <fstream>\n#include <string>\n#include <sstream>\n#include <vector>\n#include \"Token.cpp\"\n\n";
     if(!yalex.header.empty())out<<"// === HEADER ===\n"<<yalex.header<<"\n// === FIN HEADER ===\n\n";
 
     out<<"const char* TOKEN_NAMES[] = {\n";
@@ -940,26 +940,48 @@ void generar_analizador_lexico(const ArchivoYalex& yalex, AFD& afd_min, const st
     for(auto&up:afd_min.estados){auto*e=up.get();if(e->es_final&&e->token_id>=0)out<<"    token_aceptado["<<e->id<<"]="<<e->token_id<<";\n";}
     out<<"}\n\n";
 
-    out<<"void analizar(const std::string& entrada) {\n";
-    out<<"    init_char_to_sym(); init_tablas();\n";
-    out<<"    size_t pos=0; int linea=1,columna=1;\n";
+    out<<"ResultadoLexico analizar_tokens(const std::string& entrada) {\n";
+    out<<"    ResultadoLexico resultado;\n";
+    out<<"    init_char_to_sym();\n";
+    out<<"    init_tablas();\n";
+    out<<"    size_t pos=0;\n";
+    out<<"    int linea=1, columna=1;\n";
     out<<"    while(pos<entrada.size()) {\n";
-    out<<"        int ea=ESTADO_INICIAL; size_t uap=pos; int ut=-1; size_t i=pos;\n";
+    out<<"        int linea_inicio=linea, columna_inicio=columna;\n";
+    out<<"        int ea=ESTADO_INICIAL;\n";
+    out<<"        size_t uap=pos;\n";
+    out<<"        int ut=-1;\n";
+    out<<"        size_t i=pos;\n";
     out<<"        while(i<entrada.size()){int sy=char_to_sym[(unsigned char)entrada[i]];if(sy<0)break;int sg=transicion[ea][sy];if(sg<0)break;ea=sg;i++;if(token_aceptado[ea]>=0){uap=i;ut=token_aceptado[ea];}}\n";
     out<<"        if(ut>=0&&uap>pos){\n";
     out<<"            std::string lex=entrada.substr(pos,uap-pos);\n";
     out<<"            std::string ac=TOKEN_ACTIONS[ut];\n";
     out<<"            if(std::string(ac).find(\"return lexbuf\")==std::string::npos&&std::string(ac).find(\"return EOL\")==std::string::npos){\n";
-    out<<"                std::string lp;for(char c:lex){if(c=='\\n')lp+=\"\\\\n\";else if(c=='\\t')lp+=\"\\\\t\";else lp+=c;}\n";
-    out<<"                std::cout<<\"Token: \"<<TOKEN_NAMES[ut]<<\"  Lexema: '\"<<lp<<\"'  Linea: \"<<linea<<\"  Col: \"<<columna<<\"\\n\";\n";
+    out<<"                resultado.tokens.push_back({TOKEN_NAMES[ut], lex});\n";
+    out<<"                resultado.posiciones.push_back({linea_inicio, columna_inicio});\n";
     out<<"            }\n";
     out<<"            for(size_t k=pos;k<uap;k++){if(entrada[k]=='\\n'){linea++;columna=1;}else columna++;}\n";
     out<<"            pos=uap;\n";
     out<<"        } else {\n";
     out<<"            std::cerr<<\"ERROR LEXICO: '\"<<entrada[pos]<<\"' (\"<<(int)(unsigned char)entrada[pos]<<\") linea \"<<linea<<\" col \"<<columna<<\"\\n\";\n";
     out<<"            if(entrada[pos]=='\\n'){linea++;columna=1;}else columna++; pos++;\n";
-    out<<"        }\n    }\n";
-    out<<"    std::cout<<\"\\nAnalisis lexico completado.\\n\";\n}\n\n";
+    out<<"        }\n";
+    out<<"    }\n";
+    out<<"    resultado.tokens.push_back({\"$\", \"$\"});\n";
+    out<<"    resultado.posiciones.push_back({linea, columna});\n";
+    out<<"    return resultado;\n";
+    out<<"}\n\n";
+
+    out<<"void analizar(const std::string& entrada) {\n";
+    out<<"    ResultadoLexico resultado=analizar_tokens(entrada);\n";
+    out<<"    for(size_t i=0;i<resultado.tokens.size();i++){\n";
+    out<<"        const Token& token=resultado.tokens[i];\n";
+    out<<"        if(token.id==\"$\") continue;\n";
+    out<<"        std::string lp;for(char c:token.valor){if(c=='\\n')lp+=\"\\\\n\";else if(c=='\\t')lp+=\"\\\\t\";else lp+=c;}\n";
+    out<<"        std::cout<<\"Token: \"<<token.id<<\"  Lexema: '\"<<lp<<\"'  Linea: \"<<resultado.posiciones[i].linea<<\"  Col: \"<<resultado.posiciones[i].columna<<\"\\n\";\n";
+    out<<"    }\n";
+    out<<"    std::cout<<\"\\nAnalisis lexico completado.\\n\";\n";
+    out<<"}\n\n";
 
     out<<"int main(int argc,char*argv[]){\n";
     out<<"    if(argc!=2){std::cerr<<\"Uso: \"<<argv[0]<<\" <archivo>\\n\";return 1;}\n";

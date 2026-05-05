@@ -8,6 +8,8 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <vector>
+#include "Token.cpp"
 
 // === HEADER ===
 // Header: includes necesarios
@@ -111,18 +113,25 @@ void init_tablas() {
     token_aceptado[8]=2;
 }
 
-void analizar(const std::string& entrada) {
-    init_char_to_sym(); init_tablas();
-    size_t pos=0; int linea=1,columna=1;
+ResultadoLexico analizar_tokens(const std::string& entrada) {
+    ResultadoLexico resultado;
+    init_char_to_sym();
+    init_tablas();
+    size_t pos=0;
+    int linea=1, columna=1;
     while(pos<entrada.size()) {
-        int ea=ESTADO_INICIAL; size_t uap=pos; int ut=-1; size_t i=pos;
+        int linea_inicio=linea, columna_inicio=columna;
+        int ea=ESTADO_INICIAL;
+        size_t uap=pos;
+        int ut=-1;
+        size_t i=pos;
         while(i<entrada.size()){int sy=char_to_sym[(unsigned char)entrada[i]];if(sy<0)break;int sg=transicion[ea][sy];if(sg<0)break;ea=sg;i++;if(token_aceptado[ea]>=0){uap=i;ut=token_aceptado[ea];}}
         if(ut>=0&&uap>pos){
             std::string lex=entrada.substr(pos,uap-pos);
             std::string ac=TOKEN_ACTIONS[ut];
             if(std::string(ac).find("return lexbuf")==std::string::npos&&std::string(ac).find("return EOL")==std::string::npos){
-                std::string lp;for(char c:lex){if(c=='\n')lp+="\\n";else if(c=='\t')lp+="\\t";else lp+=c;}
-                std::cout<<"Token: "<<TOKEN_NAMES[ut]<<"  Lexema: '"<<lp<<"'  Linea: "<<linea<<"  Col: "<<columna<<"\n";
+                resultado.tokens.push_back({TOKEN_NAMES[ut], lex});
+                resultado.posiciones.push_back({linea_inicio, columna_inicio});
             }
             for(size_t k=pos;k<uap;k++){if(entrada[k]=='\n'){linea++;columna=1;}else columna++;}
             pos=uap;
@@ -130,6 +139,19 @@ void analizar(const std::string& entrada) {
             std::cerr<<"ERROR LEXICO: '"<<entrada[pos]<<"' ("<<(int)(unsigned char)entrada[pos]<<") linea "<<linea<<" col "<<columna<<"\n";
             if(entrada[pos]=='\n'){linea++;columna=1;}else columna++; pos++;
         }
+    }
+    resultado.tokens.push_back({"$", "$"});
+    resultado.posiciones.push_back({linea, columna});
+    return resultado;
+}
+
+void analizar(const std::string& entrada) {
+    ResultadoLexico resultado=analizar_tokens(entrada);
+    for(size_t i=0;i<resultado.tokens.size();i++){
+        const Token& token=resultado.tokens[i];
+        if(token.id=="$") continue;
+        std::string lp;for(char c:token.valor){if(c=='\n')lp+="\\n";else if(c=='\t')lp+="\\t";else lp+=c;}
+        std::cout<<"Token: "<<token.id<<"  Lexema: '"<<lp<<"'  Linea: "<<resultado.posiciones[i].linea<<"  Col: "<<resultado.posiciones[i].columna<<"\n";
     }
     std::cout<<"\nAnalisis lexico completado.\n";
 }
