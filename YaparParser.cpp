@@ -261,3 +261,75 @@ Gramatica construirGramatica(const YaparSpec& spec) {
 
     return g;
 }
+
+// ── Validaciones (Avance 4) ───────────────────────────────────────────────────
+
+void validarTokensDeEntrada(
+    const std::vector<Token>& tokens,
+    const std::vector<TokenPosicion>& posiciones,
+    const YaparSpec& spec)
+{
+    for (size_t i = 0; i < tokens.size(); i++) {
+        const Token& token = tokens[i];
+
+        if (token.id == "$") continue;
+
+        if (spec.tokensDeclarados.count(token.id) == 0) {
+            std::cerr << "Error: el token producido por YALex no fue declarado en YAPar: "
+                      << token.id
+                      << " con valor '" << token.valor << "'";
+
+            if (i < posiciones.size()) {
+                std::cerr << " en linea " << posiciones[i].linea
+                          << ", columna " << posiciones[i].columna;
+            }
+
+            std::cerr << "\n";
+        }
+    }
+}
+
+void validarTokensIgnorados(const YaparSpec& spec) {
+    for (const std::string& ignorado : spec.tokensIgnorados) {
+        if (ignorado == "$") {
+            throw std::runtime_error(
+                "Error en YAPar: no se puede ignorar el token final $"
+            );
+        }
+        if (spec.tokensDeclarados.count(ignorado) == 0) {
+            throw std::runtime_error(
+                "Error en YAPar: el token " + ignorado
+                + " aparece en IGNORE pero no fue declarado con %token"
+            );
+        }
+    }
+}
+
+void advertirTokensDeclaradosNoUsados(
+    const std::vector<Token>& tokens,
+    const YaparSpec& spec)
+{
+    std::set<std::string> producidos;
+    for (const Token& token : tokens) {
+        if (token.id != "$") producidos.insert(token.id);
+    }
+
+    for (const std::string& declarado : spec.tokensDeclarados) {
+        if (spec.tokensIgnorados.count(declarado) > 0) continue;
+        if (producidos.count(declarado) == 0) {
+            std::cerr << "Advertencia: el token " << declarado
+                      << " fue declarado en YAPar pero no aparece en esta entrada\n";
+        }
+    }
+}
+
+std::set<std::string> terminalesParaParsing(const YaparSpec& spec) {
+    std::set<std::string> resultado;
+    for (const std::string& token : spec.tokensDeclarados) {
+        if (spec.tokensIgnorados.count(token) == 0) {
+            resultado.insert(token);
+        }
+    }
+    resultado.insert("$");
+    return resultado;
+}
