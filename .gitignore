@@ -4,12 +4,6 @@
 *.exe
 output/
 .vscode/
-build_yalex.log
+
 _tmp_test.cpp
 *.o
-main_avance2
-main_avance3
-parser
-yalex_parser
-lexer_complejo.cpp
-mi_lexer.cpp
