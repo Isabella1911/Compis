@@ -7,3 +7,7 @@ output/
 
 _tmp_test.cpp
 *.o
+
+__pycache__/
+*.pyc
+*.pyo
