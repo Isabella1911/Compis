@@ -1,0 +1,21 @@
+(* ejemplo.yal - Archivo de prueba YALex *)
+(* Analizador léxico para expresiones aritméticas simples *)
+
+{
+// Header: includes necesarios
+}
+
+let delim = [' ' '\t']
+let digits = ['0'-'9']+
+let letter = ['a'-'z' 'A'-'Z']
+
+rule gettoken =
+  [' ' '\t']       { return lexbuf }
+| ['\n']           { return EOL }
+| ['0'-'9']+       { return int(lxm) }
+| '+'              { return PLUS }
+| '-'              { return MINUS }
+| '*'              { return TIMES }
+| '/'              { return DIV }
+| '('              { return LPAREN }
+| ')'              { return RPAREN }

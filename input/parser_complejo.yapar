@@ -1,8 +1,8 @@
 /* parser_complejo.yapar
  * Gramática para el mini-lenguaje reconocido por lexer_complejo.yal
- *
- * Tokens producidos por el lexer (return lexbuf y EOL son silenciosos,
- * no llegan al parser, por eso no se declaran aquí).
+ * Cubre todos los tokens: IF ELSE WHILE RETURN ID NUMBER
+ * EQ NEQ LEQ GEQ LT GT PLUS MINUS TIMES DIV ASSIGN
+ * LPAREN RPAREN LBRACE RBRACE SEMICOLON COMMA
  */
 
 %token NUMBER IF ELSE WHILE RETURN ID
@@ -11,7 +11,6 @@
 
 %%
 
-/* Un programa es una lista de sentencias */
 programa:
     lista_sentencias
 ;
@@ -23,6 +22,7 @@ lista_sentencias:
 
 sentencia:
     sentencia_if
+  | sentencia_if_else
   | sentencia_while
   | sentencia_return
   | sentencia_asignacion
@@ -31,6 +31,10 @@ sentencia:
 
 sentencia_if:
     IF LPAREN expr RPAREN bloque
+;
+
+sentencia_if_else:
+    IF LPAREN expr RPAREN bloque ELSE bloque
 ;
 
 sentencia_while:
@@ -53,7 +57,6 @@ bloque:
     LBRACE lista_sentencias RBRACE
 ;
 
-/* Expresiones aritméticas y relacionales */
 expr:
     expr PLUS termino
   | expr MINUS termino
@@ -63,6 +66,7 @@ expr:
   | expr GT termino
   | expr LEQ termino
   | expr GEQ termino
+  | expr COMMA termino
   | termino
 ;
 
