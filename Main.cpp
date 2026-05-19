@@ -11,7 +11,8 @@
  *       -o compilador
  *
  * Uso:
- *   ./compilador <archivo.yal> <archivo.yapar> <archivo_entrada>
+ *   ./compilador                                      (menu interactivo)
+ *   ./compilador <archivo.yal> <archivo.yapar> <entrada>
  */
 
 #include "lexer/YalexParser.h"
@@ -28,17 +29,47 @@
 #include <map>
 #include <vector>
 
-// ── Estructuras ───────────────────────────────────────────────────────────────
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  Estructuras                                                ║
+// ╚══════════════════════════════════════════════════════════════╝
 
 struct EntradaSimbolo {
     std::string nombre;
     int         apariciones = 0;
-    std::vector<std::pair<int,int>> posiciones; // {linea, columna}
 };
 
 using TablaSimbolos = std::map<std::string, EntradaSimbolo>;
 
-// ── Utilidades ────────────────────────────────────────────────────────────────
+struct ConjuntoArchivos {
+    std::string nombre;
+    std::string yal;
+    std::string yapar;
+    std::string entrada;
+};
+
+struct ResultadoPipeline {
+    ArchivoYalex     yalex;
+    AFD              afd_min;
+    ResultadoLexico  salidaLexer;
+    ResultadoLexico  filtrada;
+    TablaSimbolos    tablaSimbolos;
+    Gramatica        gramatica;
+    MapaFirst        first;
+    MapaFollow       follow;
+    ResultadoTablaLL1 tablaLL1;
+    bool             parseExito = false;
+    int              parseSteps = 0;
+};
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  Utilidades de impresion                                    ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+static void separador(const std::string& titulo) {
+    std::cout << "\n==================================================\n";
+    std::cout << "  " << titulo << "\n";
+    std::cout << "==================================================\n";
+}
 
 static std::string leerArchivo(const std::string& ruta) {
     std::ifstream f(ruta);
@@ -47,12 +78,6 @@ static std::string leerArchivo(const std::string& ruta) {
     std::ostringstream ss;
     ss << f.rdbuf();
     return ss.str();
-}
-
-static void separador(const std::string& titulo) {
-    std::cout << "\n==================================================\n";
-    std::cout << "  " << titulo << "\n";
-    std::cout << "==================================================\n";
 }
 
 static void imprimirTokens(const ResultadoLexico& rl, const std::string& etiqueta) {
@@ -69,18 +94,21 @@ static void imprimirTokens(const ResultadoLexico& rl, const std::string& etiquet
 
 static void imprimirGramatica(const Gramatica& g) {
     std::cout << "Simbolo inicial: " << g.simboloInicial << "\n\n";
+
     std::cout << "Terminales: ";
     bool primero = true;
     for (const auto& t : g.terminales) {
         if (!primero) std::cout << ", ";
         std::cout << t; primero = false;
     }
+
     std::cout << "\n\nNo terminales: ";
     primero = true;
     for (const auto& nt : g.noTerminales) {
         if (!primero) std::cout << ", ";
         std::cout << nt; primero = false;
     }
+
     std::cout << "\n\nProducciones:\n";
     for (size_t i = 0; i < g.producciones.size(); i++) {
         const Produccion& p = g.producciones[i];
@@ -90,151 +118,40 @@ static void imprimirGramatica(const Gramatica& g) {
     }
 }
 
-// ── Tabla de simbolos ─────────────────────────────────────────────────────────
-
-static TablaSimbolos construirTablaSimbolos(const ResultadoLexico& rl) {
-    TablaSimbolos tabla;
-    for (size_t i = 0; i < rl.tokens.size(); i++) {
-        const Token& t = rl.tokens[i];
-        if (t.id != "ID") continue;
-
-        auto& entrada = tabla[t.valor];
-        entrada.nombre = t.valor;
-        entrada.apariciones++;
-        entrada.posiciones.push_back({rl.posiciones[i].linea,
-                                      rl.posiciones[i].columna});
-    }
-    return tabla;
-}
-
 static void imprimirTablaSimbolos(const TablaSimbolos& tabla) {
     if (tabla.empty()) {
         std::cout << "  (no se encontraron identificadores)\n";
         return;
     }
-
     std::cout << std::left
               << std::setw(20) << "Identificador"
               << "Apariciones\n";
     std::cout << std::string(32, '-') << "\n";
-
-    for (const auto& [nombre, entrada] : tabla) {
-        std::cout << std::left
-                  << std::setw(20) << entrada.nombre
+    for (const auto& [nombre, entrada] : tabla)
+        std::cout << std::left << std::setw(20) << entrada.nombre
                   << entrada.apariciones << "\n";
-    }
 }
 
-// ── main ──────────────────────────────────────────────────────────────────────
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  Fase 1 — Generacion del analizador lexico                  ║
+// ╚══════════════════════════════════════════════════════════════╝
 
-int main(int argc, char* argv[]) {
-
-    // Conjuntos de archivos disponibles
-    struct ConjuntoArchivos {
-        std::string nombre;
-        std::string yal;
-        std::string yapar;
-        std::string entrada;
-    };
-
-    const std::vector<ConjuntoArchivos> conjuntos = {
-        {
-            "Lenguaje complejo (if/while/return/expresiones)",
-            "input/lexer_complejo.yal",
-            "input/parser_complejo.yapar",
-            "input/entrada_complejo.txt"
-        },
-        {
-            "Lenguaje complejo — caso de prueba alternativo",
-            "input/lexer_complejo.yal",
-            "input/parser_complejo.yapar",
-            "input/Test_complejo.txt"
-        },
-        {
-            "Expresiones aritmeticas simples (ejemplo.yal)",
-            "input/ejemplo.yal",
-            "input/parser_ejemplo.yapar",
-            "input/entrada_ejemplo.txt"
-        }
-    };
-
-    std::string rutaYal, rutaYapar, rutaEntrada;
-
-    if (argc == 4) {
-        // Modo directo: rutas pasadas como argumentos
-        rutaYal     = argv[1];
-        rutaYapar   = argv[2];
-        rutaEntrada = argv[3];
-    } else if (argc == 1) {
-        // Modo interactivo: mostrar menu
-        std::cout << "\n╔══════════════════════════════════════════════════╗\n";
-        std::cout << "║   COMPILADOR  |  Seleccion de archivos           ║\n";
-        std::cout << "╚══════════════════════════════════════════════════╝\n\n";
-        std::cout << "Selecciona un conjunto de archivos:\n\n";
-
-        for (size_t i = 0; i < conjuntos.size(); i++) {
-            std::cout << "  [" << (i + 1) << "] " << conjuntos[i].nombre << "\n";
-            std::cout << "      YAL:     " << conjuntos[i].yal     << "\n";
-            std::cout << "      YAPar:   " << conjuntos[i].yapar   << "\n";
-            std::cout << "      Entrada: " << conjuntos[i].entrada << "\n\n";
-        }
-
-        std::cout << "  [0] Ingresar rutas manualmente\n\n";
-        std::cout << "Opcion: ";
-
-        int opcion = -1;
-        std::cin >> opcion;
-
-        if (opcion >= 1 && opcion <= (int)conjuntos.size()) {
-            rutaYal     = conjuntos[opcion - 1].yal;
-            rutaYapar   = conjuntos[opcion - 1].yapar;
-            rutaEntrada = conjuntos[opcion - 1].entrada;
-        } else if (opcion == 0) {
-            std::cout << "\nRuta del archivo .yal:     ";
-            std::cin >> rutaYal;
-            std::cout << "Ruta del archivo .yapar:   ";
-            std::cin >> rutaYapar;
-            std::cout << "Ruta del archivo entrada:  ";
-            std::cin >> rutaEntrada;
-        } else {
-            std::cerr << "Opcion invalida.\n";
-            return 1;
-        }
-    } else {
-        std::cerr << "\nUso:\n";
-        std::cerr << "  " << argv[0] << "                          (menu interactivo)\n";
-        std::cerr << "  " << argv[0] << " <archivo.yal> <archivo.yapar> <archivo_entrada>\n\n";
-        return 1;
-    }
-
-    std::error_code ec;
-    std::filesystem::create_directories("output", ec);
-    if (ec) std::cerr << "Advertencia: no se pudo crear output/: " << ec.message() << "\n";
-
-    std::cout << "\n╔══════════════════════════════════════════════════╗\n";
-    std::cout << "║   COMPILADOR  |  YALex + YAPar + LL(1)          ║\n";
-    std::cout << "╚══════════════════════════════════════════════════╝\n";
-    std::cout << "  YAL:     " << rutaYal     << "\n";
-    std::cout << "  YAPar:   " << rutaYapar   << "\n";
-    std::cout << "  Entrada: " << rutaEntrada << "\n";
-
-    // ══════════════════════════════════════════════════════════════
-    //  FASE 1 — Generacion del analizador lexico (YALex)
-    // ══════════════════════════════════════════════════════════════
-
+static bool fase1_lexer(const std::string& rutaYal,
+                        ArchivoYalex& yalex, AFD& afd_min) {
     separador("FASE 1 — Lectura y expansion del .yal");
 
-    ArchivoYalex yalex;
     try {
         yalex = parsear_yalex(rutaYal);
     } catch (const std::exception& e) {
         std::cerr << "Error en fase lexica: " << e.what() << "\n";
-        return 1;
+        return false;
     }
+
     if (yalex.reglas.empty()) {
         std::cerr << "Error: no se encontraron reglas en " << rutaYal << "\n";
-        return 1;
+        return false;
     }
+
     std::cout << "  Definiciones: " << yalex.definiciones_raw.size() << "\n";
     std::cout << "  Reglas:       " << yalex.reglas.size()           << "\n";
     std::cout << "  Rule:         " << yalex.nombre_regla            << "\n";
@@ -244,47 +161,59 @@ int main(int argc, char* argv[]) {
 
     separador("FASE 1 — Construccion de automatas (AFN -> AFD -> min)");
 
-    AFN afn     = construir_afn_combinado(yalex.reglas);
-    AFD afd     = construir_afd_subconjuntos(afn);
-    AFD afd_min = minimizar_afd(afd);
+    AFN afn = construir_afn_combinado(yalex.reglas);
+    AFD afd = construir_afd_subconjuntos(afn);
+    afd_min = minimizar_afd(afd);
+
     std::cout << "  AFD:     " << afd.estados.size()     << " estados\n";
     std::cout << "  AFD min: " << afd_min.estados.size() << " estados\n";
+    return true;
+}
 
-    // ══════════════════════════════════════════════════════════════
-    //  FASE 2 — Analisis lexico del archivo de entrada
-    // ══════════════════════════════════════════════════════════════
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  Fase 2 — Analisis lexico de la entrada                     ║
+// ╚══════════════════════════════════════════════════════════════╝
 
+static bool fase2_analisisLexico(const std::string& rutaEntrada,
+                                  AFD& afd_min, const ArchivoYalex& yalex,
+                                  ResultadoLexico& salidaLexer) {
     separador("FASE 2 — Analisis lexico de la entrada");
 
-    std::string textoEntrada;
+    std::string texto;
     try {
-        textoEntrada = leerArchivo(rutaEntrada);
+        texto = leerArchivo(rutaEntrada);
     } catch (const std::exception& e) {
         std::cerr << "Error leyendo entrada: " << e.what() << "\n";
-        return 1;
+        return false;
     }
 
-    ResultadoLexico salidaLexer;
     try {
-        salidaLexer = ejecutar_lexer(afd_min, yalex, textoEntrada);
+        salidaLexer = ejecutar_lexer(afd_min, yalex, texto);
     } catch (const std::exception& e) {
         std::cerr << "Error en analisis lexico: " << e.what() << "\n";
-        return 1;
+        return false;
     }
+
     imprimirTokens(salidaLexer, "Tokens del lexer (antes de filtrar)");
+    return true;
+}
 
-    // ══════════════════════════════════════════════════════════════
-    //  FASE 3 — Lectura del .yapar y filtrado de tokens
-    // ══════════════════════════════════════════════════════════════
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  Fase 3 — YAPar, filtrado, validacion y tabla de simbolos   ║
+// ╚══════════════════════════════════════════════════════════════╝
 
+static bool fase3_yapar(const std::string& rutaYapar,
+                         const ResultadoLexico& salidaLexer,
+                         YaparSpec& spec,
+                         ResultadoLexico& filtrada,
+                         TablaSimbolos& tablaSimbolos) {
     separador("FASE 3 — Lectura del .yapar");
 
-    YaparSpec spec;
     try {
         spec = leerYapar(rutaYapar);
     } catch (const std::exception& e) {
         std::cerr << "Error en YAPar: " << e.what() << "\n";
-        return 1;
+        return false;
     }
 
     std::cout << "Tokens declarados (%token): ";
@@ -308,198 +237,323 @@ int main(int argc, char* argv[]) {
         validarTokensIgnorados(spec);
     } catch (const std::exception& e) {
         std::cerr << "Error validacion IGNORE: " << e.what() << "\n";
-        return 1;
+        return false;
     }
 
     separador("FASE 3 — Filtrado de tokens ignorados");
-
-    ResultadoLexico filtrada = filtrarTokensIgnorados(salidaLexer, spec.tokensIgnorados);
+    filtrada = filtrarTokensIgnorados(salidaLexer, spec.tokensIgnorados);
     imprimirTokens(filtrada, "Tokens para el parser (despues de filtrar)");
 
     separador("FASE 3 — Validacion YALex vs YAPar");
-
     validarTokensDeEntrada(filtrada.tokens, filtrada.posiciones, spec);
     std::cout << "  (errores de validacion aparecen arriba si los hay)\n";
     advertirTokensDeclaradosNoUsados(filtrada.tokens, spec);
     std::cout << "  (advertencias de tokens no usados aparecen arriba si las hay)\n";
 
-    // ══════════════════════════════════════════════════════════════
-    //  FASE 3b — Tabla de simbolos
-    // ══════════════════════════════════════════════════════════════
-
-    separador("FASE 3b — Tabla de simbolos");
-
-    TablaSimbolos tablaSimbolos = construirTablaSimbolos(filtrada);
+    separador("FASE 3 — Tabla de simbolos");
+    for (size_t i = 0; i < filtrada.tokens.size(); i++) {
+        const Token& t = filtrada.tokens[i];
+        if (t.id != "ID") continue;
+        auto& e = tablaSimbolos[t.valor];
+        e.nombre = t.valor;
+        e.apariciones++;
+    }
     imprimirTablaSimbolos(tablaSimbolos);
     std::cout << "\n  Total identificadores unicos: " << tablaSimbolos.size() << "\n";
 
-    // ══════════════════════════════════════════════════════════════
-    //  FASE 4 — Construccion de la gramatica y tabla LL(1)
-    // ══════════════════════════════════════════════════════════════
+    return true;
+}
 
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  Fase 4 — Gramatica, FIRST, FOLLOW y tabla LL(1)            ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+static bool fase4_gramatica(const YaparSpec& spec,
+                             Gramatica& gramatica,
+                             MapaFirst& first,
+                             MapaFollow& follow,
+                             ResultadoTablaLL1& tablaLL1) {
     separador("FASE 4 — Gramatica");
 
-    Gramatica gramatica;
     try {
         gramatica = construirGramatica(spec);
     } catch (const std::exception& e) {
         std::cerr << "Error construyendo gramatica: " << e.what() << "\n";
-        return 1;
+        return false;
     }
     imprimirGramatica(gramatica);
 
     separador("FASE 4 — FIRST");
-    MapaFirst first = calcularFirst(gramatica);
+    first = calcularFirst(gramatica);
     imprimirFirst(first, gramatica);
 
     separador("FASE 4 — FOLLOW");
-    MapaFollow follow = calcularFollow(gramatica, first);
+    follow = calcularFollow(gramatica, first);
     imprimirFollow(follow);
 
     separador("FASE 4 — Tabla LL(1)");
-    ResultadoTablaLL1 resultado = construirTablaLL1(gramatica, first, follow);
-    imprimirTablaLL1(resultado, gramatica);
+    tablaLL1 = construirTablaLL1(gramatica, first, follow);
+    imprimirTablaLL1(tablaLL1, gramatica);
 
-    if (!resultado.esLL1()) {
+    if (!tablaLL1.esLL1()) {
         std::cout << "\n";
-        imprimirConflictos(resultado.conflictos, gramatica);
+        imprimirConflictos(tablaLL1.conflictos, gramatica);
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  FASE 5 — Parsing LL(1)
-    // ══════════════════════════════════════════════════════════════
+    return true;
+}
 
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  Fase 5 — Parsing LL(1)                                     ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+static bool fase5_parsing(const ResultadoLexico& filtrada,
+                           const Gramatica& gramatica,
+                           const ResultadoTablaLL1& tablaLL1,
+                           int& pasos) {
     separador("FASE 5 — Parsing LL(1)");
 
-    if (!resultado.esLL1()) {
+    if (!tablaLL1.esLL1()) {
         std::cout << "  La gramatica tiene conflictos LL(1).\n";
         std::cout << "  Se intentara parsear usando la primera produccion en cada conflicto.\n\n";
     }
 
-    {
-        std::vector<std::string> pila;
-        pila.push_back("$");
-        pila.push_back(gramatica.simboloInicial);
+    std::vector<std::string> pila;
+    pila.push_back("$");
+    pila.push_back(gramatica.simboloInicial);
 
-        size_t idx    = 0;
-        bool   exito  = true;
-        int    pasos  = 0;
-        const int MAX_PASOS = 10000;
+    size_t idx   = 0;
+    bool   exito = true;
+    pasos        = 0;
+    const int MAX_PASOS = 10000;
 
-        std::cout << std::left
-                  << std::setw(6)  << "Paso"
-                  << std::setw(30) << "Tope pila"
-                  << std::setw(20) << "Token actual"
-                  << "Accion\n";
-        std::cout << std::string(76, '-') << "\n";
+    std::cout << std::left
+              << std::setw(6)  << "Paso"
+              << std::setw(30) << "Tope pila"
+              << std::setw(20) << "Token actual"
+              << "Accion\n";
+    std::cout << std::string(76, '-') << "\n";
 
-        while (!pila.empty() && pasos < MAX_PASOS) {
-            pasos++;
-            const std::string& tope = pila.back();
-            const std::string  tok  = (idx < filtrada.tokens.size())
-                                      ? filtrada.tokens[idx].id : "$";
+    while (!pila.empty() && pasos < MAX_PASOS) {
+        pasos++;
+        const std::string& tope = pila.back();
+        const std::string  tok  = (idx < filtrada.tokens.size())
+                                  ? filtrada.tokens[idx].id : "$";
 
-            if (pasos <= 60) {
-                std::cout << std::left
-                          << std::setw(6)  << pasos
-                          << std::setw(30) << tope
-                          << std::setw(20) << tok;
-            } else if (pasos == 61) {
-                std::cout << "  (pasos restantes omitidos...)\n";
-            }
+        if (pasos <= 60) {
+            std::cout << std::left
+                      << std::setw(6)  << pasos
+                      << std::setw(30) << tope
+                      << std::setw(20) << tok;
+        } else if (pasos == 61) {
+            std::cout << "  (pasos restantes omitidos...)\n";
+        }
 
-            if (tope == "$") {
-                if (tok == "$") {
-                    if (pasos <= 60) std::cout << "ACEPTAR\n";
-                    std::cout << "\n  --> ACEPTADO: el programa es sintacticamente correcto.\n";
-                } else {
-                    if (pasos <= 60) std::cout << "ERROR: entrada no consumida\n";
-                    std::cerr << "\nERROR SINTACTICO: se esperaba fin de entrada pero se encontro '"
-                              << tok << "' (linea " << filtrada.posiciones[idx].linea
-                              << ", col " << filtrada.posiciones[idx].columna << ")\n";
-                    exito = false;
-                }
-                break;
-
-            } else if (gramatica.terminales.count(tope)) {
-                if (tope == tok) {
-                    if (pasos <= 60) std::cout << "Consumir '" << tok << "'\n";
-                    pila.pop_back();
-                    idx++;
-                } else {
-                    if (pasos <= 60) std::cout << "ERROR\n";
-                    std::cerr << "\nERROR SINTACTICO en linea "
-                              << filtrada.posiciones[idx].linea
-                              << ", col " << filtrada.posiciones[idx].columna
-                              << ": se esperaba '" << tope
-                              << "' pero se encontro '" << tok << "'\n";
-                    exito = false;
-                    break;
-                }
-
+        if (tope == "$") {
+            if (tok == "$") {
+                if (pasos <= 60) std::cout << "ACEPTAR\n";
+                std::cout << "\n  --> ACEPTADO: el programa es sintacticamente correcto.\n";
             } else {
-                auto fila = resultado.tabla.find(tope);
-                int prod_idx = -1;
-                if (fila != resultado.tabla.end()) {
-                    auto col = fila->second.find(tok);
-                    if (col != fila->second.end())
-                        prod_idx = col->second;
-                }
-
-                if (prod_idx == -1) {
-                    if (pasos <= 60) std::cout << "ERROR\n";
-                    std::cerr << "\nERROR SINTACTICO en linea "
-                              << filtrada.posiciones[idx].linea
-                              << ", col " << filtrada.posiciones[idx].columna
-                              << ": no hay produccion para M[" << tope << ", " << tok << "]\n";
-                    exito = false;
-                    break;
-                }
-
-                const Produccion& prod = gramatica.producciones[prod_idx];
-                if (pasos <= 60) {
-                    std::cout << tope << " -> ";
-                    for (const auto& s : prod.derecha) std::cout << s << " ";
-                    std::cout << "\n";
-                }
-
-                pila.pop_back();
-                if (!(prod.derecha.size() == 1 && prod.derecha[0] == "epsilon")) {
-                    for (int k = (int)prod.derecha.size() - 1; k >= 0; k--)
-                        pila.push_back(prod.derecha[k]);
-                }
+                if (pasos <= 60) std::cout << "ERROR: entrada no consumida\n";
+                std::cerr << "\nERROR SINTACTICO: se esperaba fin de entrada pero se encontro '"
+                          << tok << "' (linea " << filtrada.posiciones[idx].linea
+                          << ", col " << filtrada.posiciones[idx].columna << ")\n";
+                exito = false;
             }
+            break;
+
+        } else if (gramatica.terminales.count(tope)) {
+            if (tope == tok) {
+                if (pasos <= 60) std::cout << "Consumir '" << tok << "'\n";
+                pila.pop_back();
+                idx++;
+            } else {
+                if (pasos <= 60) std::cout << "ERROR\n";
+                std::cerr << "\nERROR SINTACTICO en linea "
+                          << filtrada.posiciones[idx].linea
+                          << ", col " << filtrada.posiciones[idx].columna
+                          << ": se esperaba '" << tope
+                          << "' pero se encontro '" << tok << "'\n";
+                exito = false;
+                break;
+            }
+
+        } else {
+            auto fila = tablaLL1.tabla.find(tope);
+            int prod_idx = -1;
+            if (fila != tablaLL1.tabla.end()) {
+                auto col = fila->second.find(tok);
+                if (col != fila->second.end())
+                    prod_idx = col->second;
+            }
+
+            if (prod_idx == -1) {
+                if (pasos <= 60) std::cout << "ERROR\n";
+                std::cerr << "\nERROR SINTACTICO en linea "
+                          << filtrada.posiciones[idx].linea
+                          << ", col " << filtrada.posiciones[idx].columna
+                          << ": no hay produccion para M[" << tope << ", " << tok << "]\n";
+                exito = false;
+                break;
+            }
+
+            const Produccion& prod = gramatica.producciones[prod_idx];
+            if (pasos <= 60) {
+                std::cout << tope << " -> ";
+                for (const auto& s : prod.derecha) std::cout << s << " ";
+                std::cout << "\n";
+            }
+
+            pila.pop_back();
+            if (!(prod.derecha.size() == 1 && prod.derecha[0] == "epsilon"))
+                for (int k = (int)prod.derecha.size() - 1; k >= 0; k--)
+                    pila.push_back(prod.derecha[k]);
         }
-
-        if (pasos >= MAX_PASOS) {
-            std::cerr << "\nERROR: se alcanzo el limite de pasos (" << MAX_PASOS << ").\n";
-            exito = false;
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        //  RESUMEN FINAL
-        // ══════════════════════════════════════════════════════════════
-
-        separador("Resumen");
-
-        std::cout << "  Reglas YALex:              " << yalex.reglas.size()              << "\n";
-        std::cout << "  Estados AFD min:           " << afd_min.estados.size()           << "\n";
-        std::cout << "  Tokens en entrada:         " << salidaLexer.tokens.size() - 1   << " (sin $)\n";
-        std::cout << "  Tokens tras filtrado:      " << filtrada.tokens.size() - 1       << " (sin $)\n";
-        std::cout << "  Identificadores unicos:    " << tablaSimbolos.size()             << "\n";
-        std::cout << "  Producciones:              " << gramatica.producciones.size()    << "\n";
-        {
-            int celdas = 0;
-            for (auto& fila : resultado.tabla)
-                for (auto& col : fila.second)
-                    if (col.second != -1) celdas++;
-            std::cout << "  Celdas en tabla LL(1):   " << celdas << "\n";
-        }
-        std::cout << "  Conflictos LL(1):          " << resultado.conflictos.size()       << "\n";
-        std::cout << "  Gramatica LL(1):           " << (resultado.esLL1() ? "SI" : "NO") << "\n";
-        std::cout << "  Pasos de parsing:          " << pasos                             << "\n";
-        std::cout << "  Resultado:                 " << (exito ? "ACEPTADO" : "RECHAZADO") << "\n\n";
-
-        return exito ? 0 : 3;
     }
+
+    if (pasos >= MAX_PASOS) {
+        std::cerr << "\nERROR: se alcanzo el limite de pasos (" << MAX_PASOS << ").\n";
+        exito = false;
+    }
+
+    return exito;
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  Resumen final                                              ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+static void imprimirResumen(const ResultadoPipeline& r) {
+    separador("Resumen");
+
+    int celdas = 0;
+    for (auto& fila : r.tablaLL1.tabla)
+        for (auto& col : fila.second)
+            if (col.second != -1) celdas++;
+
+    std::cout << "  Reglas YALex:              " << r.yalex.reglas.size()              << "\n";
+    std::cout << "  Estados AFD min:           " << r.afd_min.estados.size()           << "\n";
+    std::cout << "  Tokens en entrada:         " << r.salidaLexer.tokens.size() - 1   << " (sin $)\n";
+    std::cout << "  Tokens tras filtrado:      " << r.filtrada.tokens.size() - 1       << " (sin $)\n";
+    std::cout << "  Identificadores unicos:    " << r.tablaSimbolos.size()             << "\n";
+    std::cout << "  Producciones:              " << r.gramatica.producciones.size()    << "\n";
+    std::cout << "  Celdas en tabla LL(1):     " << celdas                             << "\n";
+    std::cout << "  Conflictos LL(1):          " << r.tablaLL1.conflictos.size()       << "\n";
+    std::cout << "  Gramatica LL(1):           " << (r.tablaLL1.esLL1() ? "SI" : "NO")<< "\n";
+    std::cout << "  Pasos de parsing:          " << r.parseSteps                       << "\n";
+    std::cout << "  Resultado:                 " << (r.parseExito ? "ACEPTADO" : "RECHAZADO") << "\n\n";
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  Menu de seleccion de archivos                              ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+static bool seleccionarArchivos(int argc, char* argv[],
+                                 std::string& yal,
+                                 std::string& yapar,
+                                 std::string& entrada) {
+    const std::vector<ConjuntoArchivos> conjuntos = {
+        {
+            "Lenguaje complejo (if/while/return/expresiones)",
+            "input/lexer_complejo.yal",
+            "input/parser_complejo.yapar",
+            "input/entrada_complejo.txt"
+        },
+        {
+            "Lenguaje complejo — caso de prueba alternativo",
+            "input/lexer_complejo.yal",
+            "input/parser_complejo.yapar",
+            "input/Test_complejo.txt"
+        },
+        {
+            "Expresiones aritmeticas simples (ejemplo.yal)",
+            "input/ejemplo.yal",
+            "input/parser_ejemplo.yapar",
+            "input/entrada_ejemplo.txt"
+        }
+    };
+
+    if (argc == 4) {
+        yal     = argv[1];
+        yapar   = argv[2];
+        entrada = argv[3];
+        return true;
+    }
+
+    if (argc != 1) {
+        std::cerr << "\nUso:\n";
+        std::cerr << "  " << argv[0] << "                                    (menu interactivo)\n";
+        std::cerr << "  " << argv[0] << " <archivo.yal> <archivo.yapar> <entrada>\n\n";
+        return false;
+    }
+
+    std::cout << "\n╔══════════════════════════════════════════════════╗\n";
+    std::cout << "║   COMPILADOR  |  Seleccion de archivos           ║\n";
+    std::cout << "╚══════════════════════════════════════════════════╝\n\n";
+    std::cout << "Selecciona un conjunto de archivos:\n\n";
+
+    for (size_t i = 0; i < conjuntos.size(); i++) {
+        std::cout << "  [" << (i + 1) << "] " << conjuntos[i].nombre << "\n";
+        std::cout << "      YAL:     " << conjuntos[i].yal     << "\n";
+        std::cout << "      YAPar:   " << conjuntos[i].yapar   << "\n";
+        std::cout << "      Entrada: " << conjuntos[i].entrada << "\n\n";
+    }
+    std::cout << "  [0] Ingresar rutas manualmente\n\n";
+    std::cout << "Opcion: ";
+
+    int opcion = -1;
+    std::cin >> opcion;
+
+    if (opcion >= 1 && opcion <= (int)conjuntos.size()) {
+        yal     = conjuntos[opcion - 1].yal;
+        yapar   = conjuntos[opcion - 1].yapar;
+        entrada = conjuntos[opcion - 1].entrada;
+    } else if (opcion == 0) {
+        std::cout << "\nRuta del archivo .yal:     "; std::cin >> yal;
+        std::cout << "Ruta del archivo .yapar:   "; std::cin >> yapar;
+        std::cout << "Ruta del archivo entrada:  "; std::cin >> entrada;
+    } else {
+        std::cerr << "Opcion invalida.\n";
+        return false;
+    }
+
+    return true;
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  main                                                       ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+int main(int argc, char* argv[]) {
+
+    std::string rutaYal, rutaYapar, rutaEntrada;
+    if (!seleccionarArchivos(argc, argv, rutaYal, rutaYapar, rutaEntrada))
+        return 1;
+
+    std::error_code ec;
+    std::filesystem::create_directories("output", ec);
+
+    std::cout << "\n╔══════════════════════════════════════════════════╗\n";
+    std::cout << "║   COMPILADOR  |  YALex + YAPar + LL(1)          ║\n";
+    std::cout << "╚══════════════════════════════════════════════════╝\n";
+    std::cout << "  YAL:     " << rutaYal     << "\n";
+    std::cout << "  YAPar:   " << rutaYapar   << "\n";
+    std::cout << "  Entrada: " << rutaEntrada << "\n";
+
+    ResultadoPipeline r;
+    YaparSpec spec;
+
+    if (!fase1_lexer(rutaYal, r.yalex, r.afd_min))            return 1;
+    if (!fase2_analisisLexico(rutaEntrada, r.afd_min,
+                               r.yalex, r.salidaLexer))        return 1;
+    if (!fase3_yapar(rutaYapar, r.salidaLexer,
+                     spec, r.filtrada, r.tablaSimbolos))        return 1;
+    if (!fase4_gramatica(spec, r.gramatica,
+                          r.first, r.follow, r.tablaLL1))       return 1;
+
+    r.parseExito = fase5_parsing(r.filtrada, r.gramatica,
+                                  r.tablaLL1, r.parseSteps);
+    imprimirResumen(r);
+
+    return r.parseExito ? 0 : 3;
 }
