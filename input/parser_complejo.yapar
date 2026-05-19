@@ -1,8 +1,10 @@
-/* parser_complejo.yapar
- * Gramática para el mini-lenguaje reconocido por lexer_complejo.yal
- * Cubre todos los tokens: IF ELSE WHILE RETURN ID NUMBER
- * EQ NEQ LEQ GEQ LT GT PLUS MINUS TIMES DIV ASSIGN
- * LPAREN RPAREN LBRACE RBRACE SEMICOLON COMMA
+/* parser_complejo.yapar  —  version LL(1) sin conflictos
+ *
+ * Correcciones:
+ *  1. lista_sentencias usa epsilon para terminar correctamente ante RBRACE y $
+ *  2. sentencia_id unifica asignacion y expresion que empiezan con ID
+ *  3. Recursion izquierda eliminada en expr y termino
+ *  4. if/else resuelto con else_opt
  */
 
 %token NUMBER IF ELSE WHILE RETURN ID
@@ -15,26 +17,49 @@ programa:
     lista_sentencias
 ;
 
+/* lista con epsilon: termina ante RBRACE o $ */
 lista_sentencias:
     sentencia lista_sentencias
-  | sentencia
+  | epsilon
 ;
 
 sentencia:
     sentencia_if
-  | sentencia_if_else
   | sentencia_while
   | sentencia_return
-  | sentencia_asignacion
-  | sentencia_expr
+  | sentencia_id
+  | sentencia_expr_no_id
 ;
 
+/* Unifica asignacion (ID = expr ;) y expr que empieza con ID (ID expr_rest ;)
+ * Tras leer ID, si sigue ASSIGN es asignacion, si no es expresion */
+sentencia_id:
+    ID sentencia_id_rest
+;
+
+sentencia_id_rest:
+    ASSIGN expr SEMICOLON
+  | termino_rest expr_rest SEMICOLON
+;
+
+/* Expresiones que NO empiezan con ID (empiezan con LPAREN o NUMBER) */
+sentencia_expr_no_id:
+    factor_no_id termino_rest expr_rest SEMICOLON
+;
+
+factor_no_id:
+    LPAREN expr RPAREN
+  | NUMBER
+;
+
+/* if con else opcional */
 sentencia_if:
-    IF LPAREN expr RPAREN bloque
+    IF LPAREN expr RPAREN bloque else_opt
 ;
 
-sentencia_if_else:
-    IF LPAREN expr RPAREN bloque ELSE bloque
+else_opt:
+    ELSE bloque
+  | epsilon
 ;
 
 sentencia_while:
@@ -45,35 +70,36 @@ sentencia_return:
     RETURN expr SEMICOLON
 ;
 
-sentencia_asignacion:
-    ID ASSIGN expr SEMICOLON
-;
-
-sentencia_expr:
-    expr SEMICOLON
-;
-
 bloque:
     LBRACE lista_sentencias RBRACE
 ;
 
+/* expr sin recursion izquierda */
 expr:
-    expr PLUS termino
-  | expr MINUS termino
-  | expr EQ termino
-  | expr NEQ termino
-  | expr LT termino
-  | expr GT termino
-  | expr LEQ termino
-  | expr GEQ termino
-  | expr COMMA termino
-  | termino
+    termino expr_rest
+;
+
+expr_rest:
+    PLUS termino expr_rest
+  | MINUS termino expr_rest
+  | EQ termino expr_rest
+  | NEQ termino expr_rest
+  | LT termino expr_rest
+  | GT termino expr_rest
+  | LEQ termino expr_rest
+  | GEQ termino expr_rest
+  | COMMA termino expr_rest
+  | epsilon
 ;
 
 termino:
-    termino TIMES factor
-  | termino DIV factor
-  | factor
+    factor termino_rest
+;
+
+termino_rest:
+    TIMES factor termino_rest
+  | DIV factor termino_rest
+  | epsilon
 ;
 
 factor:
