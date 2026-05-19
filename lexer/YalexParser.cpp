@@ -1013,12 +1013,10 @@ ResultadoLexico ejecutar_lexer(AFD& afd_min, const ArchivoYalex& yalex, const st
 
         if (ut >= 0 && uap > pos) {
             std::string lex = entrada.substr(pos, uap - pos);
-            const std::string& ac = token_actions[ut];
-            if (ac.find("return lexbuf") == std::string::npos &&
-                ac.find("return EOL")   == std::string::npos) {
-                resultado.tokens.push_back({token_names[ut], lex});
-                resultado.posiciones.push_back({linea_inicio, columna_inicio});
-            }
+            // Emitir TODOS los tokens — el filtrado lo hace filtrarTokensIgnorados()
+            // usando la declaracion IGNORE del .yapar. No filtrar aqui.
+            resultado.tokens.push_back({token_names[ut], lex});
+            resultado.posiciones.push_back({linea_inicio, columna_inicio});
             for (size_t k = pos; k < uap; k++) {
                 if (entrada[k] == '\n') { linea++; columna = 1; }
                 else columna++;

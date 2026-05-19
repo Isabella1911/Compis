@@ -5,11 +5,15 @@
  *  2. sentencia_id unifica asignacion y expresion que empiezan con ID
  *  3. Recursion izquierda eliminada en expr y termino
  *  4. if/else resuelto con else_opt
+ *  5. IGNORE declarado correctamente — el filtrado real usa este mecanismo
  */
 
 %token NUMBER IF ELSE WHILE RETURN ID
 %token EQ NEQ LEQ GEQ PLUS MINUS TIMES DIV
 %token ASSIGN LT GT LPAREN RPAREN LBRACE RBRACE SEMICOLON COMMA
+%token lexbuf EOL
+
+IGNORE lexbuf EOL
 
 %%
 
@@ -31,7 +35,7 @@ sentencia:
   | sentencia_expr_no_id
 ;
 
-/* Unifica asignacion (ID = expr ;) y expr que empieza con ID (ID expr_rest ;)
+/* Unifica asignacion (ID = expr ;) y expr que empieza con ID
  * Tras leer ID, si sigue ASSIGN es asignacion, si no es expresion */
 sentencia_id:
     ID sentencia_id_rest
