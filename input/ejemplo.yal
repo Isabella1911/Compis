@@ -12,7 +12,7 @@ let letter = ['a'-'z' 'A'-'Z']
 rule gettoken =
   [' ' '\t']       { return lexbuf }
 | ['\n']           { return EOL }
-| ['0'-'9']+       { return int(lxm) }
+| ['0'-'9']+   { return NUMBER }
 | '+'              { return PLUS }
 | '-'              { return MINUS }
 | '*'              { return TIMES }

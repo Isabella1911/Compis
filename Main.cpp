@@ -1,5 +1,5 @@
 /*
- * main.cpp  —  Pipeline completo: YALex + YAPar + LL(1)
+ * main.cpp  —  Pipeline completo: YALex + YAPar + LL(1) + LR(0) + SLR(1) + LALR(1)
  *
  * Compila desde la raiz del proyecto:
  *
@@ -8,6 +8,7 @@
  *       lexer/YalexParser.cpp \
  *       parser/YaparParser.cpp parser/Grammar.cpp \
  *       parser/FirstFollow.cpp parser/LL1Table.cpp \
+ *       parser/LR0.cpp parser/SLR1.cpp parser/LALR1.cpp \
  *       -o compilador
  *
  * Uso:
@@ -19,6 +20,9 @@
 #include "parser/YaparParser.h"
 #include "parser/FirstFollow.h"
 #include "parser/LL1Table.h"
+#include "parser/LR0.h"
+#include "parser/SLR1.h"
+#include "parser/LALR1.h"
 
 #include <iostream>
 #include <fstream>
@@ -48,17 +52,22 @@ struct ConjuntoArchivos {
 };
 
 struct ResultadoPipeline {
-    ArchivoYalex     yalex;
-    AFD              afd_min;
-    ResultadoLexico  salidaLexer;
-    ResultadoLexico  filtrada;
-    TablaSimbolos    tablaSimbolos;
-    Gramatica        gramatica;
-    MapaFirst        first;
-    MapaFollow       follow;
+    ArchivoYalex      yalex;
+    AFD               afd_min;
+    ResultadoLexico   salidaLexer;
+    ResultadoLexico   filtrada;
+    TablaSimbolos     tablaSimbolos;
+    Gramatica         gramatica;
+    MapaFirst         first;
+    MapaFollow        follow;
     ResultadoTablaLL1 tablaLL1;
-    bool             parseExito = false;
-    int              parseSteps = 0;
+    AutomataLR0       lr0;
+    TablaSLR1         slr1;
+    TablaLALR1        lalr1;
+    bool              parseExitoLL1  = false;
+    bool              parseExitoSLR1 = false;
+    bool              parseExitoLALR = false;
+    int               parseSteps     = 0;
 };
 
 // ╔══════════════════════════════════════════════════════════════╗
@@ -207,7 +216,7 @@ static bool fase3_yapar(const std::string& rutaYapar,
                          YaparSpec& spec,
                          ResultadoLexico& filtrada,
                          TablaSimbolos& tablaSimbolos) {
-    separador("FASE 3 — Lectura del .yapar");
+    separador("FASE 3 — Lectura del .yapar y filtrado");
 
     try {
         spec = leerYapar(rutaYapar);
@@ -216,56 +225,34 @@ static bool fase3_yapar(const std::string& rutaYapar,
         return false;
     }
 
-    std::cout << "Tokens declarados (%token): ";
-    bool primero = true;
-    for (const auto& t : spec.tokensDeclarados) {
-        if (!primero) std::cout << ", ";
-        std::cout << t; primero = false;
-    }
-    std::cout << "\n";
-
-    std::cout << "Tokens ignorados (IGNORE):  ";
-    primero = true;
-    for (const auto& t : spec.tokensIgnorados) {
-        if (!primero) std::cout << ", ";
-        std::cout << t; primero = false;
-    }
-    if (spec.tokensIgnorados.empty()) std::cout << "(ninguno)";
-    std::cout << "\n";
-
     try {
         validarTokensIgnorados(spec);
     } catch (const std::exception& e) {
-        std::cerr << "Error validacion IGNORE: " << e.what() << "\n";
+        std::cerr << "Error de validacion IGNORE: " << e.what() << "\n";
         return false;
     }
 
-    separador("FASE 3 — Filtrado de tokens ignorados");
     filtrada = filtrarTokensIgnorados(salidaLexer, spec.tokensIgnorados);
     imprimirTokens(filtrada, "Tokens para el parser (despues de filtrar)");
 
-    separador("FASE 3 — Validacion YALex vs YAPar");
     validarTokensDeEntrada(filtrada.tokens, filtrada.posiciones, spec);
-    std::cout << "  (errores de validacion aparecen arriba si los hay)\n";
     advertirTokensDeclaradosNoUsados(filtrada.tokens, spec);
-    std::cout << "  (advertencias de tokens no usados aparecen arriba si las hay)\n";
 
     separador("FASE 3 — Tabla de simbolos");
     for (size_t i = 0; i < filtrada.tokens.size(); i++) {
-        const Token& t = filtrada.tokens[i];
-        if (t.id != "ID") continue;
-        auto& e = tablaSimbolos[t.valor];
-        e.nombre = t.valor;
-        e.apariciones++;
+        const Token& tok = filtrada.tokens[i];
+        if (tok.id == "ID" || tok.id == "id") {
+            tablaSimbolos[tok.valor].nombre = tok.valor;
+            tablaSimbolos[tok.valor].apariciones++;
+        }
     }
     imprimirTablaSimbolos(tablaSimbolos);
-    std::cout << "\n  Total identificadores unicos: " << tablaSimbolos.size() << "\n";
 
     return true;
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
-// ║  Fase 4 — Gramatica, FIRST, FOLLOW y tabla LL(1)            ║
+// ║  Fase 4 — Gramatica, FIRST, FOLLOW, tabla LL(1)             ║
 // ╚══════════════════════════════════════════════════════════════╝
 
 static bool fase4_gramatica(const YaparSpec& spec,
@@ -420,16 +407,94 @@ static bool fase5_parsing(const ResultadoLexico& filtrada,
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
+// ║  Fase 6 — Automata LR(0)                                    ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+static void fase6_lr0(const Gramatica& gramatica, AutomataLR0& lr0) {
+    separador("FASE 6 — Automata LR(0)");
+
+    lr0 = construirLR0(gramatica);
+
+    std::cout << "  Estados LR(0): " << lr0.estados.size() << "\n\n";
+    imprimirLR0(lr0);
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  Fase 7 — Tabla SLR(1) y evaluacion                        ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+static bool fase7_slr1(const AutomataLR0& lr0,
+                        const MapaFollow& follow,
+                        const ResultadoLexico& filtrada,
+                        TablaSLR1& tablaSLR,
+                        bool& parseExito) {
+    separador("FASE 7 — Tabla SLR(1)");
+
+    tablaSLR = construirSLR1(lr0, follow);
+    imprimirTablaSLR1(tablaSLR);
+
+    if (!tablaSLR.conflictos.empty()) {
+        std::cout << "\n";
+        imprimirConflictosSLR(tablaSLR.conflictos);
+    }
+
+    separador("FASE 7 — Evaluacion SLR(1)");
+    parseExito = evaluarSLR1(tablaSLR, filtrada.tokens, filtrada.posiciones, true);
+
+    if (parseExito)
+        std::cout << "\n  --> ACEPTADO por SLR(1).\n";
+    else
+        std::cout << "\n  --> RECHAZADO por SLR(1).\n";
+
+    return true;
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  Fase 8 — Tabla LALR(1) y evaluacion                       ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+static bool fase8_lalr1(const AutomataLR0& lr0,
+                         const MapaFirst& first,
+                         const ResultadoLexico& filtrada,
+                         TablaLALR1& tablaLALR,
+                         bool& parseExito) {
+    separador("FASE 8 — Tabla LALR(1)");
+
+    tablaLALR = construirLALR1(lr0, first);
+    imprimirTablaLALR1(tablaLALR);
+
+    separador("FASE 8 — Evaluacion LALR(1)");
+    parseExito = evaluarLALR1(tablaLALR, filtrada.tokens, filtrada.posiciones, true);
+
+    if (parseExito)
+        std::cout << "\n  --> ACEPTADO por LALR(1).\n";
+    else
+        std::cout << "\n  --> RECHAZADO por LALR(1).\n";
+
+    return true;
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
 // ║  Resumen final                                              ║
 // ╚══════════════════════════════════════════════════════════════╝
 
 static void imprimirResumen(const ResultadoPipeline& r) {
     separador("Resumen");
 
-    int celdas = 0;
+    int celdasLL1 = 0;
     for (auto& fila : r.tablaLL1.tabla)
         for (auto& col : fila.second)
-            if (col.second != -1) celdas++;
+            if (col.second != -1) celdasLL1++;
+
+    int celdasSLR = 0;
+    for (auto& fila : r.slr1.action)
+        for (auto& col : fila)
+            if (!col.second.esError()) celdasSLR++;
+
+    int celdasLALR = 0;
+    for (auto& fila : r.lalr1.action)
+        for (auto& col : fila)
+            if (!col.second.esError()) celdasLALR++;
 
     std::cout << "  Reglas YALex:              " << r.yalex.reglas.size()              << "\n";
     std::cout << "  Estados AFD min:           " << r.afd_min.estados.size()           << "\n";
@@ -437,11 +502,28 @@ static void imprimirResumen(const ResultadoPipeline& r) {
     std::cout << "  Tokens tras filtrado:      " << r.filtrada.tokens.size() - 1       << " (sin $)\n";
     std::cout << "  Identificadores unicos:    " << r.tablaSimbolos.size()             << "\n";
     std::cout << "  Producciones:              " << r.gramatica.producciones.size()    << "\n";
-    std::cout << "  Celdas en tabla LL(1):     " << celdas                             << "\n";
-    std::cout << "  Conflictos LL(1):          " << r.tablaLL1.conflictos.size()       << "\n";
-    std::cout << "  Gramatica LL(1):           " << (r.tablaLL1.esLL1() ? "SI" : "NO")<< "\n";
-    std::cout << "  Pasos de parsing:          " << r.parseSteps                       << "\n";
-    std::cout << "  Resultado:                 " << (r.parseExito ? "ACEPTADO" : "RECHAZADO") << "\n\n";
+    std::cout << "\n";
+    std::cout << "  LL(1):\n";
+    std::cout << "    Celdas:                  " << celdasLL1                           << "\n";
+    std::cout << "    Conflictos:              " << r.tablaLL1.conflictos.size()        << "\n";
+    std::cout << "    Es LL(1):                " << (r.tablaLL1.esLL1() ? "SI" : "NO") << "\n";
+    std::cout << "    Resultado:               " << (r.parseExitoLL1 ? "ACEPTADO" : "RECHAZADO") << "\n";
+    std::cout << "\n";
+    std::cout << "  LR(0):\n";
+    std::cout << "    Estados:                 " << r.lr0.estados.size()               << "\n";
+    std::cout << "\n";
+    std::cout << "  SLR(1):\n";
+    std::cout << "    Celdas ACTION:           " << celdasSLR                           << "\n";
+    std::cout << "    Conflictos:              " << r.slr1.conflictos.size()            << "\n";
+    std::cout << "    Es SLR(1):               " << (r.slr1.esSLR1() ? "SI" : "NO")   << "\n";
+    std::cout << "    Resultado:               " << (r.parseExitoSLR1 ? "ACEPTADO" : "RECHAZADO") << "\n";
+    std::cout << "\n";
+    std::cout << "  LALR(1):\n";
+    std::cout << "    Celdas ACTION:           " << celdasLALR                          << "\n";
+    std::cout << "    Conflictos:              " << r.lalr1.conflictos.size()           << "\n";
+    std::cout << "    Es LALR(1):              " << (r.lalr1.esSLR1() ? "SI" : "NO")  << "\n";
+    std::cout << "    Resultado:               " << (r.parseExitoLALR ? "ACEPTADO" : "RECHAZADO") << "\n";
+    std::cout << "\n";
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
@@ -534,7 +616,7 @@ int main(int argc, char* argv[]) {
     std::filesystem::create_directories("output", ec);
 
     std::cout << "\n╔══════════════════════════════════════════════════╗\n";
-    std::cout << "║   COMPILADOR  |  YALex + YAPar + LL(1)          ║\n";
+    std::cout << "║   COMPILADOR  |  YALex + YAPar + LL(1) + LR/SLR/LALR ║\n";
     std::cout << "╚══════════════════════════════════════════════════╝\n";
     std::cout << "  YAL:     " << rutaYal     << "\n";
     std::cout << "  YAPar:   " << rutaYapar   << "\n";
@@ -543,6 +625,7 @@ int main(int argc, char* argv[]) {
     ResultadoPipeline r;
     YaparSpec spec;
 
+    // Fases existentes (lexer + LL(1))
     if (!fase1_lexer(rutaYal, r.yalex, r.afd_min))            return 1;
     if (!fase2_analisisLexico(rutaEntrada, r.afd_min,
                                r.yalex, r.salidaLexer))        return 1;
@@ -551,9 +634,17 @@ int main(int argc, char* argv[]) {
     if (!fase4_gramatica(spec, r.gramatica,
                           r.first, r.follow, r.tablaLL1))       return 1;
 
-    r.parseExito = fase5_parsing(r.filtrada, r.gramatica,
-                                  r.tablaLL1, r.parseSteps);
+    r.parseExitoLL1 = fase5_parsing(r.filtrada, r.gramatica,
+                                     r.tablaLL1, r.parseSteps);
+
+    // Nuevas fases: LR(0) + SLR(1) + LALR(1)
+    fase6_lr0(r.gramatica, r.lr0);
+    fase7_slr1(r.lr0, r.follow, r.filtrada, r.slr1, r.parseExitoSLR1);
+    fase8_lalr1(r.lr0, r.first, r.filtrada, r.lalr1, r.parseExitoLALR);
+
     imprimirResumen(r);
 
-    return r.parseExito ? 0 : 3;
+    // Exitoso si al menos uno de los parsers acepta
+    bool exito = r.parseExitoLL1 || r.parseExitoSLR1 || r.parseExitoLALR;
+    return exito ? 0 : 3;
 }
