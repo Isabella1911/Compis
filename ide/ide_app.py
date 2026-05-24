@@ -20,7 +20,7 @@ EJECUTABLE_NOMBRE = "compilador.exe" if os.name == "nt" else "compilador"
 EJECUTABLE_PATH = PROJECT_ROOT / EJECUTABLE_NOMBRE
 
 COMANDO_COMPILACION = [
-    "g++", "-std=c++17", "-O2",
+    "g++", "-std=c++17", "-O2", "-DCOMPILAR_CON_ORQUESTADOR",
     "-o", str(EJECUTABLE_PATH),
     str(PROJECT_ROOT / "Main.cpp"),
     str(PROJECT_ROOT / "lexer" / "YalexParser.cpp"),
@@ -28,6 +28,9 @@ COMANDO_COMPILACION = [
     str(PROJECT_ROOT / "Parser" / "Grammar.cpp"),
     str(PROJECT_ROOT / "Parser" / "FirstFollow.cpp"),
     str(PROJECT_ROOT / "Parser" / "LL1Table.cpp"),
+    str(PROJECT_ROOT / "Parser" / "LR0.cpp"),
+    str(PROJECT_ROOT / "Parser" / "SLR1.cpp"),
+    str(PROJECT_ROOT / "Parser" / "LALR1.cpp"),
 ]
 
 FUENTE_MONO = ("Consolas", 10)
@@ -116,15 +119,14 @@ SEPARADOR_LINEA = "=" * 50
 # Mapa: clave de panel -> lista de subcadenas que pueden aparecer en el
 # titulo de un encabezado impreso por Main.cpp (`separador()`).
 MAPA_SECCIONES = [
-    ("tokens",       ["Analisis lexico", "Filtrado de tokens"]),
+    ("tokens",       ["Analisis lexico"]),
     ("validaciones", ["Lectura del .yapar",
-                       "Validacion YALex",
                        "Tabla de simbolos",
                        "Gramatica"]),
     ("ff",           ["FIRST", "FOLLOW"]),
     ("ll1",          ["Tabla LL(1)"]),
     ("traza",        ["Parsing LL(1)"]),
-    ("resultado",    ["Resumen"]),
+    ("resultado",    ["Resumen", "Automata LR", "Evaluacion"]),
 ]
 
 
