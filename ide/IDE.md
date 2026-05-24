@@ -34,7 +34,7 @@ ejecutable aparecen en la barra inferior.
 | Cargar YAPar      | Abre un `.yapar` y lo muestra en el segundo editor. |
 | Cargar entrada    | Abre el archivo de entrada y lo muestra en el tercer editor. |
 | Guardar YALex / YAPar / entrada | Guarda el editor correspondiente; si no tiene ruta, pide *Guardar como*. |
-| Guardar todo      | Guarda los tres editores. |
+Ejemplo| Guardar todo      | Guarda los tres editores. |
 | Compilar          | Ejecuta el `g++` con los fuentes actuales del proyecto y produce `compilador.exe` en la raíz. |
 | Ejecutar análisis | Llama al ejecutable con las rutas de los tres archivos cargados. |
 | Limpiar salida    | Vacía los paneles de resultados. |
@@ -66,7 +66,7 @@ Las secciones se detectan a partir de los encabezados que ya imprime
 pestañas pueden quedar vacías; la pestaña **Salida completa** siempre
 contiene todo lo emitido.
 
-## Flujo recomendado
+## Flujo 
 
 1. Iniciar la IDE.
 2. Pulsar *Cargar YALex* y elegir, por ejemplo,
@@ -79,13 +79,3 @@ contiene todo lo emitido.
 7. Si todavía no existe `compilador.exe`, pulsar *Compilar*.
 8. Pulsar *Ejecutar análisis* y revisar las pestañas inferiores.
 
-## Notas
-
-- La IDE no implementa LR(0), SLR(1), LALR, AST visual ni análisis
-  semántico porque esas funciones no están en el proyecto actual.
-- Las rutas son relativas a la raíz del proyecto; tanto la compilación
-  como la ejecución usan esa raíz como directorio de trabajo, de modo
-  que `Main.cpp` puede crear su carpeta `output/` y resolver rutas
-  `input/...` exactamente igual que desde la línea de comandos.
-- Compilar o ejecutar se hacen en hilos aparte para que la ventana no se
-  congele; la barra de estado indica cuándo termina cada proceso.
