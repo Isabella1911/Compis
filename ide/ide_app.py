@@ -453,15 +453,16 @@ def formatear_veredictos(veredictos, codigo):
     return "\n".join(filas)
 
 
+
 def parser_ganador(veredictos):
     """Devuelve el parser de mayor poder que aceptó, o '-' si ninguno."""
     for clave, etiqueta in (("lalr1", "LALR(1)"),
                              ("slr1", "SLR(1)"),
                              ("ll1", "LL(1)")):
-        if veredictos.get(clave, {}).get("resultado") == "ACEPTADO":
+        res = veredictos.get(clave, {}).get("resultado", "")
+        if res.startswith("ACEPTADO"):   # cubre "ACEPTADO" y "ACEPTADO CON ERRORES"
             return etiqueta
     return "-"
-
 
 def contar_tokens_filtrados(stdout):
     """Lee del Resumen el conteo 'Tokens tras filtrado'."""
@@ -2151,7 +2152,8 @@ class IDE:
             self._marcar_conflictos(self.paneles[clave])
 
         # Estado
-        algun_aceptado  = any(v["resultado"] == "ACEPTADO"
+        
+        algun_aceptado  = any(v["resultado"].startswith("ACEPTADO")
                                 for v in veredictos.values())
         algun_rechazado = any(v["resultado"] == "RECHAZADO"
                                 for v in veredictos.values())
