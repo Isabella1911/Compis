@@ -53,6 +53,85 @@ INPUT_DIR         = PROJECT_ROOT / "input"
 OUTPUT_DIR        = PROJECT_ROOT / "output"
 EJECUTABLE_NOMBRE = "compilador.exe" if os.name == "nt" else "compilador"
 EJECUTABLE_PATH   = PROJECT_ROOT / EJECUTABLE_NOMBRE
+
+
+def _detectar_wsl():
+    """Devuelve True si la IDE corre dentro de WSL/WSL2."""
+    if os.name == "nt":
+        return False
+    if os.environ.get("WSL_DISTRO_NAME") or os.environ.get("WSL_INTEROP"):
+        return True
+    try:
+        with open("/proc/version", "r",
+                   encoding="utf-8", errors="replace") as f:
+            return "microsoft" in f.read().lower()
+    except OSError:
+        return False
+
+
+IS_WSL = _detectar_wsl()
+_PATRON_DRIVE_LETTER = re.compile(r"^[A-Za-z]:[\\/]")
+_PATRON_UNC_WSL = re.compile(r"^\\\\wsl(?:\.localhost|\$)[\\/]", re.IGNORECASE)
+
+
+def normalizar_ruta_arrastrada(raw):
+    """Limpia un path arrastrado y lo convierte al formato del SO actual.
+
+    - Quita llaves `{}` y comillas que tkinterdnd2 puede agregar.
+    - En WSL: si llega un path estilo Windows (`C:\\path\\foo`), lo traduce
+      a `/mnt/c/path/foo`. Si `wslpath` está instalado se usa para máxima
+      exactitud; si no, hay un fallback manual.
+    - En Windows: si llega un path UNC de WSL (`\\\\wsl.localhost\\...`)
+      lo deja tal cual; Windows 11 los abre nativamente.
+    """
+    s = str(raw).strip().strip("{}").strip('"').strip("'")
+    if not s:
+        return s
+
+    # WSL: convertir paths Windows → /mnt/...
+    if IS_WSL and _PATRON_DRIVE_LETTER.match(s):
+        wp = shutil.which("wslpath")
+        if wp is not None:
+            try:
+                proc = subprocess.run(
+                    [wp, "-u", s], capture_output=True, text=True,
+                    timeout=2)
+                salida = proc.stdout.strip()
+                if proc.returncode == 0 and salida:
+                    return salida
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+        # Fallback manual: C:\path\foo  →  /mnt/c/path/foo
+        unidad = s[0].lower()
+        resto = s[2:].replace("\\", "/")
+        if not resto.startswith("/"):
+            resto = "/" + resto
+        return f"/mnt/{unidad}{resto}"
+
+    # WSL: convertir UNC \\wsl.localhost\... a su /... equivalente
+    if IS_WSL and _PATRON_UNC_WSL.match(s):
+        wp = shutil.which("wslpath")
+        if wp is not None:
+            try:
+                proc = subprocess.run(
+                    [wp, "-u", s], capture_output=True, text=True,
+                    timeout=2)
+                salida = proc.stdout.strip()
+                if proc.returncode == 0 and salida:
+                    return salida
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+        # Sin wslpath, intento heurístico: \\wsl.localhost\Distro\home\u\f
+        partes = s.replace("\\", "/").split("/")
+        # Saltar entradas vacías y el nombre de la distro: ['', '', 'wsl.localhost', 'Distro', 'home', ...]
+        try:
+            idx_distro = next(i for i, p in enumerate(partes)
+                              if p.lower().startswith("wsl"))
+            return "/" + "/".join(partes[idx_distro + 2:])
+        except (StopIteration, IndexError):
+            pass
+
+    return s
 LR0_DOT_PATH      = OUTPUT_DIR / "lr0.dot"
 LR0_PNG_PATH      = OUTPUT_DIR / "lr0.png"
 TABLAS_JSON_PATH  = OUTPUT_DIR / "tablas.json"
@@ -2458,9 +2537,12 @@ class IDE:
         importados = []
         rechazados = []
         for raw in paths:
-            ruta = Path(str(raw).strip().strip("{}"))
+            normalizada = normalizar_ruta_arrastrada(raw)
+            ruta = Path(normalizada)
             if not ruta.exists() or not ruta.is_file():
-                rechazados.append(str(raw))
+                rechazados.append(
+                    f"{raw} -> {normalizada}" if normalizada != str(raw)
+                    else str(raw))
                 continue
             destino = self._clasificar_por_extension(ruta)
             try:

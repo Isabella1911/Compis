@@ -200,6 +200,29 @@ dependencia opcional no está instalada, la barra de estado lo indica
 con un mensaje sugerente; la IDE sigue funcionando con los diálogos
 *Archivo → Cargar...*.
 
+### Soporte para WSL
+
+Si corrés la IDE dentro de WSL (con WSLg en Windows 11 o un X server
+configurado), las rutas que llegan desde un drop pueden tener dos
+formatos:
+
+| Formato recibido | Origen | Conversión que aplica la IDE |
+|------------------|--------|------------------------------|
+| `C:\Users\foo\x.yal` | Explorador de Windows → WSL | `/mnt/c/Users/foo/x.yal` |
+| `D:/proyecto/foo.txt` | (forward slash) | `/mnt/d/proyecto/foo.txt` |
+| `\\wsl.localhost\Ubuntu\home\u\f.yal` | Vista UNC desde Windows | `/home/u/f.yal` |
+| `/home/usuario/file.yal` | Filesystem de WSL | sin cambios |
+| `/mnt/c/...` | WSL leyendo Windows | sin cambios |
+
+La conversión usa el utilitario nativo `wslpath -u` cuando está
+disponible (lo está por default en cualquier distro WSL moderna); si
+no, cae a una conversión manual probada para `C:\...` y rutas UNC de
+`\\wsl.localhost\...` / `\\wsl$\...`.
+
+La detección de WSL se hace al inicio leyendo `WSL_DISTRO_NAME` /
+`WSL_INTEROP` o, como fallback, buscando "microsoft" en
+`/proc/version`.
+
 ## Flujo recomendado
 
 1. Iniciar la IDE.
