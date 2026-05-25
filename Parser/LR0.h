@@ -37,4 +37,9 @@ bool           esItemCompleto(const ItemLR0& item, const Gramatica& g);
 void           imprimirLR0(const AutomataLR0& automata);
 void           imprimirConjunto(const ConjuntoItems& items, const Gramatica& g, int numeroEstado = -1);
 
+// Exporta el autómata LR(0) a formato DOT (Graphviz).
+// Cada nodo es un estado con sus items y cada arista es una transición GOTO.
+// Retorna true si pudo escribir el archivo.
+bool           exportarLR0Dot(const AutomataLR0& automata, const std::string& ruta);
+
 #endif // LR0_H

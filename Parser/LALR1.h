@@ -37,4 +37,11 @@ bool evaluarLALR1(const TablaLALR1& tabla,
 
 void imprimirTablaLALR1(const TablaLALR1& tabla);
 
+// Veredicto LALR(1): mismo criterio de ausencia de conflictos que SLR(1),
+// pero la tabla LALR(1) usa lookaheads refinados. Exponerlo aquí permite
+// que el resto del pipeline use el nombre semánticamente correcto.
+inline bool esLALR1(const TablaLALR1& tabla) {
+    return tabla.conflictos.empty();
+}
+
 #endif // LALR1_H

@@ -238,21 +238,18 @@ bool evaluarSLR1(const TablaSLR1& tabla,
 
 // ─── Impresión ────────────────────────────────────────────────────────────────
 
-void imprimirTablaSLR1(const TablaSLR1& tabla) {
+void imprimirCuerpoTablaSLR1(const TablaSLR1& tabla) {
     const Gramatica& g = tabla.gramatica;
 
-    // Recolectar terminales y no-terminales (orden estable)
     std::vector<std::string> terms(g.terminales.begin(), g.terminales.end());
     terms.push_back("$");
     std::vector<std::string> noTerms;
     for (const auto& nt : g.noTerminales) {
-        // Omitir S' de las columnas GOTO (solo interesa en accept)
         if (nt != g.simboloInicial) noTerms.push_back(nt);
     }
 
     int ancho = 8;
 
-    // Encabezado
     std::cout << std::setw(6) << "Est";
     std::cout << " | ";
     std::cout << std::setw(static_cast<int>(terms.size()) * (ancho + 1)) << "ACTION";
@@ -267,7 +264,6 @@ void imprimirTablaSLR1(const TablaSLR1& tabla) {
     std::cout << "\n";
     std::cout << std::string(6 + 3 + terms.size() * (ancho + 1) + 3 + noTerms.size() * (ancho + 1), '-') << "\n";
 
-    // Filas
     for (size_t i = 0; i < tabla.action.size(); i++) {
         std::cout << std::setw(6) << i << " | ";
 
@@ -285,11 +281,14 @@ void imprimirTablaSLR1(const TablaSLR1& tabla) {
         }
         std::cout << "\n";
     }
+}
 
+void imprimirTablaSLR1(const TablaSLR1& tabla) {
+    imprimirCuerpoTablaSLR1(tabla);
     if (tabla.conflictos.empty()) {
-        std::cout << "\n  La gramática es SLR(1).\n";
+        std::cout << "\n  La gramatica es SLR(1).\n";
     } else {
-        std::cout << "\n  *** La gramática NO es SLR(1). Conflictos: "
+        std::cout << "\n  *** La gramatica NO es SLR(1). Conflictos: "
                   << tabla.conflictos.size() << " ***\n";
     }
 }

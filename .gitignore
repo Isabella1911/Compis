@@ -11,3 +11,24 @@ _tmp_test.cpp
 __pycache__/
 *.pyc
 *.pyo
+
+# Binarios sin extension (build artifacts)
+/compilador
+/yalex_parser
+/main_avance2
+/main_avance3
+/main_avance4
+/g++
+
+# Logs y archivos generados por el generador YALex
+/build_yalex.log
+/lexer_complejo.cpp
+/mi_lexer.cpp
+
+# Reportes temporales y scripts ad-hoc
+/_run_*.txt
+/_ide_smoke.py
+/_ide_*.py
+
+# Estado persistido de la IDE
+/.ide_state.json

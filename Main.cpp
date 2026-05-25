@@ -32,6 +32,7 @@
 #include <iomanip>
 #include <map>
 #include <vector>
+#include <cstdio>
 
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  Estructuras                                                ║
@@ -417,6 +418,14 @@ static void fase6_lr0(const Gramatica& gramatica, AutomataLR0& lr0) {
 
     std::cout << "  Estados LR(0): " << lr0.estados.size() << "\n\n";
     imprimirLR0(lr0);
+
+    // Exportar autómata LR(0) a Graphviz para visualización en la IDE
+    const std::string rutaDot = "output/lr0.dot";
+    if (exportarLR0Dot(lr0, rutaDot)) {
+        std::cout << "\n  [LR0-DOT] Autómata LR(0) exportado a: " << rutaDot << "\n";
+    } else {
+        std::cout << "\n  [LR0-DOT] No se pudo exportar a " << rutaDot << "\n";
+    }
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
@@ -475,6 +484,204 @@ static bool fase8_lalr1(const AutomataLR0& lr0,
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
+// ║  Exportación de tablas a JSON (consumible por la IDE)        ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+static std::string escaparJSON(const std::string& s) {
+    std::string r;
+    r.reserve(s.size() + 4);
+    for (char c : s) {
+        switch (c) {
+            case '"':  r += "\\\""; break;
+            case '\\': r += "\\\\"; break;
+            case '\n': r += "\\n";  break;
+            case '\r': r += "\\r";  break;
+            case '\t': r += "\\t";  break;
+            default:
+                if (static_cast<unsigned char>(c) < 0x20) {
+                    char buf[8];
+                    std::snprintf(buf, sizeof(buf), "\\u%04x", c);
+                    r += buf;
+                } else {
+                    r += c;
+                }
+        }
+    }
+    return r;
+}
+
+static std::string accionSLRAJson(const AccionSLR& a) {
+    switch (a.tipo) {
+        case TipoAccion::SHIFT:  return "s" + std::to_string(a.valor);
+        case TipoAccion::REDUCE: return "r" + std::to_string(a.valor);
+        case TipoAccion::ACCEPT: return "acc";
+        case TipoAccion::ERROR:  return "";
+    }
+    return "";
+}
+
+static void escribirTablaSLREnJSON(std::ostream& out,
+                                    const std::string& clave,
+                                    const TablaSLR1& tabla,
+                                    bool primero) {
+    if (!primero) out << ",\n";
+    const Gramatica& g = tabla.gramatica;
+
+    std::vector<std::string> terms(g.terminales.begin(), g.terminales.end());
+    terms.push_back("$");
+    std::vector<std::string> nterms;
+    for (const auto& nt : g.noTerminales) {
+        if (nt != g.simboloInicial) nterms.push_back(nt);
+    }
+
+    out << "  \"" << clave << "\": {\n";
+
+    out << "    \"terminales\": [";
+    for (size_t i = 0; i < terms.size(); i++) {
+        if (i) out << ", ";
+        out << "\"" << escaparJSON(terms[i]) << "\"";
+    }
+    out << "],\n";
+
+    out << "    \"no_terminales\": [";
+    for (size_t i = 0; i < nterms.size(); i++) {
+        if (i) out << ", ";
+        out << "\"" << escaparJSON(nterms[i]) << "\"";
+    }
+    out << "],\n";
+
+    out << "    \"action\": [";
+    for (size_t i = 0; i < tabla.action.size(); i++) {
+        if (i) out << ", ";
+        out << "{";
+        bool first = true;
+        for (const auto& [t, a] : tabla.action[i]) {
+            std::string repr = accionSLRAJson(a);
+            if (repr.empty()) continue;
+            if (!first) out << ", ";
+            out << "\"" << escaparJSON(t) << "\": \"" << repr << "\"";
+            first = false;
+        }
+        out << "}";
+    }
+    out << "],\n";
+
+    out << "    \"goto\": [";
+    for (size_t i = 0; i < tabla.goto_.size(); i++) {
+        if (i) out << ", ";
+        out << "{";
+        bool first = true;
+        for (const auto& [nt, dest] : tabla.goto_[i]) {
+            if (!first) out << ", ";
+            out << "\"" << escaparJSON(nt) << "\": " << dest;
+            first = false;
+        }
+        out << "}";
+    }
+    out << "],\n";
+
+    out << "    \"conflictos\": [";
+    for (size_t i = 0; i < tabla.conflictos.size(); i++) {
+        if (i) out << ", ";
+        const auto& c = tabla.conflictos[i];
+        out << "{"
+            << "\"estado\": " << c.estado
+            << ", \"terminal\": \"" << escaparJSON(c.terminal) << "\""
+            << ", \"descripcion\": \"" << escaparJSON(c.descripcion) << "\""
+            << "}";
+    }
+    out << "]\n";
+
+    out << "  }";
+}
+
+static bool escribirTablasJSON(const ResultadoPipeline& r,
+                                const std::string& ruta) {
+    std::ofstream out(ruta);
+    if (!out.is_open()) return false;
+
+    out << "{\n";
+
+    // FIRST
+    out << "  \"first\": {";
+    {
+        bool primero = true;
+        for (const auto& [nt, conj] : r.first) {
+            if (!primero) out << ",";
+            out << "\n    \"" << escaparJSON(nt) << "\": [";
+            bool f = true;
+            for (const auto& t : conj) {
+                if (!f) out << ", ";
+                out << "\"" << escaparJSON(t) << "\"";
+                f = false;
+            }
+            out << "]";
+            primero = false;
+        }
+    }
+    out << "\n  },\n";
+
+    // FOLLOW
+    out << "  \"follow\": {";
+    {
+        bool primero = true;
+        for (const auto& [nt, conj] : r.follow) {
+            if (!primero) out << ",";
+            out << "\n    \"" << escaparJSON(nt) << "\": [";
+            bool f = true;
+            for (const auto& t : conj) {
+                if (!f) out << ", ";
+                out << "\"" << escaparJSON(t) << "\"";
+                f = false;
+            }
+            out << "]";
+            primero = false;
+        }
+    }
+    out << "\n  },\n";
+
+    // LL(1): terminales + filas
+    {
+        std::vector<std::string> terms(r.gramatica.terminales.begin(),
+                                        r.gramatica.terminales.end());
+        terms.push_back("$");
+        out << "  \"ll1\": {\n";
+        out << "    \"terminales\": [";
+        for (size_t i = 0; i < terms.size(); i++) {
+            if (i) out << ", ";
+            out << "\"" << escaparJSON(terms[i]) << "\"";
+        }
+        out << "],\n";
+
+        out << "    \"filas\": {";
+        bool primero = true;
+        for (const auto& [nt, fila] : r.tablaLL1.tabla) {
+            if (!primero) out << ",";
+            out << "\n      \"" << escaparJSON(nt) << "\": {";
+            bool f = true;
+            for (const auto& [t, prod] : fila) {
+                if (prod < 0) continue;
+                if (!f) out << ", ";
+                out << "\"" << escaparJSON(t) << "\": " << prod;
+                f = false;
+            }
+            out << "}";
+            primero = false;
+        }
+        out << "\n    }\n";
+        out << "  },\n";
+    }
+
+    // SLR(1) y LALR(1)
+    escribirTablaSLREnJSON(out, "slr1",  r.slr1,  true);
+    escribirTablaSLREnJSON(out, "lalr1", r.lalr1, false);
+    out << "\n";
+
+    out << "}\n";
+    return true;
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
 // ║  Resumen final                                              ║
 // ╚══════════════════════════════════════════════════════════════╝
 
@@ -521,7 +728,7 @@ static void imprimirResumen(const ResultadoPipeline& r) {
     std::cout << "  LALR(1):\n";
     std::cout << "    Celdas ACTION:           " << celdasLALR                          << "\n";
     std::cout << "    Conflictos:              " << r.lalr1.conflictos.size()           << "\n";
-    std::cout << "    Es LALR(1):              " << (r.lalr1.esSLR1() ? "SI" : "NO")  << "\n";
+    std::cout << "    Es LALR(1):              " << (esLALR1(r.lalr1) ? "SI" : "NO")  << "\n";
     std::cout << "    Resultado:               " << (r.parseExitoLALR ? "ACEPTADO" : "RECHAZADO") << "\n";
     std::cout << "\n";
 }
@@ -643,6 +850,14 @@ int main(int argc, char* argv[]) {
     fase8_lalr1(r.lr0, r.first, r.filtrada, r.lalr1, r.parseExitoLALR);
 
     imprimirResumen(r);
+
+    // Exportar tablas a JSON consumibles por la IDE.
+    const std::string rutaJson = "output/tablas.json";
+    if (escribirTablasJSON(r, rutaJson)) {
+        std::cout << "  [TABLAS-JSON] Tablas exportadas a: " << rutaJson << "\n";
+    } else {
+        std::cout << "  [TABLAS-JSON] No se pudo exportar a " << rutaJson << "\n";
+    }
 
     // Exitoso si al menos uno de los parsers acepta
     bool exito = r.parseExitoLL1 || r.parseExitoSLR1 || r.parseExitoLALR;

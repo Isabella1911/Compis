@@ -43,6 +43,7 @@ bool evaluarSLR1(const TablaSLR1& tabla,
                  bool verbose = true);
 
 void imprimirTablaSLR1(const TablaSLR1& tabla);
+void imprimirCuerpoTablaSLR1(const TablaSLR1& tabla);
 void imprimirConflictosSLR(const std::vector<ConflictoSLR>& conflictos);
 
 #endif // SLR1_H

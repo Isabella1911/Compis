@@ -253,11 +253,11 @@ bool evaluarLALR1(const TablaLALR1& tabla,
 
 void imprimirTablaLALR1(const TablaLALR1& tabla) {
     std::cout << "Tabla LALR(1):\n";
-    imprimirTablaSLR1(tabla);
-    if (tabla.conflictos.empty())
-        std::cout << "  La gramática es LALR(1).\n";
-    else {
-        std::cout << "  *** La gramática NO es LALR(1). Conflictos: "
+    imprimirCuerpoTablaSLR1(tabla);
+    if (tabla.conflictos.empty()) {
+        std::cout << "\n  La gramatica es LALR(1).\n";
+    } else {
+        std::cout << "\n  *** La gramatica NO es LALR(1). Conflictos: "
                   << tabla.conflictos.size() << " ***\n";
         imprimirConflictosSLR(tabla.conflictos);
     }

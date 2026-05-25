@@ -1,6 +1,8 @@
 #include "LR0.h"
 #include <iostream>
 #include <iomanip>
+#include <fstream>
+#include <sstream>
 #include <algorithm>
 #include <stdexcept>
 
@@ -187,4 +189,58 @@ void imprimirLR0(const AutomataLR0& automata) {
             std::cout << "  GOTO(" << i << ", " << sym << ") = " << dest << "\n";
         std::cout << "\n";
     }
+}
+
+// ─── Exportación a Graphviz (.dot) ───────────────────────────────────────────
+
+static std::string escaparDot(const std::string& s) {
+    std::string r;
+    r.reserve(s.size() + 4);
+    for (char c : s) {
+        switch (c) {
+            case '"':  r += "\\\""; break;
+            case '\\': r += "\\\\"; break;
+            case '<':  r += "\\<";  break;
+            case '>':  r += "\\>";  break;
+            case '|':  r += "\\|";  break;
+            case '{':  r += "\\{";  break;
+            case '}':  r += "\\}";  break;
+            case '\n': r += "\\l";  break;
+            default:   r += c;       break;
+        }
+    }
+    return r;
+}
+
+bool exportarLR0Dot(const AutomataLR0& automata, const std::string& ruta) {
+    std::ofstream out(ruta);
+    if (!out.is_open()) return false;
+
+    const Gramatica& g = automata.gramaticaAumentada;
+
+    out << "digraph LR0 {\n";
+    out << "  rankdir=LR;\n";
+    out << "  node [shape=record, fontname=\"Consolas\", fontsize=10];\n";
+    out << "  edge [fontname=\"Consolas\", fontsize=10];\n\n";
+
+    for (size_t i = 0; i < automata.estados.size(); i++) {
+        std::ostringstream label;
+        label << "I" << i << "\\l";
+        for (const ItemLR0& item : automata.estados[i]) {
+            label << itemAString(item, g) << "\\l";
+        }
+        out << "  s" << i << " [label=\"{" << escaparDot(label.str()) << "}\"];\n";
+    }
+
+    out << "\n";
+
+    for (size_t i = 0; i < automata.estados.size(); i++) {
+        for (const auto& [sym, dest] : automata.goto_[i]) {
+            out << "  s" << i << " -> s" << dest
+                << " [label=\"" << escaparDot(sym) << "\"];\n";
+        }
+    }
+
+    out << "}\n";
+    return true;
 }
