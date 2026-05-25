@@ -33,7 +33,8 @@ TablaLALR1 construirLALR1(const AutomataLR0& automata, const MapaFirst& first);
 bool evaluarLALR1(const TablaLALR1& tabla,
                   const std::vector<Token>& tokens,
                   const std::vector<TokenPosicion>& posiciones,
-                  bool verbose = true);
+                  bool verbose,
+                  int& erroresEncontrados);
 
 void imprimirTablaLALR1(const TablaLALR1& tabla);
 

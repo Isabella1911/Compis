@@ -1,19 +1,5 @@
 /*
  * main.cpp  —  Pipeline completo: YALex + YAPar + LL(1) + LR(0) + SLR(1) + LALR(1)
- *
- * Compila desde la raiz del proyecto:
- *
- *   g++ -std=c++17 -O2 -DCOMPILAR_CON_ORQUESTADOR \
- *       main.cpp \
- *       lexer/YalexParser.cpp \
- *       parser/YaparParser.cpp parser/Grammar.cpp \
- *       parser/FirstFollow.cpp parser/LL1Table.cpp \
- *       parser/LR0.cpp parser/SLR1.cpp parser/LALR1.cpp \
- *       -o compilador
- *
- * Uso:
- *   ./compilador                                      (menu interactivo)
- *   ./compilador <archivo.yal> <archivo.yapar> <entrada>
  */
 
 #include "lexer/YalexParser.h"
@@ -69,6 +55,10 @@ struct ResultadoPipeline {
     bool              parseExitoSLR1 = false;
     bool              parseExitoLALR = false;
     int               parseSteps     = 0;
+    // Conteo de errores recuperados por cada parser
+    int               parseErroresLL1  = 0;
+    int               parseErroresSLR  = 0;
+    int               parseErroresLALR = 0;
 };
 
 // ╔══════════════════════════════════════════════════════════════╗
@@ -292,13 +282,14 @@ static bool fase4_gramatica(const YaparSpec& spec,
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
-// ║  Fase 5 — Parsing LL(1)                                     ║
+// ║  Fase 5 — Parsing LL(1) con recuperación de errores        ║
 // ╚══════════════════════════════════════════════════════════════╝
 
 static bool fase5_parsing(const ResultadoLexico& filtrada,
                            const Gramatica& gramatica,
                            const ResultadoTablaLL1& tablaLL1,
-                           int& pasos) {
+                           int& pasos,
+                           int& erroresEncontrados) {
     separador("FASE 5 — Parsing LL(1)");
 
     if (!tablaLL1.esLL1()) {
@@ -306,105 +297,15 @@ static bool fase5_parsing(const ResultadoLexico& filtrada,
         std::cout << "  Se intentara parsear usando la primera produccion en cada conflicto.\n\n";
     }
 
-    std::vector<std::string> pila;
-    pila.push_back("$");
-    pila.push_back(gramatica.simboloInicial);
-
-    size_t idx   = 0;
-    bool   exito = true;
-    pasos        = 0;
-    const int MAX_PASOS = 10000;
-
-    std::cout << std::left
-              << std::setw(6)  << "Paso"
-              << std::setw(30) << "Tope pila"
-              << std::setw(20) << "Token actual"
-              << "Accion\n";
-    std::cout << std::string(76, '-') << "\n";
-
-    while (!pila.empty() && pasos < MAX_PASOS) {
-        pasos++;
-        const std::string& tope = pila.back();
-        const std::string  tok  = (idx < filtrada.tokens.size())
-                                  ? filtrada.tokens[idx].id : "$";
-
-        if (pasos <= 60) {
-            std::cout << std::left
-                      << std::setw(6)  << pasos
-                      << std::setw(30) << tope
-                      << std::setw(20) << tok;
-        } else if (pasos == 61) {
-            std::cout << "  (pasos restantes omitidos...)\n";
-        }
-
-        if (tope == "$") {
-            if (tok == "$") {
-                if (pasos <= 60) std::cout << "ACEPTAR\n";
-                std::cout << "\n  --> ACEPTADO: el programa es sintacticamente correcto.\n";
-            } else {
-                if (pasos <= 60) std::cout << "ERROR: entrada no consumida\n";
-                std::cerr << "\nERROR SINTACTICO: se esperaba fin de entrada pero se encontro '"
-                          << tok << "' (linea " << filtrada.posiciones[idx].linea
-                          << ", col " << filtrada.posiciones[idx].columna << ")\n";
-                exito = false;
-            }
-            break;
-
-        } else if (gramatica.terminales.count(tope)) {
-            if (tope == tok) {
-                if (pasos <= 60) std::cout << "Consumir '" << tok << "'\n";
-                pila.pop_back();
-                idx++;
-            } else {
-                if (pasos <= 60) std::cout << "ERROR\n";
-                std::cerr << "\nERROR SINTACTICO en linea "
-                          << filtrada.posiciones[idx].linea
-                          << ", col " << filtrada.posiciones[idx].columna
-                          << ": se esperaba '" << tope
-                          << "' pero se encontro '" << tok << "'\n";
-                exito = false;
-                break;
-            }
-
-        } else {
-            auto fila = tablaLL1.tabla.find(tope);
-            int prod_idx = -1;
-            if (fila != tablaLL1.tabla.end()) {
-                auto col = fila->second.find(tok);
-                if (col != fila->second.end())
-                    prod_idx = col->second;
-            }
-
-            if (prod_idx == -1) {
-                if (pasos <= 60) std::cout << "ERROR\n";
-                std::cerr << "\nERROR SINTACTICO en linea "
-                          << filtrada.posiciones[idx].linea
-                          << ", col " << filtrada.posiciones[idx].columna
-                          << ": no hay produccion para M[" << tope << ", " << tok << "]\n";
-                exito = false;
-                break;
-            }
-
-            const Produccion& prod = gramatica.producciones[prod_idx];
-            if (pasos <= 60) {
-                std::cout << tope << " -> ";
-                for (const auto& s : prod.derecha) std::cout << s << " ";
-                std::cout << "\n";
-            }
-
-            pila.pop_back();
-            if (!(prod.derecha.size() == 1 && prod.derecha[0] == "epsilon"))
-                for (int k = (int)prod.derecha.size() - 1; k >= 0; k--)
-                    pila.push_back(prod.derecha[k]);
-        }
-    }
-
-    if (pasos >= MAX_PASOS) {
-        std::cerr << "\nERROR: se alcanzo el limite de pasos (" << MAX_PASOS << ").\n";
-        exito = false;
-    }
-
-    return exito;
+    return evaluarLL1ConRecuperacion(
+        tablaLL1,
+        gramatica,
+        filtrada.tokens,
+        filtrada.posiciones,
+        pasos,
+        true,
+        erroresEncontrados
+    );
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
@@ -419,7 +320,6 @@ static void fase6_lr0(const Gramatica& gramatica, AutomataLR0& lr0) {
     std::cout << "  Estados LR(0): " << lr0.estados.size() << "\n\n";
     imprimirLR0(lr0);
 
-    // Exportar autómata LR(0) a Graphviz para visualización en la IDE
     const std::string rutaDot = "output/lr0.dot";
     if (exportarLR0Dot(lr0, rutaDot)) {
         std::cout << "\n  [LR0-DOT] Autómata LR(0) exportado a: " << rutaDot << "\n";
@@ -436,7 +336,8 @@ static bool fase7_slr1(const AutomataLR0& lr0,
                         const MapaFollow& follow,
                         const ResultadoLexico& filtrada,
                         TablaSLR1& tablaSLR,
-                        bool& parseExito) {
+                        bool& parseExito,
+                        int& erroresEncontrados) {
     separador("FASE 7 — Tabla SLR(1)");
 
     tablaSLR = construirSLR1(lr0, follow);
@@ -448,10 +349,13 @@ static bool fase7_slr1(const AutomataLR0& lr0,
     }
 
     separador("FASE 7 — Evaluacion SLR(1)");
-    parseExito = evaluarSLR1(tablaSLR, filtrada.tokens, filtrada.posiciones, true);
-
-    if (parseExito)
+    parseExito = evaluarSLR1(tablaSLR, filtrada.tokens, filtrada.posiciones, true,
+                              erroresEncontrados);
+    
+    if (parseExito && erroresEncontrados == 0)
         std::cout << "\n  --> ACEPTADO por SLR(1).\n";
+    else if (erroresEncontrados > 0)
+        std::cout << "\n  --> ACEPTADO CON ERRORES (" << erroresEncontrados << ") por SLR(1).\n";
     else
         std::cout << "\n  --> RECHAZADO por SLR(1).\n";
 
@@ -466,17 +370,21 @@ static bool fase8_lalr1(const AutomataLR0& lr0,
                          const MapaFirst& first,
                          const ResultadoLexico& filtrada,
                          TablaLALR1& tablaLALR,
-                         bool& parseExito) {
+                         bool& parseExito,
+                         int& erroresEncontrados) {
     separador("FASE 8 — Tabla LALR(1)");
 
     tablaLALR = construirLALR1(lr0, first);
     imprimirTablaLALR1(tablaLALR);
 
     separador("FASE 8 — Evaluacion LALR(1)");
-    parseExito = evaluarLALR1(tablaLALR, filtrada.tokens, filtrada.posiciones, true);
+    parseExito = evaluarLALR1(tablaLALR, filtrada.tokens, filtrada.posiciones, true,
+                               erroresEncontrados);
 
-    if (parseExito)
+    if (parseExito && erroresEncontrados == 0)
         std::cout << "\n  --> ACEPTADO por LALR(1).\n";
+    else if (erroresEncontrados > 0)
+        std::cout << "\n  --> ACEPTADO CON ERRORES (" << erroresEncontrados << ") por LALR(1).\n";
     else
         std::cout << "\n  --> RECHAZADO por LALR(1).\n";
 
@@ -484,7 +392,7 @@ static bool fase8_lalr1(const AutomataLR0& lr0,
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
-// ║  Exportación de tablas a JSON (consumible por la IDE)        ║
+// ║  Exportación de tablas a JSON                               ║
 // ╚══════════════════════════════════════════════════════════════╝
 
 static std::string escaparJSON(const std::string& s) {
@@ -602,7 +510,6 @@ static bool escribirTablasJSON(const ResultadoPipeline& r,
 
     out << "{\n";
 
-    // FIRST
     out << "  \"first\": {";
     {
         bool primero = true;
@@ -621,7 +528,6 @@ static bool escribirTablasJSON(const ResultadoPipeline& r,
     }
     out << "\n  },\n";
 
-    // FOLLOW
     out << "  \"follow\": {";
     {
         bool primero = true;
@@ -640,7 +546,6 @@ static bool escribirTablasJSON(const ResultadoPipeline& r,
     }
     out << "\n  },\n";
 
-    // LL(1): terminales + filas
     {
         std::vector<std::string> terms(r.gramatica.terminales.begin(),
                                         r.gramatica.terminales.end());
@@ -672,7 +577,6 @@ static bool escribirTablasJSON(const ResultadoPipeline& r,
         out << "  },\n";
     }
 
-    // SLR(1) y LALR(1)
     escribirTablaSLREnJSON(out, "slr1",  r.slr1,  true);
     escribirTablaSLREnJSON(out, "lalr1", r.lalr1, false);
     out << "\n";
@@ -684,6 +588,12 @@ static bool escribirTablasJSON(const ResultadoPipeline& r,
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  Resumen final                                              ║
 // ╚══════════════════════════════════════════════════════════════╝
+
+static std::string resultadoParser(bool exito, int errores) {
+    if (exito && errores == 0) return "ACEPTADO";
+    if (errores > 0)           return "ACEPTADO CON ERRORES (" + std::to_string(errores) + ")";
+    return "RECHAZADO";
+}
 
 static void imprimirResumen(const ResultadoPipeline& r) {
     separador("Resumen");
@@ -703,33 +613,36 @@ static void imprimirResumen(const ResultadoPipeline& r) {
         for (auto& col : fila)
             if (!col.second.esError()) celdasLALR++;
 
-    std::cout << "  Reglas YALex:              " << r.yalex.reglas.size()              << "\n";
-    std::cout << "  Estados AFD min:           " << r.afd_min.estados.size()           << "\n";
-    std::cout << "  Tokens en entrada:         " << r.salidaLexer.tokens.size() - 1   << " (sin $)\n";
-    std::cout << "  Tokens tras filtrado:      " << r.filtrada.tokens.size() - 1       << " (sin $)\n";
-    std::cout << "  Identificadores unicos:    " << r.tablaSimbolos.size()             << "\n";
-    std::cout << "  Producciones:              " << r.gramatica.producciones.size()    << "\n";
+    std::cout << "  Reglas YALex:              " << r.yalex.reglas.size()            << "\n";
+    std::cout << "  Estados AFD min:           " << r.afd_min.estados.size()         << "\n";
+    std::cout << "  Tokens en entrada:         " << r.salidaLexer.tokens.size() - 1 << " (sin $)\n";
+    std::cout << "  Tokens tras filtrado:      " << r.filtrada.tokens.size() - 1     << " (sin $)\n";
+    std::cout << "  Identificadores unicos:    " << r.tablaSimbolos.size()           << "\n";
+    std::cout << "  Producciones:              " << r.gramatica.producciones.size()  << "\n";
     std::cout << "\n";
     std::cout << "  LL(1):\n";
-    std::cout << "    Celdas:                  " << celdasLL1                           << "\n";
-    std::cout << "    Conflictos:              " << r.tablaLL1.conflictos.size()        << "\n";
-    std::cout << "    Es LL(1):                " << (r.tablaLL1.esLL1() ? "SI" : "NO") << "\n";
-    std::cout << "    Resultado:               " << (r.parseExitoLL1 ? "ACEPTADO" : "RECHAZADO") << "\n";
+    std::cout << "    Celdas:                  " << celdasLL1                                       << "\n";
+    std::cout << "    Conflictos:              " << r.tablaLL1.conflictos.size()                   << "\n";
+    std::cout << "    Es LL(1):                " << (r.tablaLL1.esLL1() ? "SI" : "NO")            << "\n";
+    std::cout << "    Errores recuperados:     " << r.parseErroresLL1                              << "\n";
+    std::cout << "    Resultado:               " << resultadoParser(r.parseExitoLL1,  r.parseErroresLL1)  << "\n";
     std::cout << "\n";
     std::cout << "  LR(0):\n";
-    std::cout << "    Estados:                 " << r.lr0.estados.size()               << "\n";
+    std::cout << "    Estados:                 " << r.lr0.estados.size()                           << "\n";
     std::cout << "\n";
     std::cout << "  SLR(1):\n";
-    std::cout << "    Celdas ACTION:           " << celdasSLR                           << "\n";
-    std::cout << "    Conflictos:              " << r.slr1.conflictos.size()            << "\n";
-    std::cout << "    Es SLR(1):               " << (r.slr1.esSLR1() ? "SI" : "NO")   << "\n";
-    std::cout << "    Resultado:               " << (r.parseExitoSLR1 ? "ACEPTADO" : "RECHAZADO") << "\n";
+    std::cout << "    Celdas ACTION:           " << celdasSLR                                      << "\n";
+    std::cout << "    Conflictos:              " << r.slr1.conflictos.size()                       << "\n";
+    std::cout << "    Es SLR(1):               " << (r.slr1.esSLR1() ? "SI" : "NO")              << "\n";
+    std::cout << "    Errores recuperados:     " << r.parseErroresSLR                             << "\n";
+    std::cout << "    Resultado:               " << resultadoParser(r.parseExitoSLR1, r.parseErroresSLR) << "\n";
     std::cout << "\n";
     std::cout << "  LALR(1):\n";
-    std::cout << "    Celdas ACTION:           " << celdasLALR                          << "\n";
-    std::cout << "    Conflictos:              " << r.lalr1.conflictos.size()           << "\n";
-    std::cout << "    Es LALR(1):              " << (esLALR1(r.lalr1) ? "SI" : "NO")  << "\n";
-    std::cout << "    Resultado:               " << (r.parseExitoLALR ? "ACEPTADO" : "RECHAZADO") << "\n";
+    std::cout << "    Celdas ACTION:           " << celdasLALR                                     << "\n";
+    std::cout << "    Conflictos:              " << r.lalr1.conflictos.size()                      << "\n";
+    std::cout << "    Es LALR(1):              " << (esLALR1(r.lalr1) ? "SI" : "NO")             << "\n";
+    std::cout << "    Errores recuperados:     " << r.parseErroresLALR                            << "\n";
+    std::cout << "    Resultado:               " << resultadoParser(r.parseExitoLALR, r.parseErroresLALR) << "\n";
     std::cout << "\n";
 }
 
@@ -832,7 +745,6 @@ int main(int argc, char* argv[]) {
     ResultadoPipeline r;
     YaparSpec spec;
 
-    // Fases existentes (lexer + LL(1))
     if (!fase1_lexer(rutaYal, r.yalex, r.afd_min))            return 1;
     if (!fase2_analisisLexico(rutaEntrada, r.afd_min,
                                r.yalex, r.salidaLexer))        return 1;
@@ -842,16 +754,17 @@ int main(int argc, char* argv[]) {
                           r.first, r.follow, r.tablaLL1))       return 1;
 
     r.parseExitoLL1 = fase5_parsing(r.filtrada, r.gramatica,
-                                     r.tablaLL1, r.parseSteps);
+                                     r.tablaLL1, r.parseSteps,
+                                     r.parseErroresLL1);
 
-    // Nuevas fases: LR(0) + SLR(1) + LALR(1)
     fase6_lr0(r.gramatica, r.lr0);
-    fase7_slr1(r.lr0, r.follow, r.filtrada, r.slr1, r.parseExitoSLR1);
-    fase8_lalr1(r.lr0, r.first, r.filtrada, r.lalr1, r.parseExitoLALR);
+    fase7_slr1(r.lr0, r.follow, r.filtrada, r.slr1,
+               r.parseExitoSLR1, r.parseErroresSLR);
+    fase8_lalr1(r.lr0, r.first, r.filtrada, r.lalr1,
+                r.parseExitoLALR, r.parseErroresLALR);
 
     imprimirResumen(r);
 
-    // Exportar tablas a JSON consumibles por la IDE.
     const std::string rutaJson = "output/tablas.json";
     if (escribirTablasJSON(r, rutaJson)) {
         std::cout << "  [TABLAS-JSON] Tablas exportadas a: " << rutaJson << "\n";
@@ -859,7 +772,18 @@ int main(int argc, char* argv[]) {
         std::cout << "  [TABLAS-JSON] No se pudo exportar a " << rutaJson << "\n";
     }
 
-    // Exitoso si al menos uno de los parsers acepta
-    bool exito = r.parseExitoLL1 || r.parseExitoSLR1 || r.parseExitoLALR;
-    return exito ? 0 : 3;
+
+    // Aceptado limpio: ningún parser tuvo errores
+    bool aceptadoLimpio = (r.parseExitoLL1 && r.parseErroresLL1 == 0) ||
+                          (r.parseExitoSLR1 && r.parseErroresSLR == 0) ||
+                          (r.parseExitoLALR && r.parseErroresLALR == 0);
+
+    // Aceptado con recuperación: al menos uno llegó a acc aunque con errores
+    bool aceptadoConErrores = (r.parseErroresLL1 > 0) ||
+                              (r.parseErroresSLR > 0) ||
+                              (r.parseErroresLALR > 0);
+
+    if (aceptadoLimpio)       return 0;  // ACEPTADO
+    if (aceptadoConErrores)   return 1;  // ACEPTADO CON ERRORES (código distinto de 3)
+    return 3;                             // RECHAZADO
 }

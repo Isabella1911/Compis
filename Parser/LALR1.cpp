@@ -247,8 +247,9 @@ TablaLALR1 construirLALR1(const AutomataLR0& automata, const MapaFirst& /*firstO
 bool evaluarLALR1(const TablaLALR1& tabla,
                   const std::vector<Token>& tokens,
                   const std::vector<TokenPosicion>& posiciones,
-                  bool verbose) {
-    return evaluarSLR1(tabla, tokens, posiciones, verbose);
+                  bool verbose,
+                  int& erroresEncontrados) {
+    return evaluarSLR1(tabla, tokens, posiciones, verbose, erroresEncontrados);
 }
 
 void imprimirTablaLALR1(const TablaLALR1& tabla) {

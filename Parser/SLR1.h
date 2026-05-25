@@ -40,7 +40,8 @@ TablaSLR1 construirSLR1(const AutomataLR0& automata, const MapaFollow& follow);
 bool evaluarSLR1(const TablaSLR1& tabla,
                  const std::vector<Token>& tokens,
                  const std::vector<TokenPosicion>& posiciones,
-                 bool verbose = true);
+                 bool verbose,
+                 int& erroresEncontrados);
 
 void imprimirTablaSLR1(const TablaSLR1& tabla);
 void imprimirCuerpoTablaSLR1(const TablaSLR1& tabla);
