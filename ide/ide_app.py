@@ -74,6 +74,48 @@ _PATRON_DRIVE_LETTER = re.compile(r"^[A-Za-z]:[\\/]")
 _PATRON_UNC_WSL = re.compile(r"^\\\\wsl(?:\.localhost|\$)[\\/]", re.IGNORECASE)
 
 
+def _candidatos_ejecutable():
+    """Posibles rutas del binario del back, en orden de preferencia
+    según el SO actual."""
+    base = PROJECT_ROOT
+    if os.name == "nt":
+        return [base / "compilador.exe", base / "compilador"]
+    if IS_WSL:
+        # En WSL2 se pueden ejecutar .exe vía interop, pero preferimos
+        # el binario Linux nativo si está. El .exe es fallback.
+        return [base / "compilador", base / "compilador.exe"]
+    return [base / "compilador"]
+
+
+def obtener_ejecutable_real():
+    """Devuelve el primer candidato existente, o el preferido si ninguno
+    existe (para mostrar mensajes coherentes)."""
+    for c in _candidatos_ejecutable():
+        if c.exists():
+            return c
+    return _candidatos_ejecutable()[0]
+
+
+def ruta_windows_desde_wsl(p):
+    """Convierte una ruta POSIX a su equivalente Windows usando wslpath.
+    Devuelve None si la conversión falla o no estamos en WSL."""
+    if not IS_WSL:
+        return None
+    wp = shutil.which("wslpath")
+    if wp is None:
+        return None
+    try:
+        proc = subprocess.run(
+            [wp, "-w", str(p)],
+            capture_output=True, text=True, timeout=2)
+        salida = proc.stdout.strip()
+        if proc.returncode == 0 and salida:
+            return salida
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return None
+
+
 def normalizar_ruta_arrastrada(raw):
     """Limpia un path arrastrado y lo convierte al formato del SO actual.
 
@@ -1632,7 +1674,7 @@ class IDE:
                                        text="Estado: Listo")
         self._lbl_ej      = ttk.Label(
             contenido, style="Status.TLabel",
-            text=f"Ejecutable: {EJECUTABLE_PATH.name}")
+            text=f"Ejecutable: {obtener_ejecutable_real().name}")
 
         self._lbl_pos.pack(side="left", padx=(8, 12))
         ttk.Separator(contenido, orient="vertical").pack(
@@ -1977,7 +2019,7 @@ class IDE:
         self._detener_spinner()
         self._escribir("salida", salida)
         self._colorizar_consola(self.paneles["salida"])
-        if codigo == 0 and EJECUTABLE_PATH.exists():
+        if codigo == 0 and obtener_ejecutable_real().exists():
             self._escribir("errores", "")
             self._set_toolbar("Compilación exitosa", Tema.OK)
             self._seleccionar_seccion("salida")
@@ -2018,9 +2060,12 @@ class IDE:
                     f"El archivo {editor.ruta} no existe en disco.\n"
                     "Guardá antes de ejecutar.")
                 return
-        if not EJECUTABLE_PATH.exists():
+        ejecutable = obtener_ejecutable_real()
+        if not ejecutable.exists():
+            sugeridos = "\n  ".join(str(c) for c in _candidatos_ejecutable())
             self._reportar_error(
-                f"No se encontró el ejecutable en:\n  {EJECUTABLE_PATH}\n\n"
+                f"No se encontró el ejecutable.\n\n"
+                f"Buscado en:\n  {sugeridos}\n\n"
                 "Presioná Compilar antes de ejecutar.")
             return
         try:
@@ -2039,7 +2084,7 @@ class IDE:
 
     def _ejecutar_thread(self):
         argv = [
-            str(EJECUTABLE_PATH),
+            str(obtener_ejecutable_real()),
             str(self._editores["yalex"].ruta),
             str(self._editores["yapar"].ruta),
             str(self._editores["entrada"].ruta),
@@ -2398,12 +2443,44 @@ class IDE:
             self._set_toolbar(f"No existe: {ruta.name}", Tema.WARN)
             return
         try:
+            # Windows nativo: startfile delega al visor por defecto.
             if os.name == "nt":
                 os.startfile(str(ruta))  # type: ignore[attr-defined]
-            elif getattr(os, "uname", None) and os.uname().sysname == "Darwin":
+                return
+
+            # WSL: tres estrategias por orden de robustez.
+            if IS_WSL:
+                # 1) wslview (paquete `wslu`): la opción más limpia.
+                if shutil.which("wslview") is not None:
+                    subprocess.run(["wslview", str(ruta)])
+                    return
+                # 2) explorer.exe + ruta Windows: funciona para abrir el
+                #    archivo con su asociación en Windows (mejor para
+                #    .png, .dot, .pdf...).
+                ruta_win = ruta_windows_desde_wsl(ruta)
+                if ruta_win is not None and shutil.which("explorer.exe"):
+                    # explorer.exe siempre retorna 1 aunque tenga exito;
+                    # ignoramos el código.
+                    subprocess.run(["explorer.exe", ruta_win],
+                                     check=False)
+                    return
+                # 3) Fallback: xdg-open (funciona si la distro tiene un
+                #    handler X registrado).
+                if shutil.which("xdg-open"):
+                    subprocess.run(["xdg-open", str(ruta)])
+                    return
+                self._set_toolbar(
+                    "Instalá `wslu` (wslview) o configurá xdg-open para "
+                    "abrir archivos en WSL.", Tema.WARN)
+                return
+
+            # macOS
+            if getattr(os, "uname", None) and os.uname().sysname == "Darwin":
                 subprocess.run(["open", str(ruta)])
-            else:
-                subprocess.run(["xdg-open", str(ruta)])
+                return
+
+            # Linux nativo
+            subprocess.run(["xdg-open", str(ruta)])
         except OSError as exc:
             self._set_toolbar(f"No se pudo abrir {ruta.name}: {exc}",
                                 Tema.ERR)

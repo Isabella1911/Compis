@@ -223,6 +223,40 @@ La detección de WSL se hace al inicio leyendo `WSL_DISTRO_NAME` /
 `WSL_INTEROP` o, como fallback, buscando "microsoft" en
 `/proc/version`.
 
+#### Apertura de archivos externos en WSL
+
+Los botones que abren archivos en el visor del sistema
+(*Abrir externo .dot / PNG*, *Herramientas → Abrir carpeta output*…)
+también detectan que están en WSL y eligen el lanzador adecuado, en
+este orden:
+
+1. **`wslview`** (paquete `wslu`, recomendado en Ubuntu/Debian sobre
+   WSL): convierte la ruta y la abre con la aplicación de Windows
+   asociada por extensión.
+   Instalación: `sudo apt install wslu`.
+2. **`explorer.exe`** + `wslpath -w`: si no está `wslview`, la IDE
+   convierte la ruta POSIX a ruta Windows (`/mnt/c/foo` → `C:\foo`) y
+   delega a `explorer.exe`, que también respeta las asociaciones por
+   extensión de Windows.
+3. **`xdg-open`**: último fallback, útil sólo si la distro tiene un
+   handler X registrado (poco común en WSL puro).
+
+Si ninguno está disponible, la barra de estado sugiere instalar
+`wslu`.
+
+#### Ejecutable del back en WSL
+
+La IDE acepta dos nombres para el binario en la raíz del proyecto:
+`compilador` (binario Linux nativo, preferido) y `compilador.exe`
+(binario Windows, ejecutable desde WSL2 vía interop). Esto significa
+que podés:
+
+- compilar dentro de WSL con `g++ ... -o compilador` y usar ese
+  binario directo;
+- **o** seguir usando el `compilador.exe` que dejó una compilación
+  hecha desde Windows, sin tener que recompilar (WSL2 lo ejecuta vía
+  el bridge de Microsoft).
+
 ## Flujo recomendado
 
 1. Iniciar la IDE.
