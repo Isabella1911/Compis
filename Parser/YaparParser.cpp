@@ -111,59 +111,75 @@ void procesarLineaIgnore(const std::string& linea, YaparSpec& spec) {
     }
 }
 
+// ─── Función auxiliar interna: parsea un bloque de producción ya extraído ────
+static void procesarBloqueProduccion(
+    const std::string& bloque,
+    std::vector<Produccion>& producciones)
+{
+    std::string b = trim(bloque);
+    if (b.empty()) return;
+
+    size_t colonPos = b.find(':');
+    if (colonPos == std::string::npos) return;
+
+    std::string noTerminal = trim(b.substr(0, colonPos));
+    if (noTerminal.empty()) return;
+
+    std::string alternativas = b.substr(colonPos + 1);
+    std::istringstream altStream(alternativas);
+    std::string linea;
+    std::vector<std::string> simbolosActuales;
+
+    while (std::getline(altStream, linea)) {
+        linea = trim(linea);
+        if (linea.empty()) continue;
+
+        if (linea[0] == '|') {
+            if (!simbolosActuales.empty()) {
+                producciones.emplace_back(noTerminal, simbolosActuales);
+                simbolosActuales.clear();
+            }
+            linea = trim(linea.substr(1));
+        }
+
+        if (!linea.empty()) {
+            std::istringstream symStream(linea);
+            std::string sym;
+            while (symStream >> sym) {
+                if (sym != "|") {
+                    simbolosActuales.push_back(sym);
+                }
+            }
+        }
+    }
+
+    if (!simbolosActuales.empty()) {
+        producciones.emplace_back(noTerminal, simbolosActuales);
+    }
+}
+
 std::vector<Produccion> parsearProducciones(
     const std::string& contenido,
-    const YaparSpec& spec) {
+    const YaparSpec& /*spec*/) {
 
     std::vector<Produccion> producciones;
     std::string produccionCompleta;
 
     for (char c : contenido) {
         if (c == ';') {
-            produccionCompleta = trim(produccionCompleta);
-            if (!produccionCompleta.empty()) {
-                size_t colonPos = produccionCompleta.find(':');
-                if (colonPos != std::string::npos) {
-                    std::string noTerminal = trim(produccionCompleta.substr(0, colonPos));
-                    std::string alternativas = produccionCompleta.substr(colonPos + 1);
-
-                    std::istringstream altStream(alternativas);
-                    std::string linea;
-                    std::vector<std::string> simbolosActuales;
-
-                    while (std::getline(altStream, linea)) {
-                        linea = trim(linea);
-
-                        if (linea.empty()) continue;
-
-                        if (linea[0] == '|') {
-                            if (!simbolosActuales.empty()) {
-                                producciones.emplace_back(noTerminal, simbolosActuales);
-                                simbolosActuales.clear();
-                            }
-                            linea = trim(linea.substr(1));
-                        }
-
-                        if (!linea.empty()) {
-                            std::istringstream symStream(linea);
-                            std::string sym;
-                            while (symStream >> sym) {
-                                if (sym != "|") {
-                                    simbolosActuales.push_back(sym);
-                                }
-                            }
-                        }
-                    }
-
-                    if (!simbolosActuales.empty()) {
-                        producciones.emplace_back(noTerminal, simbolosActuales);
-                    }
-                }
-            }
+            // Bloque delimitado por ';' — caso normal
+            procesarBloqueProduccion(produccionCompleta, producciones);
             produccionCompleta.clear();
         } else {
             produccionCompleta += c;
         }
+    }
+
+    // FIX 2: si quedó contenido sin ';' al final del archivo (última producción
+    // sin punto y coma), procesarla igual que si hubiera tenido ';'.
+    produccionCompleta = trim(produccionCompleta);
+    if (!produccionCompleta.empty()) {
+        procesarBloqueProduccion(produccionCompleta, producciones);
     }
 
     return producciones;
@@ -274,6 +290,13 @@ void validarTokensDeEntrada(
 
         if (token.id == "$") continue;
 
+        // FIX 1: tokens con id "lexbuf" son whitespace/comentarios que el lexer
+        // emite internamente cuando la acción del .yal es "return lexbuf".
+        // El .yapar no los declara (ni necesita hacerlo); se descartan en el
+        // filtrado igual que los tokens IGNORE. Omitir el error de validación
+        // para no reportar falsos positivos en .yal bien escritos.
+        if (token.id == "lexbuf") continue;
+
         if (spec.tokensDeclarados.count(token.id) == 0) {
             std::cerr << "Error: el token producido por YALex no fue declarado en YAPar: "
                       << token.id
@@ -311,7 +334,7 @@ void advertirTokensDeclaradosNoUsados(
 {
     std::set<std::string> producidos;
     for (const Token& token : tokens) {
-        if (token.id != "$") producidos.insert(token.id);
+        if (token.id != "$" && token.id != "lexbuf") producidos.insert(token.id);
     }
 
     for (const std::string& declarado : spec.tokensDeclarados) {

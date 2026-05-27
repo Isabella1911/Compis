@@ -1,0 +1,166 @@
+/* pico.yalp — YAPar specification for the PICO language */
+
+/* ── Token declarations ── */
+%token INT_LIT
+%token FLOAT_LIT
+%token STRING_LIT
+%token BOOL_LIT
+%token IDENT
+
+%token KW_LET
+%token KW_EMIT
+%token KW_WHEN
+%token KW_OTHERWISE
+%token KW_REPEAT
+%token KW_UNTIL
+%token KW_MACRO
+
+%token ASSIGN
+%token PLUS
+%token MINUS
+%token TIMES
+%token DIV
+%token EQ
+%token NEQ
+%token LT
+%token GT
+%token LEQ
+%token GEQ
+%token AND
+%token OR
+%token NOT
+
+%token LPAREN
+%token RPAREN
+%token LBRACE
+%token RBRACE
+%token SEMICOLON
+%token COMMA
+
+%token WS
+IGNORE WS
+
+%%
+
+/* ── Productions ── */
+
+/* Top-level program: one or more statements */
+program:
+    statement_list
+;
+
+statement_list:
+    statement_list statement
+  | statement
+;
+
+/* All valid statement forms */
+statement:
+    let_stmt
+  | emit_stmt
+  | when_stmt
+  | repeat_stmt
+  | macro_def
+;
+
+/* Variable declaration: let <ident> <- <expr> ; */
+let_stmt:
+    KW_LET IDENT ASSIGN expr SEMICOLON
+;
+
+/* Output statement: emit <expr> ; */
+emit_stmt:
+    KW_EMIT expr SEMICOLON
+;
+
+/* Conditional: when ( <expr> ) { <stmts> }
+               when ( <expr> ) { <stmts> } otherwise { <stmts> } */
+when_stmt:
+    KW_WHEN LPAREN expr RPAREN LBRACE statement_list RBRACE
+  | KW_WHEN LPAREN expr RPAREN LBRACE statement_list RBRACE KW_OTHERWISE LBRACE statement_list RBRACE
+;
+
+/* Loop: repeat { <stmts> } until ( <expr> ) ; */
+repeat_stmt:
+    KW_REPEAT LBRACE statement_list RBRACE KW_UNTIL LPAREN expr RPAREN SEMICOLON
+;
+
+/* Macro definition: macro <ident> ( <params> ) { <stmts> }
+                     macro <ident> ()            { <stmts> } */
+macro_def:
+    KW_MACRO IDENT LPAREN param_list RPAREN LBRACE statement_list RBRACE
+  | KW_MACRO IDENT LPAREN RPAREN LBRACE statement_list RBRACE
+;
+
+/* Parameter list: one or more comma-separated identifiers */
+param_list:
+    param_list COMMA IDENT
+  | IDENT
+;
+
+/* ── Expressions (precedence encoded in grammar levels) ── */
+
+/* Level 1 — lowest precedence: logical OR */
+expr:
+    expr OR expr_and
+  | expr_and
+;
+
+/* Level 2 — logical AND */
+expr_and:
+    expr_and AND expr_eq
+  | expr_eq
+;
+
+/* Level 3 — equality / inequality */
+expr_eq:
+    expr_eq EQ  expr_cmp
+  | expr_eq NEQ expr_cmp
+  | expr_cmp
+;
+
+/* Level 4 — relational comparisons */
+expr_cmp:
+    expr_cmp LT  expr_add
+  | expr_cmp GT  expr_add
+  | expr_cmp LEQ expr_add
+  | expr_cmp GEQ expr_add
+  | expr_add
+;
+
+/* Level 5 — addition and subtraction */
+expr_add:
+    expr_add PLUS  expr_mul
+  | expr_add MINUS expr_mul
+  | expr_mul
+;
+
+/* Level 6 — multiplication and division */
+expr_mul:
+    expr_mul TIMES expr_unary
+  | expr_mul DIV   expr_unary
+  | expr_unary
+;
+
+/* Level 7 — unary NOT */
+expr_unary:
+    NOT expr_unary
+  | expr_primary
+;
+
+/* Level 8 — primary: literals, identifiers, macro calls, grouped expressions */
+expr_primary:
+    INT_LIT
+  | FLOAT_LIT
+  | STRING_LIT
+  | BOOL_LIT
+  | IDENT
+  | IDENT LPAREN arg_list RPAREN
+  | IDENT LPAREN RPAREN
+  | LPAREN expr RPAREN
+;
+
+/* Argument list: one or more comma-separated expressions */
+arg_list:
+    arg_list COMMA expr
+  | expr

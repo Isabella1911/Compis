@@ -232,7 +232,7 @@ static bool fase3_yapar(const std::string& rutaYapar,
     separador("FASE 3 — Tabla de simbolos");
     for (size_t i = 0; i < filtrada.tokens.size(); i++) {
         const Token& tok = filtrada.tokens[i];
-        if (tok.id == "ID" || tok.id == "id") {
+        if (tok.id == "IDENT" || tok.id == "ID" || tok.id == "id") {
             tablaSimbolos[tok.valor].nombre = tok.valor;
             tablaSimbolos[tok.valor].apariciones++;
         }
