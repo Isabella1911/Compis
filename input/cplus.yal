@@ -1,0 +1,255 @@
+(* cpp.yal — YAL specification for C++ language lexer *)
+
+{
+    /* Código C++ que se inyecta al inicio */
+    #include <iostream>
+    #include <string>
+    #include <vector>
+    
+    using namespace std;
+    
+    int linea_actual = 1;
+    int columna_actual = 1;
+    string token_actual;
+}
+
+(* ── Clases de caracteres ──────────────────────────────── *)
+
+let digit      = ['0'-'9']
+let hex_digit  = digit | ['A'-'F' 'a'-'f']
+let letter     = ['a'-'z' 'A'-'Z']
+let underscore = '_'
+let alphanum   = letter | digit | underscore
+
+(* ── Literales numéricos ───────────────────────────────── *)
+
+let int_lit    = digit+
+let hex_lit    = "0x" hex_digit+
+let oct_lit    = "0" digit*
+let float_lit  = digit+ '.' digit+ (['e' 'E'] ['+' '-']? digit+)?
+               | digit+ ['e' 'E'] ['+' '-']? digit+
+
+(* ── Literales de texto ───────────────────────────────── *)
+
+let char_lit   = "'" ([^'\\\n] | "\\" .) "'"
+let string_lit = '"' ([^"\\\n] | "\\" .)* '"'
+
+(* ── Identificadores y palabras clave de C++ ──────────── *)
+
+let ident      = (letter | underscore) alphanum*
+
+let kw_auto    = "auto"
+let kw_break   = "break"
+let kw_case    = "case"
+let kw_catch   = "catch"
+let kw_char    = "char"
+let kw_class   = "class"
+let kw_const   = "const"
+let kw_continue = "continue"
+let kw_default = "default"
+let kw_delete  = "delete"
+let kw_do      = "do"
+let kw_double  = "double"
+let kw_else    = "else"
+let kw_enum    = "enum"
+let kw_explicit = "explicit"
+let kw_export  = "export"
+let kw_extern  = "extern"
+let kw_false   = "false"
+let kw_float   = "float"
+let kw_for     = "for"
+let kw_friend  = "friend"
+let kw_goto    = "goto"
+let kw_if      = "if"
+let kw_inline  = "inline"
+let kw_int     = "int"
+let kw_long    = "long"
+let kw_mutable = "mutable"
+let kw_namespace = "namespace"
+let kw_new     = "new"
+let kw_operator = "operator"
+let kw_private = "private"
+let kw_protected = "protected"
+let kw_public  = "public"
+let kw_register = "register"
+let kw_return  = "return"
+let kw_short   = "short"
+let kw_signed  = "signed"
+let kw_sizeof  = "sizeof"
+let kw_static  = "static"
+let kw_static_cast = "static_cast"
+let kw_struct  = "struct"
+let kw_switch  = "switch"
+let kw_template = "template"
+let kw_this    = "this"
+let kw_throw   = "throw"
+let kw_true    = "true"
+let kw_try     = "try"
+let kw_typedef = "typedef"
+let kw_typeid  = "typeid"
+let kw_typename = "typename"
+let kw_union   = "union"
+let kw_unsigned = "unsigned"
+let kw_using   = "using"
+let kw_virtual = "virtual"
+let kw_void    = "void"
+let kw_volatile = "volatile"
+let kw_while   = "while"
+
+(* ── Comentarios ─────────────────────────────────────── *)
+
+let line_cmt   = "//" [^'\n']* '\n'
+let block_cmt  = "/*" ([^*] | '*'+ [^*/])* '*'+ "*/"
+
+(* ── Operadores de C++ (varios caracteres) ───────────── *)
+
+let op_3chars  = ">>=" | "<<=" | "->*"
+let op_2chars  = "->" | "++" | "--" | "+=" | "-=" | "*=" | "/="
+               | "%=" | "&=" | "|=" | "^=" | ">>" | "<<"
+               | "==" | "!=" | "<=" | ">=" | "&&" | "||"
+               | "::"
+
+(* ── Whitespace ──────────────────────────────────────── *)
+
+let whitespace = [' ' '\t' '\r']
+
+(* ══════════════════════════════════════════════════════ *)
+
+rule gettoken =
+
+    (* Ignorar whitespace y comentarios *)
+    whitespace+                  { return CONTINUE }
+  | '\n'                         { linea_actual++; columna_actual = 1; return CONTINUE }
+  | line_cmt                     { return CONTINUE }
+  | block_cmt                    { return CONTINUE }
+
+    (* ── Palabras clave ── *)
+  | kw_auto                      { return TOK_AUTO }
+  | kw_break                     { return TOK_BREAK }
+  | kw_case                      { return TOK_CASE }
+  | kw_catch                     { return TOK_CATCH }
+  | kw_char                      { return TOK_CHAR }
+  | kw_class                     { return TOK_CLASS }
+  | kw_const                     { return TOK_CONST }
+  | kw_continue                  { return TOK_CONTINUE }
+  | kw_default                   { return TOK_DEFAULT }
+  | kw_delete                    { return TOK_DELETE }
+  | kw_do                        { return TOK_DO }
+  | kw_double                    { return TOK_DOUBLE }
+  | kw_else                      { return TOK_ELSE }
+  | kw_enum                      { return TOK_ENUM }
+  | kw_explicit                  { return TOK_EXPLICIT }
+  | kw_export                    { return TOK_EXPORT }
+  | kw_extern                    { return TOK_EXTERN }
+  | kw_false                     { return TOK_FALSE }
+  | kw_float                     { return TOK_FLOAT }
+  | kw_for                       { return TOK_FOR }
+  | kw_friend                    { return TOK_FRIEND }
+  | kw_goto                      { return TOK_GOTO }
+  | kw_if                        { return TOK_IF }
+  | kw_inline                    { return TOK_INLINE }
+  | kw_int                       { return TOK_INT }
+  | kw_long                      { return TOK_LONG }
+  | kw_mutable                   { return TOK_MUTABLE }
+  | kw_namespace                 { return TOK_NAMESPACE }
+  | kw_new                       { return TOK_NEW }
+  | kw_operator                  { return TOK_OPERATOR }
+  | kw_private                   { return TOK_PRIVATE }
+  | kw_protected                 { return TOK_PROTECTED }
+  | kw_public                    { return TOK_PUBLIC }
+  | kw_register                  { return TOK_REGISTER }
+  | kw_return                    { return TOK_RETURN }
+  | kw_short                     { return TOK_SHORT }
+  | kw_signed                    { return TOK_SIGNED }
+  | kw_sizeof                    { return TOK_SIZEOF }
+  | kw_static                    { return TOK_STATIC }
+  | kw_static_cast               { return TOK_STATIC_CAST }
+  | kw_struct                    { return TOK_STRUCT }
+  | kw_switch                    { return TOK_SWITCH }
+  | kw_template                  { return TOK_TEMPLATE }
+  | kw_this                      { return TOK_THIS }
+  | kw_throw                     { return TOK_THROW }
+  | kw_true                      { return TOK_TRUE }
+  | kw_try                       { return TOK_TRY }
+  | kw_typedef                   { return TOK_TYPEDEF }
+  | kw_typeid                    { return TOK_TYPEID }
+  | kw_typename                  { return TOK_TYPENAME }
+  | kw_union                     { return TOK_UNION }
+  | kw_unsigned                  { return TOK_UNSIGNED }
+  | kw_using                     { return TOK_USING }
+  | kw_virtual                   { return TOK_VIRTUAL }
+  | kw_void                      { return TOK_VOID }
+  | kw_volatile                  { return TOK_VOLATILE }
+  | kw_while                     { return TOK_WHILE }
+
+    (* ── Literales ── *)
+  | hex_lit                      { return TOK_HEX_LIT }
+  | oct_lit                      { return TOK_OCT_LIT }
+  | int_lit                      { return TOK_INT_LIT }
+  | float_lit                    { return TOK_FLOAT_LIT }
+  | char_lit                     { return TOK_CHAR_LIT }
+  | string_lit                   { return TOK_STRING_LIT }
+
+    (* ── Identificador ── *)
+  | ident                        { return TOK_IDENTIFIER }
+
+    (* ── Operadores de 3 caracteres ── *)
+  | ">>="                        { return TOK_RSHIFT_ASSIGN }
+  | "<<="                        { return TOK_LSHIFT_ASSIGN }
+  | "->*"                        { return TOK_PTR_TO_MEMBER }
+
+    (* ── Operadores de 2 caracteres ── *)
+  | "->"                         { return TOK_ARROW }
+  | "++"                         { return TOK_INCREMENT }
+  | "--"                         { return TOK_DECREMENT }
+  | "+="                         { return TOK_PLUS_ASSIGN }
+  | "-="                         { return TOK_MINUS_ASSIGN }
+  | "*="                         { return TOK_MUL_ASSIGN }
+  | "/="                         { return TOK_DIV_ASSIGN }
+  | "%="                         { return TOK_MOD_ASSIGN }
+  | "&="                         { return TOK_AND_ASSIGN }
+  | "|="                         { return TOK_OR_ASSIGN }
+  | "^="                         { return TOK_XOR_ASSIGN }
+  | ">>"                         { return TOK_RSHIFT }
+  | "<<"                         { return TOK_LSHIFT }
+  | "=="                         { return TOK_EQ }
+  | "!="                         { return TOK_NEQ }
+  | "<="                         { return TOK_LEQ }
+  | ">="                         { return TOK_GEQ }
+  | "&&"                         { return TOK_AND }
+  | "||"                         { return TOK_OR }
+  | "::"                         { return TOK_SCOPE }
+
+    (* ── Operadores de 1 carácter ── *)
+  | '+'                          { return TOK_PLUS }
+  | '-'                          { return TOK_MINUS }
+  | '*'                          { return TOK_STAR }
+  | '/'                          { return TOK_SLASH }
+  | '%'                          { return TOK_PERCENT }
+  | '='                          { return TOK_ASSIGN }
+  | '<'                          { return TOK_LT }
+  | '>'                          { return TOK_GT }
+  | '!'                          { return TOK_NOT }
+  | '&'                          { return TOK_AMPERSAND }
+  | '|'                          { return TOK_PIPE }
+  | '^'                          { return TOK_CARET }
+  | '~'                          { return TOK_TILDE }
+  | '?'                          { return TOK_QUESTION }
+  | ':'                          { return TOK_COLON }
+  | ';'                          { return TOK_SEMICOLON }
+  | ','                          { return TOK_COMMA }
+  | '.'                          { return TOK_DOT }
+
+    (* ── Delimitadores ── *)
+  | '('                          { return TOK_LPAREN }
+  | ')'                          { return TOK_RPAREN }
+  | '['                          { return TOK_LBRACKET }
+  | ']'                          { return TOK_RBRACKET }
+  | '{'                          { return TOK_LBRACE }
+  | '}'                          { return TOK_RBRACE }
+
+    (* ── EOF ── *)
+  | eof                          { return TOK_EOF }
+
+    (* ── Error ── *)
+  | _                            { return TOK_ERROR }
