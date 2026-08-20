@@ -44,10 +44,10 @@ Desde la raíz del repo:
 ```bash
 g++ -std=c++17 -O2 -DCOMPILAR_CON_ORQUESTADOR \
     Main.cpp \
-    Lexer/YalexParser.cpp \
-    Parser/YaparParser.cpp Parser/Grammar.cpp \
-    Parser/FirstFollow.cpp Parser/LL1Table.cpp \
-    Parser/LR0.cpp Parser/SLR1.cpp Parser/LALR1.cpp \
+    lexer/YalexParser.cpp \
+    parser/YaparParser.cpp parser/Grammar.cpp \
+    parser/FirstFollow.cpp parser/LL1Table.cpp \
+    parser/LR0.cpp parser/SLR1.cpp parser/LALR1.cpp \
     -o compilador.exe
 ```
 
@@ -67,9 +67,9 @@ preconfigurados en `input/`):
 Modo directo (rutas explícitas):
 
 ```bash
-./compilador.exe input/ejemplo.yal input/parser_ejemplo.yapar input/entrada_ejemplo.txt
-./compilador.exe input/lexer_complejo.yal input/parser_complejo.yapar input/entrada_complejo.txt
-./compilador.exe input/lexer_complejo.yal input/parser_complejo.yapar input/Test_complejo.txt
+./compilador.exe input/ejemplo/ejemplo.yal input/ejemplo/parser_ejemplo.yapar input/ejemplo/entrada_ejemplo.txt
+./compilador.exe input/complejo/lexer_complejo.yal input/complejo/parser_complejo.yapar input/complejo/entrada_complejo.txt
+./compilador.exe input/complejo/lexer_complejo.yal input/complejo/parser_complejo.yapar input/complejo/Test_complejo.txt
 ```
 
 El proceso retorna `0` cuando al menos uno de los parsers acepta y `3`
@@ -118,9 +118,11 @@ La interfaz se documenta con detalle en
 ```
 Compis/
 ├── Main.cpp                     # Orquestador: 8 fases del pipeline
-├── Lexer/
-│   └── YalexParser.cpp/.h       # YALex -> AFN -> AFD -> AFD minimizado -> lexer
-├── Parser/
+├── lexer/
+│   ├── YalexParser.cpp/.h       # YALex -> AFN -> AFD -> AFD minimizado -> lexer
+│   ├── Token.h
+│   └── visualizar.py
+├── parser/
 │   ├── YaparParser.cpp/.h       # Lectura del .yapar
 │   ├── Grammar.cpp/.h           # Estructuras de gramática + validaciones
 │   ├── FirstFollow.cpp/.h       # FIRST y FOLLOW
@@ -131,7 +133,17 @@ Compis/
 ├── ide/
 │   ├── ide_app.py               # IDE tkinter (envuelve el ejecutable)
 │   └── IDE.md                   # Documentación detallada de la IDE
-├── input/                       # Casos de prueba (.yal, .yapar, .txt)
+├── input/                       # Casos de prueba, agrupados por set
+│   ├── ejemplo/                 # ejemplo.yal + parser_ejemplo.yapar + entrada_ejemplo.txt
+│   ├── complejo/                # lexer_complejo.yal + parser_complejo.yapar + entradas
+│   ├── example/                 # example.yal + example.yapar
+│   ├── cplus/                   # cplus.yal + cplus.yapar + cpp_lexer.yal
+│   └── misc/                    # entradas sueltas usadas en pruebas ad-hoc
+├── legacy/                      # Código de avances anteriores, fuera del build actual
+│   ├── lexer/Proyecto1.cpp      # Prototipo del Proyecto 1 (Shunting Yard/Thompson)
+│   ├── parser/Orquestador.cpp   # Pipeline standalone previo a Main.cpp
+│   ├── parser/ParserDriver.cpp/.h
+│   └── tests/main_avance2/3/4.cpp
 ├── output/                      # Artefactos generados (lr0.dot, tablas.json, ...)
 └── README.md
 ```
