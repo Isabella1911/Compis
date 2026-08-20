@@ -4,6 +4,8 @@
 *.exe
 output/
 .vscode/
+node_modules/
+package_lock.json
 
 _tmp_test.cpp
 *.o
