@@ -34,3 +34,9 @@ __pycache__/
 
 # Estado persistido de la IDE
 /.ide_state.json
+
+# Compiscript (Proyecto 2, rama ANTLR): toolchain local (JRE/antlr.jar/cmake/
+# runtime C++), codigo generado por ANTLR y el binario compilado.
+compiscript/.deps/
+compiscript/generated/
+compiscript/compiscript
