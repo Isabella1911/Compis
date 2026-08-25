@@ -37,9 +37,27 @@ $env:PATH = "C:\msys64\ucrt64\bin;$env:PATH"
 
 ---
 
-## 2. Compilar el back
+## 2. Compilar y ejecutar el back
+
+### Con `make` (recomendado)
 
 Desde la raíz del repo:
+
+```bash
+make            # compila compilador(.exe)
+make ejemplo    # compila si hace falta y corre el set input/ejemplo/
+make complejo   # compila si hace falta y corre el set input/complejo/
+make menu       # corre el modo interactivo (sin argumentos)
+make run YAL=input/example/example.yal YAPAR=input/example/example.yapar IN=ruta/a/entrada.txt
+make clean      # borra el binario compilado
+```
+
+`make` detecta el sistema (MSYS2/MinGW en Windows vs. Linux/macOS/WSL) y
+nombra el binario `compilador.exe` o `compilador` según corresponda. Los
+targets `build`/`ejemplo`/`complejo`/`run` no recompilan si el binario ya
+está actualizado respecto al código fuente.
+
+### Manual, sin `make`
 
 ```bash
 g++ -std=c++17 -O2 -DCOMPILAR_CON_ORQUESTADOR \
@@ -52,10 +70,6 @@ g++ -std=c++17 -O2 -DCOMPILAR_CON_ORQUESTADOR \
 ```
 
 En Linux / macOS, omitir el `.exe` final.
-
----
-
-## 3. Ejecutar el back (línea de comandos)
 
 Modo interactivo (muestra un menú con los conjuntos de archivos
 preconfigurados en `input/`):
@@ -78,7 +92,7 @@ parser.
 
 ---
 
-## 4. Salidas
+## 3. Salidas
 
 Cada corrida deja artefactos en `output/`:
 
@@ -92,7 +106,7 @@ La IDE consume ambos archivos automáticamente.
 
 ---
 
-## 5. IDE
+## 4. IDE
 
 Desde la raíz del repo:
 
@@ -113,11 +127,12 @@ La interfaz se documenta con detalle en
 
 ---
 
-## 6. Estructura del repositorio
+## 5. Estructura del repositorio
 
 ```
 Compis/
 ├── Main.cpp                     # Orquestador: 8 fases del pipeline
+├── Makefile                     # make / make ejemplo / make complejo / make run ...
 ├── lexer/
 │   ├── YalexParser.cpp/.h       # YALex -> AFN -> AFD -> AFD minimizado -> lexer
 │   ├── Token.h
@@ -150,7 +165,7 @@ Compis/
 
 ---
 
-## 7. Notas
+## 6. Notas
 
 - El binario se ejecuta desde la raíz del repo para que `input/...` y
   `output/...` resuelvan igual que en la IDE.
