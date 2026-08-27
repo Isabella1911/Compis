@@ -58,7 +58,8 @@ Después, desde `compiscript/`:
 make                                            # genera el parser (si hace falta) y compila
 make run FILE=tests/fixtures/valid/hello.cps    # corre un archivo .cps
 make test                                       # corre todos los fixtures de tests/fixtures/
-make clean                                      # borra el binario y el codigo generado
+make test-symbols                               # prueba unitaria de Scope/Symbol (no necesita ANTLR)
+make clean                                      # borra los binarios y el codigo generado
 ```
 
 `make` regenera el parser solo si `grammar/Compiscript.g4` cambió. El
@@ -86,10 +87,16 @@ compiscript/
 │   │   ├── diagnostic.h          #   struct Diagnostic (severity, codigo, mensaje, linea, columna)
 │   │   ├── codes.h               #   registro de codigos (SYN0xx, SEM0xx)
 │   │   └── reporter.cpp/.h       #   acumula diagnosticos, sin estado global
-│   └── compiler/
-│       ├── result.h              #   CompilationResult
-│       └── compiler.cpp/.h       #   fachada publica: Compiler::compile(source)
-├── tests/fixtures/{valid,invalid}/
+│   ├── compiler/
+│   │   ├── result.h              #   CompilationResult
+│   │   └── compiler.cpp/.h       #   fachada publica: Compiler::compile(source)
+│   └── semantic/                 # Etapa 2: tabla de simbolos (por ahora), tipos y passes despues
+│       ├── symbol.h              #   Symbol, FunctionSymbol, ClassSymbol
+│       ├── scope.h/.cpp          #   Scope: declare/resolve/resolveLocal, pila de tablas
+│       └── symbol_table.h        #   SymbolTable: dueno del scope global
+├── tests/
+│   ├── fixtures/{valid,invalid}/
+│   └── symbol_table_test.cpp     #   prueba unitaria de Scope/Symbol, sin AST ni compilador
 ├── tools/setup.sh                # instala el toolchain (JRE+antlr+cmake+runtime), sin sudo
 └── Makefile
 ```
@@ -140,7 +147,9 @@ no expone ningún tipo de ANTLR en su firma.
 
 ---
 
-## 5. Estado (checklist de esta etapa)
+## 5. Estado (checklist)
+
+### Etapa 1 — Fundación (AST + diagnósticos + fachada)
 
 - [x] Toolchain de ANTLR instalado sin sudo (`tools/setup.sh`), reproducible en cualquier máquina del equipo.
 - [x] Parser generado desde `grammar/Compiscript.g4` sin tocar la gramática oficial.
@@ -152,5 +161,17 @@ no expone ningún tipo de ANTLR en su firma.
 - [x] `Compiler::compile()` sin estado global entre llamadas.
 - [x] AST exportable a texto y a DOT.
 - [x] Batería mínima de pruebas (`make test`) con casos válidos e inválidos.
-- [ ] Tabla de símbolos, sistema de tipos, passes semánticos — Etapa 2 y 3.
+
+### Etapa 2 — Símbolos y tipos (en progreso, por rebanadas)
+
+- [x] **Tabla de símbolos** (`src/semantic/`): `Symbol`/`FunctionSymbol`/`ClassSymbol`,
+      `Scope` (declare/resolve/resolveLocal, pila de tablas con shadowing correcto),
+      `SymbolTable` como dueño del scope global. Probada en aislado
+      (`make test-symbols`, 24 checks), **todavía no conectada al AST ni al
+      compilador** — eso es la siguiente rebanada (un pass que recorra el AST
+      y cree/llene los scopes: global, función, clase, bloque).
+- [ ] Pass que puebla la tabla de símbolos recorriendo el AST (DeclarationCollector).
+- [ ] Resolución de nombres sobre el AST (llenar `AstNode::symbol`/`scope`).
+- [ ] Sistema de tipos interno (`Type`, `resolved_type`).
+- [ ] Passes semánticos (Etapa 3): verificación de tipos, control de flujo, clases, closures, código muerto — las ~25 reglas del PDF.
 - [ ] IDE (por ahora hay CLI vía `make run`; se evaluará adaptar la IDE tkinter de Compis).

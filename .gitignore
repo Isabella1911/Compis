@@ -40,3 +40,4 @@ __pycache__/
 compiscript/.deps/
 compiscript/generated/
 compiscript/compiscript
+compiscript/symbol_table_test

@@ -8,7 +8,8 @@
 #   make              -> genera el parser (si hace falta) y compila compiscript(.exe)
 #   make run FILE=tests/fixtures/valid/hello.cps
 #   make test         -> corre todos los fixtures de tests/fixtures/valid e invalid
-#   make clean        -> borra el binario y el codigo generado por ANTLR
+#   make test-symbols -> corre la prueba unitaria de Scope/Symbol (no necesita ANTLR)
+#   make clean        -> borra los binarios y el codigo generado por ANTLR
 
 DEPS        := .deps
 JAVA        := $(DEPS)/jre17/bin/java
@@ -35,14 +36,18 @@ SRC        := src/main.cpp \
               src/compiler/compiler.cpp \
               $(GENERATED)
 
+SEMANTIC_SRC := src/semantic/scope.cpp
+
 UNAME_S := $(shell uname -s 2>/dev/null)
 ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
-BIN := compiscript.exe
+BIN             := compiscript.exe
+TEST_SYMBOLS_BIN := symbol_table_test.exe
 else
-BIN := compiscript
+BIN             := compiscript
+TEST_SYMBOLS_BIN := symbol_table_test
 endif
 
-.PHONY: all build setup generate test clean
+.PHONY: all build setup generate test test-symbols clean
 
 all: build
 
@@ -85,6 +90,14 @@ test: build
 	echo "----"; echo "$$ok ok, $$fail fallos"; \
 	[ "$$fail" -eq 0 ]
 
+# No depende de $(GENERATED) ni de ANTLR4CPP a proposito: semantic/ no
+# incluye nada de ANTLR, asi que esta prueba compila (mucho) mas rapido.
+$(TEST_SYMBOLS_BIN): tests/symbol_table_test.cpp $(SEMANTIC_SRC)
+	$(CXX) -std=c++17 -O0 -g -Wall -I src tests/symbol_table_test.cpp $(SEMANTIC_SRC) -o $(TEST_SYMBOLS_BIN)
+
+test-symbols: $(TEST_SYMBOLS_BIN)
+	./$(TEST_SYMBOLS_BIN)
+
 clean:
-	rm -f compiscript compiscript.exe
+	rm -f compiscript compiscript.exe symbol_table_test symbol_table_test.exe
 	rm -rf generated
