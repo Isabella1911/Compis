@@ -6,6 +6,7 @@
 #include "ast/printer.h"
 #include "compiler/compiler.h"
 #include "diagnostics/diagnostic.h"
+#include "semantic/printer.h"
 
 namespace fs = std::filesystem;
 
@@ -51,6 +52,9 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "\nAST:\n" << ast::printTree(result.ast.get());
+
+    std::cout << "\nTabla de simbolos:\n"
+               << semantic::printScopeTree(result.symbol_table.global());
 
     fs::create_directories("output");
     std::ofstream dotFile("output/ast.dot");

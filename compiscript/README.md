@@ -11,7 +11,7 @@ o Visitors de ANTLR"). Vive en una rama aparte porque es un stack distinto
 
 ---
 
-## 1. Qué hace esta etapa (Fundación: AST + diagnósticos + fachada)
+## 1. Qué hace el pipeline hasta ahora
 
 ```
 program.cps
@@ -31,15 +31,25 @@ AST propio                              src/ast/nodes.h
     ├──► printTree() / toDot()          src/ast/printer.cpp
     │
     ▼
+DeclarationCollector (Pass 1)           src/semantic/declaration_collector.cpp
+    │  recorre el AST, crea un Scope por cada funcion/clase/bloque,
+    │  declara cada variable/constante/parametro/funcion/clase,
+    │  reporta SEM002 si algo se redeclara en el mismo ambito
+    ▼
+SymbolTable poblada                     src/semantic/scope.h
+    │
+    ├──► printScopeTree()               src/semantic/printer.cpp
+    │
+    ▼
 Compiler::compile() -> CompilationResult   src/compiler/compiler.cpp
+                                            { ast, diagnostics, symbol_table }
 ```
 
-Lo que **no** está implementado todavía (Etapas 2 y 3, fuera de este
-documento): tabla de símbolos, sistema de tipos, y las validaciones
-semánticas reales (todo lo que pide la sección "Especificaciones" del PDF
-del proyecto). Los campos `resolved_type`, `symbol` y `scope` ya existen en
-cada nodo del AST, en `nullptr`, listos para que esas etapas los llenen sin
-tener que volver a tocar `nodes.h`.
+Lo que **todavía no** está implementado: resolución de nombres sobre los
+*usos* de cada identificador (DeclarationCollector solo declara, no valida
+que cada `x` que aparece en una expresión exista), sistema de tipos, y el
+resto de las validaciones semánticas del PDF (Etapa 3). `resolved_type`
+sigue en `nullptr` en cada nodo del AST.
 
 ---
 
@@ -63,7 +73,8 @@ make clean                                      # borra los binarios y el codigo
 ```
 
 `make` regenera el parser solo si `grammar/Compiscript.g4` cambió. El
-binario imprime los diagnósticos (si hay), el AST en texto indentado, y
+binario imprime los diagnósticos (si hay), el AST en texto indentado, la
+tabla de símbolos (un `Scope` por línea, indentado por anidamiento), y
 exporta `output/ast.dot` (renderizable con `dot -Tpng output/ast.dot -o
 ast.png`, igual que Compis ya hace con su autómata LR(0)).
 
@@ -90,10 +101,12 @@ compiscript/
 │   ├── compiler/
 │   │   ├── result.h              #   CompilationResult
 │   │   └── compiler.cpp/.h       #   fachada publica: Compiler::compile(source)
-│   └── semantic/                 # Etapa 2: tabla de simbolos (por ahora), tipos y passes despues
-│       ├── symbol.h              #   Symbol, FunctionSymbol, ClassSymbol
-│       ├── scope.h/.cpp          #   Scope: declare/resolve/resolveLocal, pila de tablas
-│       └── symbol_table.h        #   SymbolTable: dueno del scope global
+│   └── semantic/                 # Etapa 2: simbolos (listo), tipos y mas passes despues
+│       ├── symbol.h                    #   Symbol, FunctionSymbol, ClassSymbol
+│       ├── scope.h/.cpp                #   Scope: declare/resolve/resolveLocal, pila de tablas
+│       ├── symbol_table.h              #   SymbolTable: dueno del scope global
+│       ├── declaration_collector.h/.cpp #  Pass 1: AST -> puebla la tabla de simbolos
+│       └── printer.h/.cpp              #   texto indentado del arbol de scopes
 ├── tests/
 │   ├── fixtures/{valid,invalid}/
 │   └── symbol_table_test.cpp     #   prueba unitaria de Scope/Symbol, sin AST ni compilador
@@ -164,14 +177,23 @@ no expone ningún tipo de ANTLR en su firma.
 
 ### Etapa 2 — Símbolos y tipos (en progreso, por rebanadas)
 
-- [x] **Tabla de símbolos** (`src/semantic/`): `Symbol`/`FunctionSymbol`/`ClassSymbol`,
-      `Scope` (declare/resolve/resolveLocal, pila de tablas con shadowing correcto),
-      `SymbolTable` como dueño del scope global. Probada en aislado
-      (`make test-symbols`, 24 checks), **todavía no conectada al AST ni al
-      compilador** — eso es la siguiente rebanada (un pass que recorra el AST
-      y cree/llene los scopes: global, función, clase, bloque).
-- [ ] Pass que puebla la tabla de símbolos recorriendo el AST (DeclarationCollector).
-- [ ] Resolución de nombres sobre el AST (llenar `AstNode::symbol`/`scope`).
+- [x] **Tabla de símbolos** (`src/semantic/symbol.h`, `scope.h/.cpp`, `symbol_table.h`):
+      `Symbol`/`FunctionSymbol`/`ClassSymbol`, `Scope` (declare/resolve/resolveLocal,
+      pila de tablas con shadowing correcto), `SymbolTable` como dueño del scope
+      global. Probada en aislado (`make test-symbols`, 24 checks).
+- [x] **DeclarationCollector** (`declaration_collector.h/.cpp`): recorre el AST,
+      crea un `Scope` por cada función/clase/bloque (el cuerpo inmediato de una
+      función o clase comparte el scope de sus parámetros/miembros, sin anidar
+      de más), declara cada variable/constante/parámetro/función/clase, y
+      reporta `SEM002` en redeclaraciones dentro del mismo ámbito. **Ya
+      conectado a `Compiler::compile()`** — `CompilationResult` ahora expone
+      `symbol_table` siempre válido (scope global vacío si hubo error
+      sintáctico). Visible con `make run FILE=...` (imprime la tabla de
+      símbolos completa) y probado con fixtures reales, incluida una
+      redeclaración real que dispara `SEM002` de punta a punta.
+- [ ] Resolución de nombres sobre los *usos* (cada `IdentifierExpression` en una
+      expresión, no solo las declaraciones) — llenar `AstNode::symbol`/`scope`
+      en el resto del árbol y reportar `SEM001` (variable no declarada).
 - [ ] Sistema de tipos interno (`Type`, `resolved_type`).
 - [ ] Passes semánticos (Etapa 3): verificación de tipos, control de flujo, clases, closures, código muerto — las ~25 reglas del PDF.
 - [ ] IDE (por ahora hay CLI vía `make run`; se evaluará adaptar la IDE tkinter de Compis).

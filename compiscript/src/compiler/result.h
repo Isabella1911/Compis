@@ -6,15 +6,18 @@
 
 #include "ast/nodes.h"
 #include "diagnostics/diagnostic.h"
+#include "semantic/symbol_table.h"
 
 namespace compiscript {
 namespace compiler {
 
-// symbol_table llega en la Etapa 2: por ahora ni se declara el campo,
-// para no tener un puntero muerto sin uso durante toda esta etapa.
 struct CompilationResult {
     ast::ProgramPtr ast;  // null si hubo error sintactico
     std::vector<diagnostics::Diagnostic> diagnostics;
+    // Siempre valido (nunca null): si hubo error sintactico simplemente
+    // queda con el scope global vacio, sin necesidad de que el que
+    // consume CompilationResult tenga que chequear null primero.
+    semantic::SymbolTable symbol_table;
 
     bool success() const {
         return std::none_of(diagnostics.begin(), diagnostics.end(),

@@ -13,23 +13,32 @@
 #include <vector>
 
 namespace compiscript {
-namespace ast {
 
-// Forward declarations de lo que llenara la Etapa 2 (tabla de simbolos /
-// sistema de tipos). No se definen aqui a proposito.
-class Type;
+// Forward declarations de las clases reales de src/semantic/ (Symbol y
+// Scope ya existen ahi; Type todavia no). Alcanza con la declaracion
+// adelantada porque AstNode solo guarda punteros no propietarios: si
+// nodes.h incluyera semantic/symbol.h de verdad, se generaria un include
+// circular (semantic/symbol.h ya incluye ast/nodes.h para TypeAnnotation).
+namespace semantic {
 class Symbol;
 class Scope;
+}  // namespace semantic
+
+namespace ast {
+
+// Sistema de tipos: todavia no existe ni siquiera como forward declaration
+// util en otro lado, se deja el placeholder local hasta que se construya.
+class Type;
 
 class AstNode {
 public:
     int line = 0;
     int column = 0;
 
-    // Se llenan en etapas posteriores (Etapa 2/3). No propietarios.
+    // Se llenan en etapas posteriores. No propietarios.
     Type* resolved_type = nullptr;
-    Symbol* symbol = nullptr;
-    Scope* scope = nullptr;
+    semantic::Symbol* symbol = nullptr;
+    semantic::Scope* scope = nullptr;
 
     virtual ~AstNode() = default;
 };

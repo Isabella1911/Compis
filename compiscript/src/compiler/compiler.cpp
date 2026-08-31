@@ -2,6 +2,7 @@
 
 #include "diagnostics/reporter.h"
 #include "frontend/parser_driver.h"
+#include "semantic/declaration_collector.h"
 
 namespace compiscript {
 namespace compiler {
@@ -15,6 +16,12 @@ CompilationResult Compiler::compile(const std::string& source) {
 
     CompilationResult result;
     result.ast = frontend::parse(source, reporter);
+
+    if (result.ast != nullptr) {
+        semantic::DeclarationCollector collector(result.symbol_table, reporter);
+        collector.run(*result.ast);
+    }
+
     result.diagnostics = reporter.sorted();
     return result;
 }

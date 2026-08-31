@@ -27,6 +27,13 @@ GRAMMAR    := grammar/Compiscript.g4
 GENERATED  := generated/CompiscriptLexer.cpp generated/CompiscriptParser.cpp \
               generated/CompiscriptBaseVisitor.cpp generated/CompiscriptVisitor.cpp
 
+SEMANTIC_SRC := src/semantic/scope.cpp \
+                src/semantic/declaration_collector.cpp \
+                src/semantic/printer.cpp
+# Subconjunto que necesita la prueba unitaria de la tabla de simbolos: no
+# arrastra declaration_collector.cpp (depende del AST) ni printer.cpp.
+SYMBOL_TEST_SRC := src/semantic/scope.cpp
+
 SRC        := src/main.cpp \
               src/ast/printer.cpp \
               src/diagnostics/reporter.cpp \
@@ -34,9 +41,8 @@ SRC        := src/main.cpp \
               src/frontend/ast_builder.cpp \
               src/frontend/parser_driver.cpp \
               src/compiler/compiler.cpp \
+              $(SEMANTIC_SRC) \
               $(GENERATED)
-
-SEMANTIC_SRC := src/semantic/scope.cpp
 
 UNAME_S := $(shell uname -s 2>/dev/null)
 ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
@@ -92,8 +98,8 @@ test: build
 
 # No depende de $(GENERATED) ni de ANTLR4CPP a proposito: semantic/ no
 # incluye nada de ANTLR, asi que esta prueba compila (mucho) mas rapido.
-$(TEST_SYMBOLS_BIN): tests/symbol_table_test.cpp $(SEMANTIC_SRC)
-	$(CXX) -std=c++17 -O0 -g -Wall -I src tests/symbol_table_test.cpp $(SEMANTIC_SRC) -o $(TEST_SYMBOLS_BIN)
+$(TEST_SYMBOLS_BIN): tests/symbol_table_test.cpp $(SYMBOL_TEST_SRC)
+	$(CXX) -std=c++17 -O0 -g -Wall -I src tests/symbol_table_test.cpp $(SYMBOL_TEST_SRC) -o $(TEST_SYMBOLS_BIN)
 
 test-symbols: $(TEST_SYMBOLS_BIN)
 	./$(TEST_SYMBOLS_BIN)
