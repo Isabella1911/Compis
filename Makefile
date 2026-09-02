@@ -29,6 +29,7 @@ GENERATED  := generated/CompiscriptLexer.cpp generated/CompiscriptParser.cpp \
 
 SEMANTIC_SRC := src/semantic/scope.cpp \
                 src/semantic/declaration_collector.cpp \
+                src/semantic/name_resolver.cpp \
                 src/semantic/printer.cpp
 # Subconjunto que necesita la prueba unitaria de la tabla de simbolos: no
 # arrastra declaration_collector.cpp (depende del AST) ni printer.cpp.
