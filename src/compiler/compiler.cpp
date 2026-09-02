@@ -3,6 +3,7 @@
 #include "diagnostics/reporter.h"
 #include "frontend/parser_driver.h"
 #include "semantic/declaration_collector.h"
+#include "semantic/name_resolver.h"
 
 namespace compiscript {
 namespace compiler {
@@ -20,6 +21,9 @@ CompilationResult Compiler::compile(const std::string& source) {
     if (result.ast != nullptr) {
         semantic::DeclarationCollector collector(result.symbol_table, reporter);
         collector.run(*result.ast);
+
+        semantic::NameResolver resolver(reporter);
+        resolver.run(*result.ast);
     }
 
     result.diagnostics = reporter.sorted();

@@ -10,9 +10,9 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Compiscript: toolchain local (JRE/antlr.jar/cmake/runtime C++), codigo
-# generado por ANTLR y el binario compilado.
-compiscript/.deps/
-compiscript/generated/
-compiscript/compiscript
-compiscript/symbol_table_test
+# Toolchain local (JRE/antlr.jar/cmake/runtime C++), codigo generado por
+# ANTLR y los binarios compilados.
+/.deps/
+/generated/
+/compiscript
+/symbol_table_test
