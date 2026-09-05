@@ -1,0 +1,10 @@
+{
+  "geometria": "1920x1137+0+31",
+  "archivos": {
+    "yalex": "/home/cisco/Universidad/cuarto/segundo_semestre/compis/compilador/Compis/input/example/example.yal",
+    "yapar": "/home/cisco/Universidad/cuarto/segundo_semestre/compis/compilador/Compis/input/example/example.yapar",
+    "entrada": "/home/cisco/Universidad/cuarto/segundo_semestre/compis/compilador/Compis/input/ejemplo/entrada_ejemplo.txt"
+  },
+  "editor_tab_activo": "yalex",
+  "grupo_resultados": 0
+}
