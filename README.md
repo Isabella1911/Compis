@@ -214,6 +214,30 @@ no expone ningún tipo de ANTLR en su firma.
       Probado: `SEM001` dispara con una variable no declarada, y
       `completo.cps` (clases, herencia, recursión, `this`, cadenas
       `a.b[0].c()`) sigue sin falsos positivos.
-- [ ] Sistema de tipos interno (`Type`, `resolved_type`).
-- [ ] Passes semánticos (Etapa 3): verificación de tipos, control de flujo, clases, closures, código muerto — las ~25 reglas del PDF.
-- [ ] IDE (por ahora hay CLI vía `make run`; se evaluará adaptar la IDE tkinter de Compis).
+- [x] **Sistema de tipos** (`type.h/.cpp`): clase `Type` (con `equals()` estructural
+      y `TypeKind::Error` como comodín que siempre es compatible, para no generar
+      cascadas de errores), `resolveTypeAnnotation()` para convertir un
+      `TypeAnnotation` en un `Type` real (resolviendo nombres de clase contra la
+      tabla de símbolos, `SEM013` si no es válido). `Symbol` ahora tiene
+      `resolved_type`; `Scope` tiene `owner` (el `Symbol` dueño del scope, para
+      poder responder "¿en qué función/clase estoy parado?"). Ver
+      [`docs/02_sistema_de_tipos.md`](docs/02_sistema_de_tipos.md) para el diseño completo.
+- [x] **TypeChecker** (Pass 3, `type_checker.h/.cpp`): llena `resolved_type` en
+      todo el árbol y valida tipos en operaciones aritméticas/lógicas/comparaciones
+      (`SEM004`), asignaciones (`SEM003`), condiciones de `if`/`while`/`do-while`/`for`/
+      ternario (`SEM005`), tipo de retorno (`SEM009`), compatibilidad `switch`/`case`,
+      tipos de elementos de arreglo e índices. **Ya conectado**, corre después de
+      `NameResolver`. Deliberadamente no resuelve todavía `obj.campo` ni valida
+      argumentos de llamadas (necesitan resolver herencia primero — ver
+      [`docs/03_passes_semanticos.md`](docs/03_passes_semanticos.md)). Probado con
+      fixtures dedicados por código (`sem003_*`, `sem004_*`, `sem005_*`, `sem013_*`)
+      más `tipos.cps` (funciones, arreglos, `for`, `switch`, ternario) sin falsos positivos.
+- [ ] Resto de los passes semánticos (Etapa 3): herencia, control de flujo (`SEM006`/`SEM007`),
+      clases/`this`/miembros, closures, código muerto — ver [`docs/03_passes_semanticos.md`](docs/03_passes_semanticos.md)
+      (ya actualizado con lo que se resolvió arriba).
+- [ ] IDE, batería de pruebas por regla y checklist de entrega — ver [`docs/04_ide_y_entrega.md`](docs/04_ide_y_entrega.md).
+
+### Fuera de Proyecto 2 (preparación para más adelante)
+
+- [ ] Generación de código y runtime, incluido el garbage collector — ver
+      [`docs/05_generacion_de_codigo_y_runtime.md`](docs/05_generacion_de_codigo_y_runtime.md).

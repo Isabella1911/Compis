@@ -2,11 +2,7 @@
 #define COMPISCRIPT_SEMANTIC_SYMBOL_H
 
 // Simbolo de la tabla de simbolos. Un Symbol por cada variable, constante,
-// parametro, funcion o clase declarada. Deliberadamente NO carga todavia un
-// "resolved_type" resuelto por un sistema de tipos: guarda el
-// TypeAnnotation tal como se escribio en el codigo fuente (el mismo tipo
-// que ya vive en ast::nodes.h), porque el sistema de tipos es la proxima
-// rebanada de esta etapa, no esta.
+// parametro, funcion o clase declarada.
 
 #include <memory>
 #include <optional>
@@ -14,6 +10,7 @@
 #include <vector>
 
 #include "ast/nodes.h"
+#include "type.h"
 
 namespace compiscript {
 namespace semantic {
@@ -26,7 +23,8 @@ class Symbol {
 public:
     std::string name;
     SymbolKind kind;
-    ast::TypeAnnotationPtr declared_type;  // puede ser null si no se anoto
+    ast::TypeAnnotationPtr declared_type;  // tal como se escribio; puede ser null si no se anoto
+    TypePtr resolved_type;                 // llenado por TypeChecker; null hasta entonces
     int declared_line = 0;
     int declared_column = 0;
     bool is_mutable = true;  // false para 'const'
