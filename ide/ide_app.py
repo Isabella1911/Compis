@@ -1,27 +1,24 @@
-"""IDE para el compilador Compis.
+"""IDE para Compiscript (Proyecto 2, motor ANTLR).
 
 Pipeline cubierto:
-    YALex -> AFD -> lexer
-    YAPar -> gramática -> FIRST / FOLLOW
-    LL(1)   -> tabla y traza
-    LR(0)   -> autómata canónico (exportable a Graphviz .dot)
-    SLR(1)  -> tabla ACTION/GOTO y evaluación
-    LALR(1) -> lookaheads refinados y evaluación
+    Compiscript (.cps) -> ANTLR (lexer+parser) -> AST propio
+    -> pases semanticos (declaraciones, herencia, nombres, tipos,
+       flujo de control, closures) -> diagnosticos + AST + tabla de simbolos
 
-La IDE NO reimplementa nada: ejecuta `compilador.exe` (compilado a partir
-de `Main.cpp`) y reparte su salida en pestañas agrupadas para inspeccionar
-cada subproducto del compilador (gramática, FIRST/FOLLOW, tablas, autómata
-LR(0), trazas y conflictos).
+La IDE NO reimplementa nada: ejecuta `compiscript(.exe)` (compilado vía
+`make build` a partir de `src/main.cpp`) y reparte su salida en pestañas
+agrupadas para inspeccionar cada producto del compilador (diagnosticos con
+codigo SYN/SEM, AST y tabla de simbolos como texto, y el AST renderizado
+con Graphviz).
 
-El layout sigue el rediseño solicitado:
+El layout conserva el rediseño original:
     Menú superior + toolbar compacta + panel Proyecto + editor con tabs
-    + área inferior con tres grupos de pestañas (Resultados / Parsing /
+    + área inferior con tres grupos de pestañas (Resultados / Análisis /
     Visualización) + barra de estado enriquecida.
 """
 
 from __future__ import annotations
 
-import csv
 import json
 import os
 import re
@@ -49,9 +46,9 @@ except ImportError:  # pragma: no cover - depende del entorno
 # ──────────────────────────────────────────────────────────────────────
 
 PROJECT_ROOT      = Path(__file__).resolve().parent.parent
-INPUT_DIR         = PROJECT_ROOT / "input"
+INPUT_DIR         = PROJECT_ROOT / "tests" / "fixtures" / "valid"
 OUTPUT_DIR        = PROJECT_ROOT / "output"
-EJECUTABLE_NOMBRE = "compilador.exe" if os.name == "nt" else "compilador"
+EJECUTABLE_NOMBRE = "compiscript.exe" if os.name == "nt" else "compiscript"
 EJECUTABLE_PATH   = PROJECT_ROOT / EJECUTABLE_NOMBRE
 
 
@@ -79,12 +76,12 @@ def _candidatos_ejecutable():
     según el SO actual."""
     base = PROJECT_ROOT
     if os.name == "nt":
-        return [base / "compilador.exe", base / "compilador"]
+        return [base / "compiscript.exe", base / "compiscript"]
     if IS_WSL:
         # En WSL2 se pueden ejecutar .exe vía interop, pero preferimos
         # el binario Linux nativo si está. El .exe es fallback.
-        return [base / "compilador", base / "compilador.exe"]
-    return [base / "compilador"]
+        return [base / "compiscript", base / "compiscript.exe"]
+    return [base / "compiscript"]
 
 
 def obtener_ejecutable_real():
@@ -174,24 +171,13 @@ def normalizar_ruta_arrastrada(raw):
             pass
 
     return s
-LR0_DOT_PATH      = OUTPUT_DIR / "lr0.dot"
-LR0_PNG_PATH      = OUTPUT_DIR / "lr0.png"
-TABLAS_JSON_PATH  = OUTPUT_DIR / "tablas.json"
+AST_DOT_PATH      = OUTPUT_DIR / "ast.dot"
+AST_PNG_PATH      = OUTPUT_DIR / "ast.png"
 ESTADO_IDE_PATH   = PROJECT_ROOT / ".ide_state.json"
 
-COMANDO_COMPILACION = [
-    "g++", "-std=c++17", "-O2", "-DCOMPILAR_CON_ORQUESTADOR",
-    "-o", str(EJECUTABLE_PATH),
-    str(PROJECT_ROOT / "Main.cpp"),
-    str(PROJECT_ROOT / "Lexer" / "YalexParser.cpp"),
-    str(PROJECT_ROOT / "Parser" / "YaparParser.cpp"),
-    str(PROJECT_ROOT / "Parser" / "Grammar.cpp"),
-    str(PROJECT_ROOT / "Parser" / "FirstFollow.cpp"),
-    str(PROJECT_ROOT / "Parser" / "LL1Table.cpp"),
-    str(PROJECT_ROOT / "Parser" / "LR0.cpp"),
-    str(PROJECT_ROOT / "Parser" / "SLR1.cpp"),
-    str(PROJECT_ROOT / "Parser" / "LALR1.cpp"),
-]
+# El Makefile encapsula el toolchain real (JRE + antlr.jar + runtime C++ de
+# ANTLR, ver tools/setup.sh); la IDE solo invoca `make build`.
+COMANDO_COMPILACION = ["make", "build"]
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -266,24 +252,6 @@ PATRONES_YALEX = [
 EMPTY_STATES = {
     "salida":      "  ▷  Ejecutá Compilar (F5) o Ejecutar análisis (F6)\n"
                     "      para ver la salida del compilador aquí.",
-    "tokens":      "  ▷  Tokens emitidos por el lexer (después de filtrar IGNORE).\n"
-                    "      Ejecutá un análisis (F6) para verlos.",
-    "validaciones":"  ▷  Validaciones del .yapar contra el .yal, gramática y tabla\n"
-                    "      de símbolos. Disponibles tras ejecutar un análisis.",
-    "ff":          "  ▷  Conjuntos FIRST y FOLLOW de la gramática.\n"
-                    "      Se calculan al ejecutar un análisis.",
-    "ll1_text":    "  ▷  Tabla LL(1) en texto plano.\n"
-                    "      Mirá la tab 'Tabla LL(1)' para la vista interactiva.",
-    "slr1_text":   "  ▷  Tabla SLR(1) en texto plano.\n"
-                    "      Mirá la tab 'Tabla SLR(1)' para la vista interactiva.",
-    "lalr1_text":  "  ▷  Tabla LALR(1) en texto plano.\n"
-                    "      Mirá la tab 'Tabla LALR(1)' para la vista interactiva.",
-    "traza_ll1":   "  ▷  Traza paso a paso del parser LL(1).\n"
-                    "      Disponible tras ejecutar un análisis.",
-    "lr0":         "  ▷  Autómata LR(0) (gramática aumentada, items y GOTOs).\n"
-                    "      Mirá también 'Autómata LR(0)' para el render gráfico.",
-    "resultado":   "  ▷  Veredicto por parser (LL(1) / SLR(1) / LALR(1)) y resumen\n"
-                    "      del pipeline. Disponible tras ejecutar.",
     "errores":     "  ✓  Sin errores.",
 }
 
@@ -300,6 +268,20 @@ PATRONES_YAPAR = [
     ("nt",     re.compile(r"^\s*([a-z_][a-zA-Z0-9_]*)\s*:", re.MULTILINE)),
     ("num",    re.compile(r"\b\d+\b")),
     ("op",     re.compile(r"[|:;]")),
+]
+
+PATRONES_CPS = [
+    ("com",    re.compile(r"/\*[\s\S]*?\*/")),
+    ("com",    re.compile(r"//[^\n]*")),
+    ("str",    re.compile(r'"(?:\\.|[^"\\])*"')),
+    ("kw",     re.compile(r"\b(?:let|var|const|function|class|if|else|"
+                           r"while|do|for|foreach|in|break|continue|"
+                           r"return|print|new|this|switch|case|default|"
+                           r"try|catch)\b")),
+    ("direct", re.compile(r"\b(?:boolean|integer|string|void|"
+                           r"null|true|false)\b")),
+    ("num",    re.compile(r"\b\d+\b")),
+    ("op",     re.compile(r"[{}()\[\];,.:=+\-*/%<>!&|]")),
 ]
 
 
@@ -323,162 +305,64 @@ FUENTE_UI_SIZE   = 9
 
 # ──────────────────────────────────────────────────────────────────────
 # Particionado de la salida del compilador
+#
+# Formato real (ver src/main.cpp):
+#   Diagnosticos:
+#     [SEM003] error 12:5: mensaje...
+#   AST:
+#   <arbol impreso por ast::printTree>
+#   Tabla de simbolos:
+#   <arbol impreso por semantic::printScopeTree>
+#   [AST-DOT] Exportado a: output/ast.dot
 # ──────────────────────────────────────────────────────────────────────
 
-SEPARADOR_LINEA = "=" * 50
+_MARCADORES_SECCION = ("Diagnosticos:", "AST:", "Tabla de simbolos:")
 
-MAPA_SECCIONES = [
-    ("tokens",       ["Analisis lexico"]),
-    ("validaciones", ["Lectura del .yapar",
-                       "Tabla de simbolos",
-                       "Gramatica"]),
-    ("ff",           ["FIRST", "FOLLOW"]),
-    ("ll1",          ["Tabla LL(1)"]),
-    ("traza_ll1",    ["Parsing LL(1)"]),
-    ("lr0",          ["Automata LR(0)", "Automata LR"]),
-    ("slr1",         ["Tabla SLR(1)", "Evaluacion SLR(1)"]),
-    ("lalr1",        ["Tabla LALR(1)", "Evaluacion LALR(1)"]),
-    ("resumen",      ["Resumen"]),
-]
+_PATRON_DIAGNOSTICO = re.compile(
+    r"^\s*\[(\w+)\]\s+(error|warning)\s+(\d+):(\d+):\s*(.*)$")
 
 
-def extraer_bloques(stdout):
-    lineas = stdout.splitlines()
-    bloques = []
-    titulo_actual = None
-    cuerpo_actual = []
-
-    i = 0
-    while i < len(lineas):
-        es_sep_arriba = lineas[i].strip().startswith("=====")
-        if (es_sep_arriba and i + 2 < len(lineas)
-                and lineas[i + 2].strip().startswith("=====")):
-            if titulo_actual is not None:
-                bloques.append((titulo_actual, "\n".join(cuerpo_actual)))
-            titulo_actual = lineas[i + 1].strip()
-            cuerpo_actual = []
-            i += 3
-            continue
-        if titulo_actual is not None:
-            cuerpo_actual.append(lineas[i])
-        i += 1
-
-    if titulo_actual is not None:
-        bloques.append((titulo_actual, "\n".join(cuerpo_actual)))
-    return bloques
-
-
-def dividir_salida(stdout, stderr):
-    secciones = {clave: "" for clave, _ in MAPA_SECCIONES}
-    bloques = extraer_bloques(stdout)
-
-    for clave, claves_titulo in MAPA_SECCIONES:
-        piezas = []
-        for titulo, cuerpo in bloques:
-            for ct in claves_titulo:
-                if ct in titulo:
-                    piezas.append(f"=== {titulo} ===\n{cuerpo}".rstrip())
-                    break
-        secciones[clave] = "\n\n".join(piezas)
-
-    errores = []
-    fuentes = stdout.splitlines() + stderr.splitlines()
-    for linea in fuentes:
-        limpia = linea.strip()
-        if not limpia:
-            continue
-        u = limpia.upper()
-        if (u.startswith("ERROR")
-                or "ERROR SINTACTICO" in u
-                or "ERROR LEXICO" in u
-                or "ADVERTENCIA" in u
-                or "FAIL" in u
-                or "CONFLICTO" in u
-                or "SHIFT/REDUCE" in u
-                or "REDUCE/REDUCE" in u
-                or "RECHAZADO" in u):
-            errores.append(linea)
-    secciones["errores"] = "\n".join(errores)
-    return secciones
-
-
-def extraer_veredictos(stdout):
-    parsers = {
-        "ll1":   {"es": "?", "resultado": "?", "conflictos": None},
-        "slr1":  {"es": "?", "resultado": "?", "conflictos": None},
-        "lalr1": {"es": "?", "resultado": "?", "conflictos": None},
-    }
-    activo = None
-    for raw in stdout.splitlines():
-        linea = raw.strip()
-        if linea.startswith("LL(1):"):
-            activo = "ll1"; continue
-        if linea.startswith("SLR(1):"):
-            activo = "slr1"; continue
-        if linea.startswith("LALR(1):"):
-            activo = "lalr1"; continue
-        if linea.startswith("LR(0):") or linea == "":
-            continue
-        if activo is None:
-            continue
-        if linea.startswith("Es LL(1):") and activo == "ll1":
-            parsers["ll1"]["es"] = linea.split(":", 1)[1].strip()
-        elif linea.startswith("Es SLR(1):") and activo == "slr1":
-            parsers["slr1"]["es"] = linea.split(":", 1)[1].strip()
-        elif linea.startswith("Es LALR(1):") and activo == "lalr1":
-            parsers["lalr1"]["es"] = linea.split(":", 1)[1].strip()
-        elif linea.startswith("Resultado:"):
-            parsers[activo]["resultado"] = linea.split(":", 1)[1].strip()
-        elif linea.startswith("Conflictos:"):
-            try:
-                parsers[activo]["conflictos"] = int(
-                    linea.split(":", 1)[1].strip())
-            except ValueError:
-                pass
-    return parsers
-
-
-def formatear_veredictos(veredictos, codigo):
-    enc = f"{'Parser':<10}{'¿Es ese?':<12}{'Conflictos':<14}{'Resultado'}"
-    sep = "─" * len(enc)
-    filas = [enc, sep]
-    for clave, etiqueta in (("ll1", "LL(1)"),
-                             ("slr1", "SLR(1)"),
-                             ("lalr1", "LALR(1)")):
-        v = veredictos[clave]
-        es = v["es"]
-        conf = v["conflictos"]
-        conf_str = "?" if conf is None else str(conf)
-        res = v["resultado"]
-        filas.append(f"{etiqueta:<10}{es:<12}{conf_str:<14}{res}")
-    filas.append("")
-    filas.append(f"Codigo de salida del proceso: {codigo}")
-    return "\n".join(filas)
-
-
-
-def parser_ganador(veredictos):
-    """Devuelve el parser de mayor poder que aceptó, o '-' si ninguno."""
-    for clave, etiqueta in (("lalr1", "LALR(1)"),
-                             ("slr1", "SLR(1)"),
-                             ("ll1", "LL(1)")):
-        res = veredictos.get(clave, {}).get("resultado", "")
-        if res.startswith("ACEPTADO"):   # cubre "ACEPTADO" y "ACEPTADO CON ERRORES"
-            return etiqueta
-    return "-"
-
-def contar_tokens_filtrados(stdout):
-    """Lee del Resumen el conteo 'Tokens tras filtrado'."""
+def parsear_diagnosticos(stdout):
+    """Parsea las lineas bajo 'Diagnosticos:' en una lista de dicts:
+    {codigo, severidad, linea, columna, mensaje}."""
+    diags = []
     for linea in stdout.splitlines():
-        s = linea.strip()
-        if s.startswith("Tokens tras filtrado:"):
-            try:
-                resto = s.split(":", 1)[1].strip()
-                num = resto.split()[0]
-                return int(num)
-            except (ValueError, IndexError):
-                return None
-    return None
+        m = _PATRON_DIAGNOSTICO.match(linea)
+        if m:
+            codigo, sev, linea_n, col_n, msg = m.groups()
+            diags.append({
+                "codigo": codigo,
+                "severidad": sev,
+                "linea": int(linea_n),
+                "columna": int(col_n),
+                "mensaje": msg,
+            })
+    return diags
+
+
+def extraer_bloque(stdout, marcador):
+    """Devuelve el texto entre una linea == marcador (p.ej. 'AST:') y el
+    siguiente marcador de seccion conocido (o el pie '[AST-DOT]')."""
+    lineas = stdout.splitlines()
+    try:
+        inicio = next(i for i, l in enumerate(lineas)
+                       if l.strip() == marcador)
+    except StopIteration:
+        return ""
+    cuerpo = []
+    for l in lineas[inicio + 1:]:
+        if (l.strip() in _MARCADORES_SECCION
+                or l.strip().startswith("[AST-DOT]")):
+            break
+        cuerpo.append(l)
+    return "\n".join(cuerpo).strip("\n")
+
+
+def resumen_diagnosticos(diags):
+    """Cuenta errores/warnings, para la barra de estado y el toolbar."""
+    errores = sum(1 for d in diags if d["severidad"] == "error")
+    warnings = sum(1 for d in diags if d["severidad"] == "warning")
+    return errores, warnings
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -487,7 +371,7 @@ def contar_tokens_filtrados(stdout):
 
 class EditorConNumeros(ttk.Frame):
     """Text widget oscuro con gutter de números de línea sincronizado y
-    resaltado de sintaxis básico para YALex / YAPar."""
+    resaltado de sintaxis básico para YALex / YAPar / Compiscript."""
 
     def __init__(self, master, on_cursor_change=None,
                   on_modificado_change=None, tipo="plain"):
@@ -709,7 +593,7 @@ class EditorConNumeros(ttk.Frame):
     # ── Resaltado de sintaxis con debounce ────────────────────────────
 
     def _programar_resaltado(self, retraso_ms=150):
-        if self._tipo not in ("yalex", "yapar"):
+        if self._tipo not in ("yalex", "yapar", "cps"):
             return
         if self._resaltado_after is not None:
             try:
@@ -720,10 +604,14 @@ class EditorConNumeros(ttk.Frame):
 
     def _resaltar(self):
         self._resaltado_after = None
-        if self._tipo not in ("yalex", "yapar"):
+        if self._tipo not in ("yalex", "yapar", "cps"):
             return
-        patrones = (PATRONES_YALEX if self._tipo == "yalex"
-                     else PATRONES_YAPAR)
+        if self._tipo == "yalex":
+            patrones = PATRONES_YALEX
+        elif self._tipo == "yapar":
+            patrones = PATRONES_YAPAR
+        else:
+            patrones = PATRONES_CPS
 
         # Limpiar tags previos
         for tag in ("syn_kw", "syn_direct", "syn_str", "syn_com",
@@ -902,14 +790,16 @@ class EditorConNumeros(ttk.Frame):
 
 
 # ──────────────────────────────────────────────────────────────────────
-# Tabla visual con ttk.Treeview (LL(1) / SLR(1) / LALR(1))
+# Tabla visual con ttk.Treeview: diagnosticos de la ultima corrida
 # ──────────────────────────────────────────────────────────────────────
 
-class TablaParser(ttk.Frame):
-    """Treeview con headers fijos, scroll H/V y resaltado de conflictos."""
+class TablaDiagnosticos(ttk.Frame):
+    """Treeview con codigo/severidad/linea/columna/mensaje. Doble click
+    en una fila salta a esa posicion en el editor (via `on_doble_click`)."""
 
-    def __init__(self, master):
+    def __init__(self, master, on_doble_click=None):
         super().__init__(master, style="Card.TFrame")
+        self._on_doble_click = on_doble_click
         self._tree = ttk.Treeview(self, show="headings",
                                    style="Tabla.Treeview")
         scroll_y = ttk.Scrollbar(self, orient="vertical",
@@ -924,92 +814,46 @@ class TablaParser(ttk.Frame):
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
 
-        self._tree.tag_configure(
-            "conflicto_sr",
-            background=Tema.CONFLICTO_SR_BG,
-            foreground=Tema.CONFLICTO_SR_FG)
-        self._tree.tag_configure(
-            "conflicto_rr",
-            background=Tema.CONFLICTO_RR_BG,
-            foreground=Tema.CONFLICTO_RR_FG)
+        cols = ("codigo", "severidad", "linea", "columna", "mensaje")
+        titulos = {"codigo": "Código", "severidad": "Sev.", "linea": "Línea",
+                   "columna": "Col", "mensaje": "Mensaje"}
+        anchos = {"codigo": 90, "severidad": 70, "linea": 55,
+                  "columna": 50, "mensaje": 460}
+        self._tree["columns"] = cols
+        for c in cols:
+            self._tree.heading(c, text=titulos[c])
+            self._tree.column(c, width=anchos[c], anchor="w",
+                               stretch=(c == "mensaje"))
+
+        self._tree.tag_configure("error",   foreground=Tema.ERR)
+        self._tree.tag_configure("warning", foreground=Tema.WARN)
+        self._tree.bind("<Double-1>", self._on_click)
 
     def limpiar(self):
         for item in self._tree.get_children():
             self._tree.delete(item)
-        self._tree["columns"] = ()
 
-    def cargar_tabla_ll1(self, datos, conflictos_por_celda):
-        """datos = {terminales, filas: {NT: {t: prod_idx}}}.
-        conflictos_por_celda = set((NT, t)).
-        """
+    def cargar(self, diagnosticos):
         self.limpiar()
-        if not datos or "terminales" not in datos:
+        for d in diagnosticos:
+            self._tree.insert(
+                "", "end",
+                values=(d["codigo"], d["severidad"], d["linea"],
+                        d["columna"], d["mensaje"]),
+                tags=(d["severidad"],))
+
+    def _on_click(self, _ev=None):
+        sel = self._tree.selection()
+        if not sel or self._on_doble_click is None:
             return
-        cols = ["NT"] + list(datos["terminales"])
-        self._tree["columns"] = cols
-        for c in cols:
-            self._tree.heading(c, text=c)
-            ancho = 60 if c == "NT" else 56
-            self._tree.column(c, width=ancho, anchor="center", stretch=False)
-
-        for nt, fila in datos.get("filas", {}).items():
-            valores = [nt]
-            tags = []
-            for t in datos["terminales"]:
-                v = fila.get(t, "")
-                valores.append(str(v))
-            if any((nt, t) in conflictos_por_celda for t in datos["terminales"]):
-                tags.append("conflicto_rr")
-            self._tree.insert("", "end", values=valores, tags=tags)
-
-    def cargar_tabla_lr(self, datos, etiqueta):
-        """datos = TablaSLR/LALR (dict de tablas.json)."""
-        self.limpiar()
-        if not datos or "action" not in datos:
+        valores = self._tree.item(sel[0], "values")
+        if not valores:
             return
-        terms  = list(datos.get("terminales", []) or [])
-        nterms = list(datos.get("no_terminales", []) or [])
-        # Construir columnas con grupo visual
-        cols_action = [f"a:{t}" for t in terms]
-        cols_goto   = [f"g:{nt}" for nt in nterms]
-        cols = ["Est"] + cols_action + cols_goto
-        self._tree["columns"] = cols
-        self._tree.heading("Est", text="Est")
-        self._tree.column("Est", width=46, anchor="center", stretch=False)
-        for c, etq in zip(cols_action, terms):
-            self._tree.heading(c, text=etq)
-            self._tree.column(c, width=58, anchor="center", stretch=False)
-        for c, etq in zip(cols_goto, nterms):
-            self._tree.heading(c, text=etq)
-            self._tree.column(c, width=58, anchor="center", stretch=False)
-
-        # Map conflictos por (estado, terminal) -> tipo
-        conf_map = {}
-        for c in datos.get("conflictos", []) or []:
-            est = c.get("estado")
-            t   = c.get("terminal")
-            desc = (c.get("descripcion") or "").lower()
-            tipo = "conflicto_rr" if "reduce/reduce" in desc else "conflicto_sr"
-            conf_map[(est, t)] = tipo
-
-        action = datos["action"]
-        goto   = datos.get("goto", [])
-        for i, fila_action in enumerate(action):
-            fila_goto = goto[i] if i < len(goto) else {}
-            valores = [i]
-            for t in terms:
-                valores.append(fila_action.get(t, ""))
-            for nt in nterms:
-                v = fila_goto.get(nt, "")
-                valores.append(str(v) if v != "" else "")
-            tags = []
-            for t in terms:
-                if (i, t) in conf_map:
-                    tags = [conf_map[(i, t)]]
-                    break
-            self._tree.insert("", "end", values=valores, tags=tags)
-
-        del etiqueta  # parámetro reservado para futuras variantes
+        try:
+            linea, columna = int(valores[2]), int(valores[3])
+        except (ValueError, IndexError):
+            return
+        self._on_doble_click(linea, columna)
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -1022,7 +866,7 @@ class IDE:
         self.root = root
         FUENTE_MONO_NAME = _resolver_fuente_mono()
 
-        self.root.title("Compis IDE — YALex + YAPar + Parsers")
+        self.root.title("Compis IDE — Compiscript / ANTLR")
         self.root.geometry("1400x880")
         self.root.minsize(1100, 680)
         self.root.configure(background=Tema.BG)
@@ -1033,9 +877,8 @@ class IDE:
         self._ultimo_stdout = ""
         self._ultimo_stderr = ""
         self._ultimo_codigo = None
-        self._ultimo_veredictos = None
-        self._tablas_json = None
-        self._lr0_imagen = None
+        self._ultimos_diagnosticos = []
+        self._ast_imagen = None
         self.proceso_activo = False
 
         # Capturas para shortcuts contextuales
@@ -1229,12 +1072,8 @@ class IDE:
                              background=Tema.BG_PANEL, foreground=Tema.FG,
                              activebackground=Tema.BG_ACTIVE,
                              activeforeground=Tema.FG)
-        m_archivo.add_command(label="Cargar YALex...",
-                              command=self.cargar_yalex)
-        m_archivo.add_command(label="Cargar YAPar...",
-                              command=self.cargar_yapar)
-        m_archivo.add_command(label="Cargar entrada...",
-                              command=self.cargar_entrada)
+        m_archivo.add_command(label="Cargar archivo .cps...",
+                              command=self.cargar_fuente)
         m_archivo.add_separator()
         m_archivo.add_command(label="Guardar",
                               accelerator="Ctrl+S",
@@ -1288,21 +1127,21 @@ class IDE:
                          background=Tema.BG_PANEL, foreground=Tema.FG,
                          activebackground=Tema.BG_ACTIVE,
                          activeforeground=Tema.FG)
-        m_vis.add_command(label="Renderizar autómata LR(0)",
-                           command=self.renderizar_lr0)
-        m_vis.add_command(label="Abrir LR(0) externo (.dot)",
-                           command=lambda: self._abrir_archivo(LR0_DOT_PATH))
-        m_vis.add_command(label="Abrir LR(0) externo (PNG)",
-                           command=lambda: self._abrir_archivo(LR0_PNG_PATH))
+        m_vis.add_command(label="Renderizar AST",
+                           command=self.renderizar_ast)
+        m_vis.add_command(label="Abrir AST externo (.dot)",
+                           command=lambda: self._abrir_archivo(AST_DOT_PATH))
+        m_vis.add_command(label="Abrir AST externo (PNG)",
+                           command=lambda: self._abrir_archivo(AST_PNG_PATH))
         m_vis.add_separator()
-        m_vis.add_command(label="Mostrar FIRST/FOLLOW",
-                           command=lambda: self._seleccionar_seccion("ff"))
-        m_vis.add_command(label="Mostrar tabla LL(1)",
-                           command=lambda: self._seleccionar_seccion("ll1"))
-        m_vis.add_command(label="Mostrar tabla SLR(1)",
-                           command=lambda: self._seleccionar_seccion("slr1"))
-        m_vis.add_command(label="Mostrar tabla LALR(1)",
-                           command=lambda: self._seleccionar_seccion("lalr1"))
+        m_vis.add_command(label="Mostrar diagnósticos",
+                           command=lambda: self._seleccionar_seccion(
+                               "diagnosticos"))
+        m_vis.add_command(label="Mostrar AST (texto)",
+                           command=lambda: self._seleccionar_seccion("ast"))
+        m_vis.add_command(label="Mostrar tabla de símbolos",
+                           command=lambda: self._seleccionar_seccion(
+                               "tabla_simbolos"))
         menubar.add_cascade(label="Visualizar", menu=m_vis)
 
         # Herramientas
@@ -1310,8 +1149,6 @@ class IDE:
                            background=Tema.BG_PANEL, foreground=Tema.FG,
                            activebackground=Tema.BG_ACTIVE,
                            activeforeground=Tema.FG)
-        m_tools.add_command(label="Exportar tablas (JSON / CSV)...",
-                              command=self.exportar_tablas)
         m_tools.add_command(label="Abrir carpeta output",
                               command=lambda: self._abrir_archivo(OUTPUT_DIR))
         menubar.add_cascade(label="Herramientas", menu=m_tools)
@@ -1344,8 +1181,8 @@ class IDE:
         ttk.Separator(barra, orient="vertical").pack(
             side="left", fill="y", padx=14, pady=2)
 
-        ttk.Button(barra, text="⟳  LR(0)",
-                    command=self.renderizar_lr0).pack(side="left", padx=(0, 8))
+        ttk.Button(barra, text="⟳  AST",
+                    command=self.renderizar_ast).pack(side="left", padx=(0, 8))
         ttk.Button(barra, text="✕  Limpiar",
                     command=self.limpiar_salida).pack(side="left")
 
@@ -1420,9 +1257,7 @@ class IDE:
         self._proyecto_root = self._proyecto.insert(
             "", "end", text="📁  Compis", open=True)
         self._proyecto_items = {}
-        for clave, etq in (("yalex",   "λ  (sin .yal)"),
-                            ("yapar",   "Σ  (sin .yapar)"),
-                            ("entrada", "≡  (sin entrada)")):
+        for clave, etq in (("fuente", "📄  (sin archivo .cps)"),):
             iid = self._proyecto.insert(
                 self._proyecto_root, "end", text=etq, values=(clave,))
             self._proyecto_items[clave] = iid
@@ -1439,14 +1274,12 @@ class IDE:
         self._editor_tabs = ttk.Notebook(marco)
         self._editor_tabs.pack(fill="both", expand=True)
 
-        # 3 editores fijos (yalex, yapar, entrada) con iconos Unicode sutiles.
+        # Un solo editor para el archivo .cps de Compiscript.
         self._editores = {}
         self._editor_tab_index = {}
         self._editor_tab_titulo_base = {}
         for clave, titulo, tipo in (
-            ("yalex",   "λ  lexer.yal",     "yalex"),
-            ("yapar",   "Σ  parser.yapar",  "yapar"),
-            ("entrada", "≡  input.txt",     "plain"),
+            ("fuente", "📄  fuente.cps", "cps"),
         ):
             ed = EditorConNumeros(
                 self._editor_tabs,
@@ -1460,15 +1293,11 @@ class IDE:
             self._editores[clave] = ed
         self._editor_tabs.bind(
             "<<NotebookTabChanged>>", self._on_editor_tab_changed)
-        self._editor_activo = self._editores["yalex"]
+        self._editor_activo = self._editores["fuente"]
 
         # Extensiones de diálogo
-        self._editores["yalex"].extensiones_dialogo = (
-            ("YALex", "*.yal *.yalex"), ("Todos", "*.*"))
-        self._editores["yapar"].extensiones_dialogo = (
-            ("YAPar", "*.yapar"), ("Todos", "*.*"))
-        self._editores["entrada"].extensiones_dialogo = (
-            ("Texto", "*.txt"), ("Todos", "*.*"))
+        self._editores["fuente"].extensiones_dialogo = (
+            ("Compiscript", "*.cps"), ("Todos", "*.*"))
 
     def _construir_resultados(self, paned):
         marco = ttk.Frame(paned, style="Editor.TFrame", padding=(10, 6, 10, 10))
@@ -1485,39 +1314,24 @@ class IDE:
         self._grupos.add(g1, text=" Resultados ")
         nb1 = ttk.Notebook(g1)
         nb1.pack(fill="both", expand=True, padx=8, pady=8)
-        for clave, titulo in (
-            ("salida",     "Consola"),
-            ("tokens",     "Tokens"),
-            ("validaciones", "YAPar / Validaciones"),
-            ("resultado",  "Resultado"),
-            ("errores",    "Errores"),
-        ):
-            self.paneles[clave] = self._panel_texto(nb1, titulo)
+        self.paneles["salida"] = self._panel_texto(nb1, "Consola")
+        self._tabla_diagnosticos = self._panel_tabla_diagnosticos(
+            nb1, "Diagnósticos")
+        self.paneles["errores"] = self._panel_texto(nb1, "Errores")
 
-        # Grupo 2: Parsing
+        # Grupo 2: Análisis (AST / tabla de símbolos, texto plano del CLI)
         g2 = ttk.Frame(self._grupos, style="Card.TFrame")
-        self._grupos.add(g2, text=" Parsing ")
+        self._grupos.add(g2, text=" Análisis ")
         nb2 = ttk.Notebook(g2)
         nb2.pack(fill="both", expand=True, padx=8, pady=8)
-        self.paneles["ff"] = self._panel_texto(nb2, "FIRST / FOLLOW")
-        # Tablas con Treeview
-        self._tabla_ll1   = self._panel_tabla(nb2, "Tabla LL(1)")
-        self._tabla_slr1  = self._panel_tabla(nb2, "Tabla SLR(1)")
-        self._tabla_lalr1 = self._panel_tabla(nb2, "Tabla LALR(1)")
-        # Versión texto fallback (la salida cruda del back)
-        self.paneles["ll1_text"]   = self._panel_texto(nb2, "LL(1) texto")
-        self.paneles["slr1_text"]  = self._panel_texto(nb2, "SLR(1) texto")
-        self.paneles["lalr1_text"] = self._panel_texto(nb2, "LALR(1) texto")
-        self.paneles["traza_ll1"] = self._panel_texto(nb2, "Traza LL(1)")
-        self._construir_panel_parser_paso(nb2)
+        self._construir_panel_analisis(nb2)
 
-        # Grupo 3: Visualización
+        # Grupo 3: Visualización (AST renderizado con Graphviz)
         g3 = ttk.Frame(self._grupos, style="Card.TFrame")
         self._grupos.add(g3, text=" Visualización ")
         nb3 = ttk.Notebook(g3)
         nb3.pack(fill="both", expand=True, padx=8, pady=8)
-        self._construir_panel_lr0(nb3)
-        self.paneles["lr0"] = self._panel_texto(nb3, "LR(0) (texto)")
+        self._construir_panel_ast_grafico(nb3)
 
     def _panel_texto(self, notebook, titulo):
         frame = ttk.Frame(notebook, style="Card.TFrame")
@@ -1554,79 +1368,63 @@ class IDE:
         text.tag_configure("bold",
                             font=(FUENTE_MONO_NAME, FUENTE_MONO_SIZE,
                                   "bold"))
-        text.tag_configure("conflicto_sr",
-                            background=Tema.CONFLICTO_SR_BG,
-                            foreground=Tema.CONFLICTO_SR_FG)
-        text.tag_configure("conflicto_rr",
-                            background=Tema.CONFLICTO_RR_BG,
-                            foreground=Tema.CONFLICTO_RR_FG)
-        text.tag_configure("veredicto_ok",
-                            foreground=Tema.OK,
-                            font=(FUENTE_MONO_NAME, FUENTE_MONO_SIZE,
-                                  "bold"))
-        text.tag_configure("veredicto_ko",
-                            foreground=Tema.ERR,
-                            font=(FUENTE_MONO_NAME, FUENTE_MONO_SIZE,
-                                  "bold"))
         text.tag_configure("encabezado",
                             foreground=Tema.ACCENT,
                             font=(FUENTE_MONO_NAME, FUENTE_MONO_SIZE,
                                   "bold"))
         return text
 
-    def _panel_tabla(self, notebook, titulo):
+    def _panel_tabla_diagnosticos(self, notebook, titulo):
         frame = ttk.Frame(notebook, style="Card.TFrame")
         notebook.add(frame, text=titulo)
-        tabla = TablaParser(frame)
+        tabla = TablaDiagnosticos(frame, on_doble_click=self._ir_a_linea)
         tabla.pack(fill="both", expand=True, padx=6, pady=6)
         tabla._tab_titulo = titulo
         tabla._notebook = notebook
         return tabla
 
-    def _construir_panel_lr0(self, notebook):
+    def _construir_panel_ast_grafico(self, notebook):
         frame = ttk.Frame(notebook, style="Card.TFrame")
-        notebook.add(frame, text="Autómata LR(0)")
+        notebook.add(frame, text="AST (gráfico)")
 
         cabecera = ttk.Frame(frame, style="Card.TFrame", padding=(10, 10))
         cabecera.pack(side="top", fill="x")
         ttk.Label(
             cabecera,
-            text="Autómata LR(0) — render con Graphviz (output/lr0.png).",
+            text="Árbol de sintaxis abstracta — render con Graphviz "
+                 "(output/ast.png).",
             style="Card.TLabel",
         ).pack(side="left")
         ttk.Button(cabecera, text="Renderizar PNG",
-                    command=self.renderizar_lr0).pack(side="right", padx=2)
+                    command=self.renderizar_ast).pack(side="right", padx=2)
         ttk.Button(cabecera, text="Abrir externo (PNG)",
-                    command=lambda: self._abrir_archivo(LR0_PNG_PATH)
+                    command=lambda: self._abrir_archivo(AST_PNG_PATH)
                     ).pack(side="right", padx=2)
         ttk.Button(cabecera, text="Abrir externo (.dot)",
-                    command=lambda: self._abrir_archivo(LR0_DOT_PATH)
+                    command=lambda: self._abrir_archivo(AST_DOT_PATH)
                     ).pack(side="right", padx=2)
 
         contenedor = ttk.Frame(frame, style="Card.TFrame")
         contenedor.pack(fill="both", expand=True, padx=8, pady=(0, 8))
 
-        self._lr0_canvas = tk.Canvas(
+        self._ast_canvas = tk.Canvas(
             contenedor, background=Tema.BG_PANEL,
             highlightthickness=0, borderwidth=0)
         sy = ttk.Scrollbar(contenedor, orient="vertical",
-                            command=self._lr0_canvas.yview)
+                            command=self._ast_canvas.yview)
         sx = ttk.Scrollbar(contenedor, orient="horizontal",
-                            command=self._lr0_canvas.xview)
-        self._lr0_canvas.configure(yscrollcommand=sy.set,
+                            command=self._ast_canvas.xview)
+        self._ast_canvas.configure(yscrollcommand=sy.set,
                                      xscrollcommand=sx.set)
-        self._lr0_canvas.grid(row=0, column=0, sticky="nsew")
+        self._ast_canvas.grid(row=0, column=0, sticky="nsew")
         sy.grid(row=0, column=1, sticky="ns")
         sx.grid(row=1, column=0, sticky="ew")
         contenedor.rowconfigure(0, weight=1)
         contenedor.columnconfigure(0, weight=1)
 
-        # Zoom con rueda
-        self._lr0_zoom = 1.0
-        self._lr0_canvas.bind("<MouseWheel>", self._lr0_on_wheel)
-        self._lr0_canvas.bind("<Control-MouseWheel>", self._lr0_on_wheel_zoom)
+        self._ast_canvas.bind("<MouseWheel>", self._ast_on_wheel)
 
-        self._lr0_canvas.create_text(
+        self._ast_canvas.create_text(
             12, 12, anchor="nw",
             text=("(sin imagen) Ejecutá un análisis y presioná 'Renderizar "
                   "PNG'. Requiere Graphviz `dot` en el PATH."),
@@ -1634,26 +1432,26 @@ class IDE:
             fill=Tema.FG_MUTED, tags=("placeholder",),
         )
 
-    def _construir_panel_parser_paso(self, notebook):
+    def _construir_panel_analisis(self, notebook):
         frame = ttk.Frame(notebook, style="Card.TFrame")
-        notebook.add(frame, text="Parser paso a paso")
+        notebook.add(frame, text="AST / Tabla de símbolos")
 
         cabecera = ttk.Frame(frame, style="Card.TFrame", padding=(10, 10))
         cabecera.pack(side="top", fill="x")
-        ttk.Label(cabecera, text="Parser:",
+        ttk.Label(cabecera, text="Vista:",
                    style="Card.TLabel").pack(side="left")
-        self._parser_paso_var = tk.StringVar(value="LL(1)")
+        self._analisis_var = tk.StringVar(value="AST")
         combo = ttk.Combobox(
-            cabecera, textvariable=self._parser_paso_var,
-            values=("LL(1)", "SLR(1)", "LALR(1)"),
-            state="readonly", width=10)
+            cabecera, textvariable=self._analisis_var,
+            values=("AST", "Tabla de símbolos"),
+            state="readonly", width=18)
         combo.pack(side="left", padx=6)
         combo.bind("<<ComboboxSelected>>",
-                    lambda _ev: self._refrescar_panel_parser_paso())
+                    lambda _ev: self._refrescar_panel_analisis())
 
         contenedor = ttk.Frame(frame, style="Card.TFrame")
         contenedor.pack(fill="both", expand=True, padx=8, pady=(0, 8))
-        self._parser_paso_text = tk.Text(
+        self._analisis_text = tk.Text(
             contenedor, wrap="none",
             font=(FUENTE_MONO_NAME, FUENTE_MONO_SIZE),
             background=Tema.BG_PANEL, foreground=Tema.FG,
@@ -1662,18 +1460,18 @@ class IDE:
             borderwidth=0, relief="flat",
             padx=12, pady=10, state="disabled")
         sy = ttk.Scrollbar(contenedor, orient="vertical",
-                            command=self._parser_paso_text.yview)
+                            command=self._analisis_text.yview)
         sx = ttk.Scrollbar(contenedor, orient="horizontal",
-                            command=self._parser_paso_text.xview)
-        self._parser_paso_text.configure(
+                            command=self._analisis_text.xview)
+        self._analisis_text.configure(
             yscrollcommand=sy.set, xscrollcommand=sx.set)
-        self._parser_paso_text.grid(row=0, column=0, sticky="nsew")
+        self._analisis_text.grid(row=0, column=0, sticky="nsew")
         sy.grid(row=0, column=1, sticky="ns")
         sx.grid(row=1, column=0, sticky="ew")
         contenedor.rowconfigure(0, weight=1)
         contenedor.columnconfigure(0, weight=1)
-        frame._tab_titulo = "Parser paso a paso"
-        self.paneles["parser_paso_tab"] = frame
+        frame._tab_titulo = "AST / Tabla de símbolos"
+        self.paneles["analisis_tab"] = frame
 
     def _construir_barra_estado(self):
         barra = ttk.Frame(self.root, style="Status.TFrame", padding=0)
@@ -1687,9 +1485,9 @@ class IDE:
         self._lbl_pos     = ttk.Label(contenido, style="Status.TLabel",
                                        text="Línea 1, Col 1")
         self._lbl_tokens  = ttk.Label(contenido, style="Status.TLabel",
-                                       text="Tokens: —")
+                                       text="Diagnósticos: —")
         self._lbl_parser  = ttk.Label(contenido, style="Status.TLabel",
-                                       text="Parser: —")
+                                       text="AST: —")
         self._lbl_estado  = ttk.Label(contenido, style="Status.TLabel",
                                        text="Estado: Listo")
         self._lbl_ej      = ttk.Label(
@@ -1741,17 +1539,21 @@ class IDE:
             self._lbl_pos.configure(text=f"Línea {l}, Col {c}")
 
         if self._ultimo_stdout:
-            n = contar_tokens_filtrados(self._ultimo_stdout)
+            errores, warnings = resumen_diagnosticos(self._ultimos_diagnosticos)
             self._lbl_tokens.configure(
-                text=f"Tokens: {n}" if n is not None else "Tokens: —")
+                text=f"Diagnósticos: {errores} error(es), "
+                     f"{warnings} advertencia(s)")
         else:
-            self._lbl_tokens.configure(text="Tokens: —")
+            self._lbl_tokens.configure(text="Diagnósticos: —")
 
-        if self._ultimo_veredictos:
+        if self._ultimo_stdout:
+            ast_generado = any(l.strip() == "AST:"
+                                for l in self._ultimo_stdout.splitlines())
             self._lbl_parser.configure(
-                text=f"Parser: {parser_ganador(self._ultimo_veredictos)}")
+                text="AST: generado" if ast_generado
+                     else "AST: — (error sintáctico)")
         else:
-            self._lbl_parser.configure(text="Parser: —")
+            self._lbl_parser.configure(text="AST: —")
 
     def _escribir(self, clave, texto):
         panel = self.paneles[clave]
@@ -1796,23 +1598,15 @@ class IDE:
         if not valores:
             return
         clave = valores[0]
-        if clave == "yalex":
-            self.cargar_yalex()
-        elif clave == "yapar":
-            self.cargar_yapar()
-        elif clave == "entrada":
-            self.cargar_entrada()
+        if clave == "fuente":
+            self.cargar_fuente()
 
     _ICONOS_PROYECTO = {
-        "yalex":   "λ",
-        "yapar":   "Σ",
-        "entrada": "≡",
+        "fuente": "📄",
     }
 
     def _refrescar_proyecto(self):
-        for clave, default in (("yalex",   "(sin .yal)"),
-                                ("yapar",   "(sin .yapar)"),
-                                ("entrada", "(sin entrada)")):
+        for clave, default in (("fuente", "(sin archivo .cps)"),):
             iid = self._proyecto_items[clave]
             icono = self._ICONOS_PROYECTO[clave]
             ruta = self._editores[clave].ruta
@@ -1919,21 +1713,12 @@ class IDE:
 
     # ── Cargar archivos ───────────────────────────────────────────────
 
-    def cargar_yalex(self):
-        self._cargar_dialogo(self._editores["yalex"], "Cargar archivo YALex")
-
-    def cargar_yapar(self):
-        self._cargar_dialogo(self._editores["yapar"], "Cargar archivo YAPar")
-
-    def cargar_entrada(self):
-        self._cargar_dialogo(self._editores["entrada"],
-                              "Cargar archivo de entrada")
+    def cargar_fuente(self):
+        self._cargar_dialogo(self._editores["fuente"],
+                              "Cargar archivo Compiscript")
 
     def cargar_activo(self):
-        clave = self._editor_actual_clave()
-        if clave == "yalex":   self.cargar_yalex()
-        elif clave == "yapar": self.cargar_yapar()
-        else:                  self.cargar_entrada()
+        self.cargar_fuente()
 
     def _cargar_dialogo(self, editor, titulo):
         ruta = self._dialogo_archivo(
@@ -2084,14 +1869,16 @@ class IDE:
                 errors="replace",
             )
         except FileNotFoundError as exc:
-            self.root.after(0, lambda: self._fin_compilacion_fallida(
-                f"No se pudo ejecutar g++.\n{exc}\n"
-                "Verifica que g++ esté en el PATH "
-                "(MSYS2 UCRT64 en Windows)."))
+            mensaje = (
+                f"No se pudo ejecutar `make`.\n{exc}\n"
+                "Verificá que make/g++/bash estén en el PATH (MSYS2, WSL, "
+                "o Linux/macOS nativo). La primera vez en una máquina "
+                "nueva corré: bash tools/setup.sh")
+            self.root.after(0, lambda: self._fin_compilacion_fallida(mensaje))
             return
         except OSError as exc:
-            self.root.after(0, lambda: self._fin_compilacion_fallida(
-                f"Error al ejecutar el compilador:\n{exc}"))
+            mensaje = f"Error al ejecutar el compilador:\n{exc}"
+            self.root.after(0, lambda: self._fin_compilacion_fallida(mensaje))
             return
 
         salida = "$ " + " ".join(COMANDO_COMPILACION) + "\n\n"
@@ -2131,21 +1918,16 @@ class IDE:
             messagebox.showinfo("Compis IDE",
                                   "Ya hay un proceso en ejecucion.")
             return
-        faltantes = [c for c, e in self._editores.items() if e.ruta is None]
-        if faltantes:
+        editor = self._editores["fuente"]
+        if editor.ruta is None:
             self._reportar_error(
-                "Cargá los tres archivos antes de ejecutar:\n"
-                "  • YALex (.yal)\n"
-                "  • YAPar (.yapar)\n"
-                "  • Entrada (.txt)\n"
-                f"Faltan: {', '.join(faltantes)}")
+                "Cargá o guardá un archivo .cps antes de ejecutar.")
             return
-        for editor in self._editores.values():
-            if not Path(editor.ruta).exists():
-                self._reportar_error(
-                    f"El archivo {editor.ruta} no existe en disco.\n"
-                    "Guardá antes de ejecutar.")
-                return
+        if not Path(editor.ruta).exists():
+            self._reportar_error(
+                f"El archivo {editor.ruta} no existe en disco.\n"
+                "Guardá antes de ejecutar.")
+            return
         ejecutable = obtener_ejecutable_real()
         if not ejecutable.exists():
             sugeridos = "\n  ".join(str(c) for c in _candidatos_ejecutable())
@@ -2155,8 +1937,7 @@ class IDE:
                 "Presioná Compilar antes de ejecutar.")
             return
         try:
-            for editor in self._editores.values():
-                editor.guardar()
+            editor.guardar()
         except OSError as exc:
             self._reportar_error(
                 f"No se pudieron guardar los cambios antes de ejecutar:\n"
@@ -2169,20 +1950,16 @@ class IDE:
         threading.Thread(target=self._ejecutar_thread, daemon=True).start()
 
     def _ejecutar_thread(self):
-        argv = [
-            str(obtener_ejecutable_real()),
-            str(self._editores["yalex"].ruta),
-            str(self._editores["yapar"].ruta),
-            str(self._editores["entrada"].ruta),
-        ]
+        argv = [str(obtener_ejecutable_real()),
+                str(self._editores["fuente"].ruta)]
         try:
             proc = subprocess.run(
                 argv, cwd=str(PROJECT_ROOT),
                 capture_output=True, text=True,
                 encoding="utf-8", errors="replace")
         except OSError as exc:
-            self.root.after(0, lambda: self._fin_ejecucion_fallida(
-                f"No se pudo ejecutar el compilador:\n{exc}"))
+            mensaje = f"No se pudo ejecutar el compilador:\n{exc}"
+            self.root.after(0, lambda: self._fin_ejecucion_fallida(mensaje))
             return
         self.root.after(0, lambda: self._fin_ejecucion(proc))
 
@@ -2199,64 +1976,33 @@ class IDE:
         self._escribir("salida", salida_total)
         self._colorizar_consola(self.paneles["salida"])
 
-        secciones = dividir_salida(stdout, stderr)
-        for clave in ("tokens", "validaciones", "ff", "traza_ll1"):
-            self._escribir(clave, secciones.get(clave, ""))
-
-        # Versión texto de las tablas (raw)
-        for clave in ("ll1", "slr1", "lalr1"):
-            self._escribir(f"{clave}_text", secciones.get(clave, ""))
-
-        # Vista cruda del LR(0) (texto)
-        self._escribir("lr0", secciones.get("lr0", ""))
+        diagnosticos = parsear_diagnosticos(stdout)
+        self._ultimos_diagnosticos = diagnosticos
+        self._tabla_diagnosticos.cargar(diagnosticos)
 
         # Errores estructurados
-        self._renderizar_errores(secciones.get("errores", ""), stderr)
+        self._renderizar_errores(diagnosticos, stderr)
 
-        # Veredictos
-        veredictos = extraer_veredictos(stdout)
-        self._ultimo_veredictos = veredictos
-        bloque_resumen = secciones.get("resumen", "")
-        cuerpo_resultado = formatear_veredictos(veredictos, codigo)
-        if bloque_resumen:
-            cuerpo_resultado += "\n\n" + bloque_resumen
-        self._escribir("resultado", cuerpo_resultado)
-        self._resaltar_veredictos(self.paneles["resultado"])
+        # AST embebido (Graphviz)
+        self._cargar_ast_dot()
 
-        # Tablas visuales LL/SLR/LALR
-        self._cargar_tablas_json()
-
-        # LR(0) embebido (Graphviz)
-        self._cargar_lr0_dot()
-
-        # Parser paso a paso
-        self._refrescar_panel_parser_paso()
-
-        # Conflictos en panel texto
-        for clave in ("ll1_text", "slr1_text", "lalr1_text", "errores"):
-            self._marcar_conflictos(self.paneles[clave])
+        # Panel Análisis (AST / tabla de símbolos)
+        self._refrescar_panel_analisis()
 
         # Estado
-        
-        algun_aceptado  = any(v["resultado"].startswith("ACEPTADO")
-                                for v in veredictos.values())
-        algun_rechazado = any(v["resultado"] == "RECHAZADO"
-                                for v in veredictos.values())
-        if algun_aceptado and not algun_rechazado:
-            self._set_toolbar("Análisis ACEPTADO", Tema.OK)
-            self._seleccionar_seccion("resultado")
-        elif algun_aceptado:
-            self._set_toolbar(
-                "Análisis ACEPTADO parcial — ver Resultado", Tema.WARN)
-            self._seleccionar_seccion("resultado")
-        elif algun_rechazado or codigo != 0:
-            self._set_toolbar(
-                f"Análisis RECHAZADO (codigo {codigo})", Tema.ERR)
-            self._seleccionar_seccion("errores" if stderr or codigo != 0
-                                       else "resultado")
-        else:
-            self._set_toolbar(f"Análisis terminó (codigo {codigo})")
+        errores, warnings = resumen_diagnosticos(diagnosticos)
+        if codigo == 0 and errores == 0:
+            if warnings:
+                self._set_toolbar(
+                    f"Análisis OK con {warnings} advertencia(s)", Tema.WARN)
+            else:
+                self._set_toolbar("Análisis OK — sin diagnósticos", Tema.OK)
             self._seleccionar_seccion("salida")
+        else:
+            self._set_toolbar(
+                f"Análisis con {errores} error(es) (código {codigo})",
+                Tema.ERR)
+            self._seleccionar_seccion("diagnosticos")
 
         self._actualizar_estado()
         self.proceso_activo = False
@@ -2266,32 +2012,24 @@ class IDE:
         self._reportar_error(mensaje)
         self.proceso_activo = False
 
-    # ── Coloreado de consola y conflictos ─────────────────────────────
+    # ── Coloreado de consola ──────────────────────────────────────────
 
     def _colorizar_consola(self, widget):
         widget.configure(state="normal")
-        for tag in ("ok", "err", "warn", "info", "muted", "encabezado",
-                     "conflicto_sr", "conflicto_rr",
-                     "veredicto_ok", "veredicto_ko"):
+        for tag in ("ok", "err", "warn", "info", "muted", "encabezado"):
             widget.tag_remove(tag, "1.0", tk.END)
         lineas = widget.get("1.0", "end-1c").splitlines()
         for idx, linea in enumerate(lineas, start=1):
-            baja = linea.lower()
-            stripped = linea.lstrip()
+            stripped = linea.strip()
             tag = None
-            if stripped.startswith("===") or stripped.startswith("FASE"):
+            m = _PATRON_DIAGNOSTICO.match(linea)
+            if stripped in _MARCADORES_SECCION:
                 tag = "encabezado"
-            elif "aceptado" in baja:
-                tag = "ok"
-            elif ("rechazado" in baja or stripped.upper().startswith("ERROR")
-                  or "shift/reduce" in baja or "reduce/reduce" in baja):
+            elif m:
+                tag = "err" if m.group(2) == "error" else "warn"
+            elif stripped.upper().startswith("ERROR"):
                 tag = "err"
-            elif "advertencia" in baja or "warn" in baja:
-                tag = "warn"
-            elif (stripped.startswith("[LR0-DOT]")
-                  or stripped.startswith("[TABLAS-JSON]")
-                  or stripped.startswith("Tokens")
-                  or stripped.startswith("Estados")):
+            elif stripped.startswith("[AST-DOT]"):
                 tag = "info"
             elif stripped.startswith("("):
                 tag = "muted"
@@ -2299,103 +2037,67 @@ class IDE:
                 widget.tag_add(tag, f"{idx}.0", f"{idx}.end")
         widget.configure(state="disabled")
 
-    def _marcar_conflictos(self, widget):
-        widget.configure(state="normal")
-        widget.tag_remove("conflicto_sr", "1.0", tk.END)
-        widget.tag_remove("conflicto_rr", "1.0", tk.END)
-        lineas = widget.get("1.0", "end-1c").splitlines()
-        for idx, linea in enumerate(lineas, start=1):
-            baja = linea.lower()
-            if "shift/reduce" in baja:
-                widget.tag_add("conflicto_sr", f"{idx}.0", f"{idx}.end")
-            elif "reduce/reduce" in baja:
-                widget.tag_add("conflicto_rr", f"{idx}.0", f"{idx}.end")
-        widget.configure(state="disabled")
-
-    def _resaltar_veredictos(self, widget):
-        widget.configure(state="normal")
-        widget.tag_remove("veredicto_ok", "1.0", tk.END)
-        widget.tag_remove("veredicto_ko", "1.0", tk.END)
-        lineas = widget.get("1.0", "end-1c").splitlines()
-        for idx, linea in enumerate(lineas, start=1):
-            if "ACEPTADO" in linea:
-                widget.tag_add("veredicto_ok", f"{idx}.0", f"{idx}.end")
-            elif "RECHAZADO" in linea:
-                widget.tag_add("veredicto_ko", f"{idx}.0", f"{idx}.end")
-        widget.configure(state="disabled")
-
-    def _renderizar_errores(self, contenido, stderr):
+    def _renderizar_errores(self, diagnosticos, stderr):
         widget = self.paneles["errores"]
         widget.configure(state="normal")
         widget.delete("1.0", tk.END)
-        if not contenido and not stderr:
+        if not diagnosticos and not stderr:
             widget.insert("1.0", "(sin errores)")
             widget.tag_add("muted", "1.0", "end")
             widget.configure(state="disabled")
             return
 
-        widget.insert("end", "ERRORES Y CONFLICTOS\n", ("encabezado",))
+        widget.insert("end", "DIAGNÓSTICOS\n", ("encabezado",))
         widget.insert("end", "─" * 60 + "\n\n", ("muted",))
-        for linea in contenido.splitlines():
-            tag = ("err",)
-            baja = linea.lower()
-            if "shift/reduce" in baja:
-                tag = ("conflicto_sr",)
-            elif "reduce/reduce" in baja:
-                tag = ("conflicto_rr",)
-            elif "advertencia" in baja:
-                tag = ("warn",)
-            widget.insert("end", linea + "\n", tag)
+        for d in diagnosticos:
+            tag = ("err",) if d["severidad"] == "error" else ("warn",)
+            widget.insert(
+                "end",
+                f"[{d['codigo']}] {d['severidad']} "
+                f"{d['linea']}:{d['columna']}: {d['mensaje']}\n", tag)
         if stderr:
             widget.insert("end", "\n--- stderr ---\n", ("muted",))
             widget.insert("end", stderr, ("err",))
         widget.configure(state="disabled")
 
-    # ── Cargar tablas (JSON) ──────────────────────────────────────────
+    # ── Ir a una posición del editor (desde la tabla de diagnósticos) ──
 
-    def _cargar_tablas_json(self):
-        if not TABLAS_JSON_PATH.exists():
-            self._tabla_ll1.limpiar()
-            self._tabla_slr1.limpiar()
-            self._tabla_lalr1.limpiar()
-            return
+    def _ir_a_linea(self, linea, columna):
+        ed = self._editores["fuente"]
+        self._editor_tabs.select(self._editor_tab_index["fuente"])
+        idx = f"{linea}.{max(columna - 1, 0)}"
         try:
-            datos = json.loads(TABLAS_JSON_PATH.read_text(
-                encoding="utf-8", errors="replace"))
-        except (OSError, json.JSONDecodeError):
-            return
-        self._tablas_json = datos
+            ed.text.mark_set("insert", idx)
+            ed.text.see(idx)
+            ed.text.focus_set()
+            self._on_editor_cursor(ed)
+        except tk.TclError:
+            pass
 
-        # LL(1): conflictos por celda no se exportan al JSON (la tabla almacena
-        # solo prod_idx por celda). Igual no resaltamos nada en LL.
-        self._tabla_ll1.cargar_tabla_ll1(datos.get("ll1", {}), set())
-        self._tabla_slr1.cargar_tabla_lr(datos.get("slr1", {}), "SLR(1)")
-        self._tabla_lalr1.cargar_tabla_lr(datos.get("lalr1", {}), "LALR(1)")
+    # ── AST: cargar y renderizar (Graphviz) ───────────────────────────
 
-    # ── LR(0): cargar y renderizar ────────────────────────────────────
-
-    def _cargar_lr0_dot(self):
-        canvas = self._lr0_canvas
+    def _cargar_ast_dot(self):
+        canvas = self._ast_canvas
         canvas.delete("placeholder")
-        if (LR0_PNG_PATH.exists()
-                and LR0_DOT_PATH.exists()
-                and LR0_PNG_PATH.stat().st_mtime >=
-                    LR0_DOT_PATH.stat().st_mtime):
-            self._mostrar_lr0_png()
+        if (AST_PNG_PATH.exists()
+                and AST_DOT_PATH.exists()
+                and AST_PNG_PATH.stat().st_mtime >=
+                    AST_DOT_PATH.stat().st_mtime):
+            self._mostrar_ast_png()
         else:
             canvas.delete("all")
             canvas.create_text(
                 12, 12, anchor="nw",
                 text=("Listo para renderizar. Presioná 'Renderizar PNG' o "
-                      "Visualizar → Renderizar autómata LR(0)."),
+                      "Visualizar → Renderizar AST."),
                 font=(FUENTE_MONO_NAME, FUENTE_MONO_SIZE),
                 fill=Tema.FG_MUTED, tags=("placeholder",),
             )
 
-    def renderizar_lr0(self):
-        if not LR0_DOT_PATH.exists():
+    def renderizar_ast(self):
+        if not AST_DOT_PATH.exists():
             self._set_toolbar(
-                f"No existe {LR0_DOT_PATH.name}. Ejecutá un análisis primero.",
+                f"No existe {AST_DOT_PATH.name}. Ejecutá un análisis primero.",
                 Tema.WARN)
             return
         ruta_dot = shutil.which("dot")
@@ -2405,26 +2107,26 @@ class IDE:
             return
         try:
             proc = subprocess.run(
-                [ruta_dot, "-Tpng", str(LR0_DOT_PATH),
-                 "-o", str(LR0_PNG_PATH)],
+                [ruta_dot, "-Tpng", str(AST_DOT_PATH),
+                 "-o", str(AST_PNG_PATH)],
                 capture_output=True, text=True,
                 encoding="utf-8", errors="replace")
         except OSError as exc:
             self._set_toolbar(f"Error invocando dot: {exc}", Tema.ERR)
             return
-        if proc.returncode != 0 or not LR0_PNG_PATH.exists():
+        if proc.returncode != 0 or not AST_PNG_PATH.exists():
             self._set_toolbar(
                 f"dot falló (code {proc.returncode}).", Tema.ERR)
             return
-        self._mostrar_lr0_png()
+        self._mostrar_ast_png()
         self._set_toolbar(
-            f"LR(0) renderizado: {LR0_PNG_PATH.name}", Tema.OK)
+            f"AST renderizado: {AST_PNG_PATH.name}", Tema.OK)
 
-    def _mostrar_lr0_png(self):
-        canvas = self._lr0_canvas
+    def _mostrar_ast_png(self):
+        canvas = self._ast_canvas
         canvas.delete("all")
         try:
-            imagen = tk.PhotoImage(file=str(LR0_PNG_PATH))
+            imagen = tk.PhotoImage(file=str(AST_PNG_PATH))
         except tk.TclError as exc:
             canvas.create_text(
                 12, 12, anchor="nw",
@@ -2432,96 +2134,34 @@ class IDE:
                       "\nProbá 'Abrir externo (PNG)'."),
                 font=(FUENTE_MONO_NAME, FUENTE_MONO_SIZE),
                 fill=Tema.ERR)
-            self._lr0_imagen = None
+            self._ast_imagen = None
             return
-        self._lr0_imagen = imagen
+        self._ast_imagen = imagen
         canvas.create_image(0, 0, image=imagen, anchor="nw")
         canvas.configure(
             scrollregion=(0, 0, imagen.width(), imagen.height()))
 
-    def _lr0_on_wheel(self, ev):
+    def _ast_on_wheel(self, ev):
         delta = -1 if ev.delta > 0 else 1
-        self._lr0_canvas.yview_scroll(delta, "units")
+        self._ast_canvas.yview_scroll(delta, "units")
 
-    def _lr0_on_wheel_zoom(self, ev):
-        # Zoom suave con Ctrl+rueda usando subsample/zoom
-        if self._lr0_imagen is None:
-            return
-        # PhotoImage no soporta zoom continuo; aproximamos con zoom() en pasos.
-        # Para evitar consumo enorme de memoria, lo dejamos como pista visual:
-        del ev
-        return
+    # ── Panel Análisis (AST / tabla de símbolos, texto plano) ─────────
 
-    # ── Parser paso a paso ────────────────────────────────────────────
-
-    def _refrescar_panel_parser_paso(self):
+    def _refrescar_panel_analisis(self):
         stdout = self._ultimo_stdout
         if not stdout:
             self._set_text_disabled(
-                self._parser_paso_text,
-                "(sin datos) Ejecutá un análisis para ver la traza.")
+                self._analisis_text,
+                "(sin datos) Ejecutá un análisis para verlo.")
             return
-        seleccion = self._parser_paso_var.get()
-        secciones = dividir_salida(stdout, "")
-        if seleccion == "LL(1)":
-            cuerpo = secciones.get("traza_ll1", "")
-        elif seleccion == "SLR(1)":
-            cuerpo = self._extraer_evaluacion(stdout, "Evaluacion SLR(1)")
+        seleccion = self._analisis_var.get()
+        if seleccion == "AST":
+            cuerpo = extraer_bloque(stdout, "AST:")
         else:
-            cuerpo = self._extraer_evaluacion(stdout, "Evaluacion LALR(1)")
+            cuerpo = extraer_bloque(stdout, "Tabla de simbolos:")
         if not cuerpo.strip():
-            cuerpo = ("(no se encontró traza para " + seleccion +
-                       " en la última corrida)")
-        self._set_text_disabled(self._parser_paso_text, cuerpo)
-
-    @staticmethod
-    def _extraer_evaluacion(stdout, titulo_clave):
-        for titulo, cuerpo in extraer_bloques(stdout):
-            if titulo_clave in titulo:
-                return f"=== {titulo} ===\n{cuerpo}".rstrip()
-        return ""
-
-    # ── Exportar tablas ───────────────────────────────────────────────
-
-    def exportar_tablas(self):
-        if not TABLAS_JSON_PATH.exists():
-            messagebox.showinfo(
-                "Compis IDE",
-                "Aún no se generó output/tablas.json.\n"
-                "Ejecutá un análisis y volvé a intentarlo.")
-            return
-        ruta = self._dialogo_archivo(
-            filedialog.asksaveasfilename,
-            title="Exportar tablas",
-            defaultextension=".json",
-            filetypes=(("JSON (todas las tablas)", "*.json"),
-                        ("CSV (genera varios archivos)", "*.csv")),
-            initialfile="tablas.json",
-            initialdir=str(OUTPUT_DIR if OUTPUT_DIR.exists() else PROJECT_ROOT),
-        )
-        if not ruta:
-            return
-        destino = Path(ruta)
-        try:
-            datos = json.loads(TABLAS_JSON_PATH.read_text(
-                encoding="utf-8", errors="replace"))
-        except (OSError, json.JSONDecodeError) as exc:
-            self._reportar_error(
-                f"No se pudo leer {TABLAS_JSON_PATH}:\n{exc}")
-            return
-        try:
-            if destino.suffix.lower() == ".csv":
-                generados = _exportar_csv(datos, destino)
-                self._set_toolbar(
-                    f"Exportados {len(generados)} archivos CSV "
-                    f"en {destino.parent}", Tema.OK)
-            else:
-                destino.write_text(
-                    json.dumps(datos, ensure_ascii=False, indent=2),
-                    encoding="utf-8")
-                self._set_toolbar(f"Exportado JSON: {destino.name}", Tema.OK)
-        except OSError as exc:
-            self._reportar_error(f"No se pudo escribir en {destino}:\n{exc}")
+            cuerpo = f"(no se encontró '{seleccion}' en la última corrida)"
+        self._set_text_disabled(self._analisis_text, cuerpo)
 
     # ── Abrir externo ─────────────────────────────────────────────────
 
@@ -2579,74 +2219,50 @@ class IDE:
         for clave, panel in self.paneles.items():
             if isinstance(panel, tk.Text):
                 self._escribir(clave, "")
-        self._tabla_ll1.limpiar()
-        self._tabla_slr1.limpiar()
-        self._tabla_lalr1.limpiar()
-        self._lr0_imagen = None
-        self._lr0_canvas.delete("all")
-        self._lr0_canvas.create_text(
+        self._tabla_diagnosticos.limpiar()
+        self._ast_imagen = None
+        self._ast_canvas.delete("all")
+        self._ast_canvas.create_text(
             12, 12, anchor="nw",
             text="(sin imagen)",
             font=(FUENTE_MONO_NAME, FUENTE_MONO_SIZE),
             fill=Tema.FG_MUTED)
-        self._set_text_disabled(self._parser_paso_text, "")
+        self._set_text_disabled(self._analisis_text, "")
         self._ultimo_stdout = ""
         self._ultimo_stderr = ""
         self._ultimo_codigo = None
-        self._ultimo_veredictos = None
+        self._ultimos_diagnosticos = []
         self._actualizar_estado()
         self._set_toolbar("Consola limpia")
 
     # Mapa de claves -> notebook donde vive, para selección rápida
     def _seleccionar_seccion(self, clave):
         """Selecciona la pestaña adecuada en el notebook que la contiene."""
-        # Mapa especial para claves que no son simples paneles texto:
         mapeo_grupo = {
-            "salida":      0, "tokens":      0, "validaciones": 0,
-            "resultado":   0, "errores":     0,
-            "ff":          1, "ll1":         1, "slr1":         1,
-            "lalr1":       1, "traza_ll1":   1,
-            "lr0":         2,
+            "salida": 0, "diagnosticos": 0, "errores": 0,
+            "ast": 1, "tabla_simbolos": 1,
         }
         if clave not in mapeo_grupo:
             return
         self._grupos.select(mapeo_grupo[clave])
 
-        # Buscar en el sub-notebook
-        if clave in ("salida", "tokens", "validaciones",
-                      "resultado", "errores"):
+        if clave in ("salida", "errores"):
             panel = self.paneles[clave]
             nb = panel._notebook
             for i in range(len(nb.tabs())):
                 if nb.tab(i, "text") == panel._tab_titulo:
                     nb.select(i)
                     return
-        elif clave in ("ff", "traza_ll1"):
-            panel = self.paneles[clave]
-            nb = panel._notebook
+        elif clave == "diagnosticos":
+            nb = self._tabla_diagnosticos._notebook
             for i in range(len(nb.tabs())):
-                if nb.tab(i, "text") == panel._tab_titulo:
+                if nb.tab(i, "text") == self._tabla_diagnosticos._tab_titulo:
                     nb.select(i)
                     return
-        elif clave == "ll1":
-            nb = self._tabla_ll1._notebook
-            for i in range(len(nb.tabs())):
-                if nb.tab(i, "text") == self._tabla_ll1._tab_titulo:
-                    nb.select(i); return
-        elif clave == "slr1":
-            nb = self._tabla_slr1._notebook
-            for i in range(len(nb.tabs())):
-                if nb.tab(i, "text") == self._tabla_slr1._tab_titulo:
-                    nb.select(i); return
-        elif clave == "lalr1":
-            nb = self._tabla_lalr1._notebook
-            for i in range(len(nb.tabs())):
-                if nb.tab(i, "text") == self._tabla_lalr1._tab_titulo:
-                    nb.select(i); return
-        elif clave == "lr0":
-            # Primera tab del grupo 3 (Autómata LR(0))
-            for sub in self._grupos.winfo_children():
-                pass
+        elif clave in ("ast", "tabla_simbolos"):
+            self._analisis_var.set(
+                "AST" if clave == "ast" else "Tabla de símbolos")
+            self._refrescar_panel_analisis()
 
     # ── Drag & drop de archivos ───────────────────────────────────────
 
@@ -2699,7 +2315,7 @@ class IDE:
         except (AttributeError, tk.TclError):
             paths = event.data.split()
 
-        importados = []
+        importado = None
         rechazados = []
         for raw in paths:
             normalizada = normalizar_ruta_arrastrada(raw)
@@ -2709,48 +2325,28 @@ class IDE:
                     f"{raw} -> {normalizada}" if normalizada != str(raw)
                     else str(raw))
                 continue
-            destino = self._clasificar_por_extension(ruta)
             try:
-                self._editores[destino].cargar(ruta)
+                self._editores["fuente"].cargar(ruta)
             except OSError as exc:
                 rechazados.append(f"{ruta.name} ({exc})")
                 continue
-            importados.append((destino, ruta.name))
+            importado = ruta.name
 
         self._refrescar_proyecto()
 
-        if importados:
-            # Foco al último importado
-            ultima_clave = importados[-1][0]
-            self._editor_tabs.select(self._editor_tab_index[ultima_clave])
-            resumen = ", ".join(f"{n} → {c}" for c, n in importados)
-            self._set_toolbar(f"Importado por DnD: {resumen}", Tema.OK)
+        if importado:
+            self._editor_tabs.select(self._editor_tab_index["fuente"])
+            self._set_toolbar(f"Importado por DnD: {importado}", Tema.OK)
         if rechazados:
             mensaje = (
                 "No se pudieron importar:\n  " + "\n  ".join(rechazados))
-            if not importados:
+            if not importado:
                 self._reportar_error(mensaje)
             else:
                 # Mantener notificación discreta en la barra
                 self._lbl_estado.configure(
                     text="Estado: algunos archivos no se importaron")
         return event.action if hasattr(event, "action") else None
-
-    def _clasificar_por_extension(self, ruta):
-        """Decide a qué editor enviar un archivo según su extensión."""
-        ext = ruta.suffix.lower()
-        if ext in (".yal", ".yalex"):
-            return "yalex"
-        if ext in (".yapar", ".yalp", ".grammar"):
-            return "yapar"
-        # Si el archivo se llama exactamente como uno de los editores actuales
-        # mantenemos la asignación.
-        nombre = ruta.name.lower()
-        if "yalex" in nombre or nombre.endswith(".yal"):
-            return "yalex"
-        if "yapar" in nombre or "grammar" in nombre:
-            return "yapar"
-        return "entrada"
 
     # ── Errores ───────────────────────────────────────────────────────
 
@@ -2870,79 +2466,9 @@ class IDE:
         messagebox.showinfo(
             "Acerca de",
             "Compis IDE\n"
-            "Pipeline: YALex + YAPar + LL(1) + LR(0) + SLR(1) + LALR(1)\n"
-            "Diseño de Lenguajes — UVG"
+            "Pipeline: Compiscript -> ANTLR -> AST -> análisis semántico\n"
+            "Construcción de Compiladores (CC3064) — UVG"
         )
-
-
-# ──────────────────────────────────────────────────────────────────────
-# Exportación CSV (compartida con la lógica del back vía tablas.json)
-# ──────────────────────────────────────────────────────────────────────
-
-def _escribir_csv(ruta, encabezado, filas):
-    with open(ruta, "w", encoding="utf-8", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(encabezado)
-        for fila in filas:
-            w.writerow(fila)
-
-
-def _exportar_csv(datos, destino_base):
-    destino_base = Path(destino_base)
-    carpeta = destino_base.parent
-    base = destino_base.stem
-    generados = []
-
-    for clave in ("first", "follow"):
-        ff = datos.get(clave, {})
-        if not isinstance(ff, dict):
-            continue
-        ruta = carpeta / f"{base}_{clave}.csv"
-        filas = [(nt, ",".join(ts)) for nt, ts in ff.items()]
-        _escribir_csv(ruta, ("no_terminal", clave), filas)
-        generados.append(ruta)
-
-    ll1 = datos.get("ll1", {})
-    if isinstance(ll1, dict) and "filas" in ll1:
-        terms = ll1.get("terminales", []) or []
-        ruta = carpeta / f"{base}_ll1.csv"
-        filas = []
-        for nt, fila in ll1["filas"].items():
-            filas.append([nt] + [str(fila.get(t, "")) for t in terms])
-        _escribir_csv(ruta, ["NT"] + list(terms), filas)
-        generados.append(ruta)
-
-    for clave in ("slr1", "lalr1"):
-        tab = datos.get(clave, {})
-        if not isinstance(tab, dict) or "action" not in tab:
-            continue
-        terms = tab.get("terminales", []) or []
-        nterms = tab.get("no_terminales", []) or []
-        ruta_action = carpeta / f"{base}_{clave}_action.csv"
-        filas = []
-        for i, fila in enumerate(tab["action"]):
-            filas.append([i] + [fila.get(t, "") for t in terms])
-        _escribir_csv(ruta_action, ["estado"] + list(terms), filas)
-        generados.append(ruta_action)
-
-        ruta_goto = carpeta / f"{base}_{clave}_goto.csv"
-        filas = []
-        for i, fila in enumerate(tab.get("goto", [])):
-            filas.append([i] + [fila.get(nt, "") for nt in nterms])
-        _escribir_csv(ruta_goto, ["estado"] + list(nterms), filas)
-        generados.append(ruta_goto)
-
-        conflictos = tab.get("conflictos", []) or []
-        if conflictos:
-            ruta_conf = carpeta / f"{base}_{clave}_conflictos.csv"
-            filas = [(c.get("estado", ""), c.get("terminal", ""),
-                       c.get("descripcion", "")) for c in conflictos]
-            _escribir_csv(ruta_conf,
-                            ("estado", "terminal", "descripcion"),
-                            filas)
-            generados.append(ruta_conf)
-
-    return generados
 
 
 # ──────────────────────────────────────────────────────────────────────
