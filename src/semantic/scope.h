@@ -30,6 +30,13 @@ public:
     ScopeKind kind() const { return kind_; }
     Scope* parent() const { return parent_; }
 
+    // Para Function/Class: el FunctionSymbol/ClassSymbol dueño de este
+    // scope (no propietario). Lo fija DeclarationCollector al crear el
+    // scope. Sirve para responder "¿en que funcion/clase estoy parado?"
+    // al recorrer hacia arriba -- lo necesita, por ejemplo, validar el
+    // tipo de retorno o resolver 'this'.
+    Symbol* owner = nullptr;
+
     // Inserta `symbol` en este scope. Si ya hay un simbolo con el mismo
     // nombre EN ESTE MISMO scope, no lo reemplaza y retorna ese simbolo
     // existente (para que el llamador arme un diagnostico con la linea de

@@ -80,6 +80,7 @@ void DeclarationCollector::collectStatement(Statement* stmt, Scope* scope) {
 
         Scope* funcScope = scope->createChild(ScopeKind::Function);
         fn->function_scope = funcScope;
+        funcScope->owner = fn.get();
         n->scope = scope;  // scope donde el NOMBRE de la funcion es visible
 
         for (auto& param : n->params) {
@@ -114,6 +115,7 @@ void DeclarationCollector::collectStatement(Statement* stmt, Scope* scope) {
 
         Scope* classScope = scope->createChild(ScopeKind::Class);
         cls->class_scope = classScope;
+        classScope->owner = cls.get();
         for (auto& member : n->members) {
             collectStatement(member.get(), classScope);
         }

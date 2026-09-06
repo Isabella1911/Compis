@@ -3,9 +3,9 @@
 
 // Jerarquia del AST de Compiscript. Cada nodo corresponde a una regla real
 // de grammar/Compiscript.g4 (verificado linea por linea contra el .g4, no
-// contra suposiciones). Los campos resolved_type/symbol/scope quedan como
-// punteros no-propietarios en null: la Etapa 2 los llena, no hace falta
-// tocar esta jerarquia de nuevo para eso.
+// contra suposiciones). Los campos resolved_type/symbol/scope arrancan en
+// null: la Etapa 2 los llena, no hace falta tocar esta jerarquia de nuevo
+// para eso.
 
 #include <memory>
 #include <optional>
@@ -14,29 +14,33 @@
 
 namespace compiscript {
 
-// Forward declarations de las clases reales de src/semantic/ (Symbol y
-// Scope ya existen ahi; Type todavia no). Alcanza con la declaracion
-// adelantada porque AstNode solo guarda punteros no propietarios: si
-// nodes.h incluyera semantic/symbol.h de verdad, se generaria un include
-// circular (semantic/symbol.h ya incluye ast/nodes.h para TypeAnnotation).
+// Forward declarations de las clases reales de src/semantic/. Alcanza con
+// la declaracion adelantada porque nodes.h no necesita conocer su
+// definicion completa: si incluyera semantic/symbol.h de verdad, se
+// generaria un include circular (semantic/symbol.h ya incluye
+// ast/nodes.h para TypeAnnotation).
 namespace semantic {
 class Symbol;
 class Scope;
+class Type;
 }  // namespace semantic
 
 namespace ast {
-
-// Sistema de tipos: todavia no existe ni siquiera como forward declaration
-// util en otro lado, se deja el placeholder local hasta que se construya.
-class Type;
 
 class AstNode {
 public:
     int line = 0;
     int column = 0;
 
-    // Se llenan en etapas posteriores. No propietarios.
-    Type* resolved_type = nullptr;
+    // symbol/scope: punteros no propietarios (Symbol/Scope viven en el
+    // arbol de scopes, con vida propia). resolved_type: shared_ptr y no
+    // puntero crudo a proposito -- muchos Type se sintetizan al vuelo
+    // durante el chequeo (p. ej. el tipo resultado de un BinaryExpression)
+    // y no tienen otro dueño estable que los mantenga vivos; un puntero
+    // crudo ahi seria colgante apenas termine el shared_ptr local que lo
+    // creo. shared_ptr<Type> con Type solo declarado adelante es valido en
+    // C++ (el destructor no necesita la definicion completa aqui).
+    std::shared_ptr<semantic::Type> resolved_type;
     semantic::Symbol* symbol = nullptr;
     semantic::Scope* scope = nullptr;
 

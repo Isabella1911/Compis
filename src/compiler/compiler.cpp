@@ -4,6 +4,7 @@
 #include "frontend/parser_driver.h"
 #include "semantic/declaration_collector.h"
 #include "semantic/name_resolver.h"
+#include "semantic/type_checker.h"
 
 namespace compiscript {
 namespace compiler {
@@ -24,6 +25,9 @@ CompilationResult Compiler::compile(const std::string& source) {
 
         semantic::NameResolver resolver(reporter);
         resolver.run(*result.ast);
+
+        semantic::TypeChecker typeChecker(reporter);
+        typeChecker.run(*result.ast);
     }
 
     result.diagnostics = reporter.sorted();
