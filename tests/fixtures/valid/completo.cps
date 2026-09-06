@@ -57,4 +57,4 @@ try {
   print("Error atrapado: " + err);
 }
 
-print(perro.nombre.length);
+print(perro.nombre);

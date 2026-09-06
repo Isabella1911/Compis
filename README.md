@@ -238,10 +238,21 @@ no expone ningún tipo de ANTLR en su firma.
       (`SEM014`). Corre entre `DeclarationCollector` y `NameResolver`. Probado:
       `herencia.cps` (cadena de 3 niveles, referencia hacia adelante) sin
       diagnósticos; base inexistente → `SEM013`; ciclo → `SEM014`.
-- [ ] Resto de los passes semánticos (Etapa 3): clases/`this`/miembros heredados,
-      validación de argumentos, control de flujo (`SEM006`/`SEM007`), closures,
-      código muerto — ver [`docs/03_passes_semanticos.md`](docs/03_passes_semanticos.md)
-      (ya actualizado con lo que se resolvió arriba).
+- [x] **Clases y Objetos, y validación de argumentos** (extendido dentro de
+      `TypeChecker`, no un pass nuevo): atributos/métodos heredados vía `.`
+      (`lookupMember()`, busca en la propia clase y sube por `base_class`,
+      `SEM010` si no existe), invocación del constructor (mismo mecanismo,
+      busca `"constructor"`), `this` tipado como la clase contenedora y
+      fuera de contexto (`SEM015`), y número/tipo de argumentos en
+      llamadas a funciones, métodos y constructor (`SEM008`). Probado con
+      `clases_y_objetos.cps` (método y campo heredados a través de una
+      subclase, `this`, constructor y método con argumentos correctos) sin
+      diagnósticos, más fixtures dedicados para cada código nuevo.
+- [ ] Resto de los passes semánticos (Etapa 3): control de flujo puro
+      (`SEM006`/`SEM007`), closures, código muerto — ver
+      [`docs/03_passes_semanticos.md`](docs/03_passes_semanticos.md) (ya
+      actualizado con lo que se resolvió arriba). Esto es lo único que
+      falta de análisis semántico — el resto es IDE y batería de pruebas.
 - [ ] IDE, batería de pruebas por regla y checklist de entrega — ver [`docs/04_ide_y_entrega.md`](docs/04_ide_y_entrega.md).
 
 ### Fuera de Proyecto 2 (preparación para más adelante)
