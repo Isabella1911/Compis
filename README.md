@@ -248,11 +248,24 @@ no expone ningún tipo de ANTLR en su firma.
       `clases_y_objetos.cps` (método y campo heredados a través de una
       subclase, `this`, constructor y método con argumentos correctos) sin
       diagnósticos, más fixtures dedicados para cada código nuevo.
-- [ ] Resto de los passes semánticos (Etapa 3): control de flujo puro
-      (`SEM006`/`SEM007`), closures, código muerto — ver
-      [`docs/03_passes_semanticos.md`](docs/03_passes_semanticos.md) (ya
-      actualizado con lo que se resolvió arriba). Esto es lo único que
-      falta de análisis semántico — el resto es IDE y batería de pruebas.
+- [x] **ControlFlowChecker** (`control_flow_checker.h/.cpp`): `break`/`continue`
+      fuera de un bucle (`SEM006`; `switch` no cuenta como bucle, decisión
+      literal del PDF ya tomada), `return` fuera de una función (`SEM007`),
+      código muerto (`SEM012`, una sola vez por bloque). Pass independiente,
+      no necesita tipos ni tabla de símbolos.
+- [x] **ClosureAnalyzer** (`closure_analyzer.h/.cpp`): identifica qué
+      variables externas usa cada función anidada y las guarda en
+      `FunctionSymbol::captured` (no valida nada — información para
+      generación de código futura). Visible en `printScopeTree()` como
+      `[captura: ...]` junto a la firma de la función.
+      Probado: `sem006_*`, `sem007_*`, `sem012_*` disparan su código exacto;
+      `control_flow_y_closures.cps` (break/continue/return correctos, una
+      función anidada capturando el parámetro de su contenedora) sin
+      diagnósticos y con la captura visible en la tabla de símbolos.
+
+**Con esto, el análisis semántico completo del Proyecto 2 está
+implementado** (~25 reglas del PDF). Lo único que queda de todo el
+proyecto es IDE y batería de pruebas por regla:
 - [ ] IDE, batería de pruebas por regla y checklist de entrega — ver [`docs/04_ide_y_entrega.md`](docs/04_ide_y_entrega.md).
 
 ### Fuera de Proyecto 2 (preparación para más adelante)

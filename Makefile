@@ -33,6 +33,8 @@ SEMANTIC_SRC := src/semantic/scope.cpp \
                 src/semantic/inheritance_resolver.cpp \
                 src/semantic/name_resolver.cpp \
                 src/semantic/type_checker.cpp \
+                src/semantic/control_flow_checker.cpp \
+                src/semantic/closure_analyzer.cpp \
                 src/semantic/printer.cpp
 # Subconjunto que necesita la prueba unitaria de la tabla de simbolos: no
 # arrastra declaration_collector.cpp (depende del AST) ni printer.cpp.

@@ -40,6 +40,12 @@ public:
     std::vector<ast::Parameter> params;
     ast::TypeAnnotationPtr return_type;  // null -> se asume void
     Scope* function_scope = nullptr;     // no propietario; lo crea quien arma la tabla
+
+    // Variables resueltas fuera de esta funcion pero usadas dentro de su
+    // cuerpo (closures). Lo llena ClosureAnalyzer; no valida nada, es
+    // informacion para cuando se generen closures reales en tiempo de
+    // ejecucion (fuera de este proyecto). No propietario, sin duplicados.
+    std::vector<Symbol*> captured;
 };
 using FunctionSymbolPtr = std::shared_ptr<FunctionSymbol>;
 

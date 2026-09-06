@@ -49,8 +49,17 @@ std::string signatureText(const Symbol& symbol) {
             if (i > 0) params += ", ";
             params += fn->params[i].name + ": " + typeText(fn->params[i].declared_type);
         }
-        return "(" + params + ") -> " +
-               (fn->return_type ? typeText(fn->return_type) : "void");
+        std::string signature = "(" + params + ") -> " +
+                                  (fn->return_type ? typeText(fn->return_type) : "void");
+        if (!fn->captured.empty()) {
+            signature += "  [captura: ";
+            for (size_t i = 0; i < fn->captured.size(); i++) {
+                if (i > 0) signature += ", ";
+                signature += fn->captured[i]->name;
+            }
+            signature += "]";
+        }
+        return signature;
     }
     if (auto* cls = dynamic_cast<const ClassSymbol*>(&symbol)) {
         return cls->base_class_name ? ("extiende " + *cls->base_class_name) : "sin base";
