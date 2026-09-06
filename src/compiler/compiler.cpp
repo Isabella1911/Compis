@@ -2,6 +2,8 @@
 
 #include "diagnostics/reporter.h"
 #include "frontend/parser_driver.h"
+#include "semantic/closure_analyzer.h"
+#include "semantic/control_flow_checker.h"
 #include "semantic/declaration_collector.h"
 #include "semantic/inheritance_resolver.h"
 #include "semantic/name_resolver.h"
@@ -32,6 +34,12 @@ CompilationResult Compiler::compile(const std::string& source) {
 
         semantic::TypeChecker typeChecker(reporter);
         typeChecker.run(*result.ast);
+
+        semantic::ControlFlowChecker controlFlowChecker(reporter);
+        controlFlowChecker.run(*result.ast);
+
+        semantic::ClosureAnalyzer closureAnalyzer;
+        closureAnalyzer.run(*result.ast);
     }
 
     result.diagnostics = reporter.sorted();
