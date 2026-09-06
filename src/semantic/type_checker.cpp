@@ -30,6 +30,66 @@ Scope* TypeChecker::findEnclosingFunctionScope(Scope* scope) const {
     return nullptr;
 }
 
+Scope* TypeChecker::findEnclosingClassScope(Scope* scope) const {
+    for (Scope* s = scope; s != nullptr; s = s->parent()) {
+        if (s->kind() == ScopeKind::Class) return s;
+    }
+    return nullptr;
+}
+
+Symbol* TypeChecker::lookupMember(ClassSymbol* cls, const std::string& name) const {
+    for (ClassSymbol* current = cls; current != nullptr; current = current->base_class) {
+        if (current->class_scope == nullptr) continue;
+        if (auto sym = current->class_scope->resolveLocal(name)) return sym.get();
+    }
+    return nullptr;
+}
+
+Symbol* TypeChecker::resolveMemberAccess(Expression* objectExpr, const std::string& memberName,
+                                          Scope* scope, int line, int column) {
+    TypePtr objectType = checkExpression(objectExpr, scope);
+    if (!objectType || objectType->kind == TypeKind::Error) {
+        // El objeto ya arrastra un problema anterior (p. ej. una variable
+        // no declarada, ya reportada por NameResolver): no reportar de
+        // nuevo sobre el acceso a miembro.
+        return nullptr;
+    }
+    if (objectType->kind != TypeKind::Class) {
+        reporter_.error(diagnostics::codes::SEM010,
+                         "no se puede acceder a '." + memberName +
+                             "': el valor no es un objeto de una clase.",
+                         line, column);
+        return nullptr;
+    }
+    Symbol* member = lookupMember(objectType->class_symbol, memberName);
+    if (member == nullptr) {
+        reporter_.error(diagnostics::codes::SEM010,
+                         "'" + memberName + "' no existe en la clase '" +
+                             objectType->class_symbol->name + "' ni en sus clases base.",
+                         line, column);
+        return nullptr;
+    }
+    return member;
+}
+
+void TypeChecker::checkArguments(const std::vector<TypePtr>& paramTypes,
+                                  const std::vector<TypePtr>& argTypes, int line, int column) {
+    if (paramTypes.size() != argTypes.size()) {
+        reporter_.error(diagnostics::codes::SEM008,
+                         "se esperaban " + std::to_string(paramTypes.size()) +
+                             " argumento(s), se recibieron " + std::to_string(argTypes.size()) +
+                             ".",
+                         line, column);
+        return;
+    }
+    for (size_t i = 0; i < paramTypes.size(); i++) {
+        checkCompatible(paramTypes[i], argTypes[i], diagnostics::codes::SEM008,
+                         "el argumento " + std::to_string(i + 1) +
+                             " no coincide con el tipo esperado.",
+                         line, column);
+    }
+}
+
 void TypeChecker::run(Program& program) {
     for (auto& stmt : program.statements) {
         checkStatement(stmt.get());
@@ -90,11 +150,17 @@ void TypeChecker::checkStatement(Statement* stmt) {
         return;
     }
     if (auto* n = dynamic_cast<PropertyAssignment*>(stmt)) {
-        // El tipo del miembro asignado no se valida todavia: requiere
-        // resolver member_name contra la clase de 'object' (ver
-        // docs/03_passes_semanticos.md, seccion Clases y Objetos).
-        checkExpression(n->object.get(), scope);
-        n->resolved_type = checkExpression(n->value.get(), scope);
+        Symbol* member = resolveMemberAccess(n->object.get(), n->member_name, scope, n->line,
+                                             n->column);
+        TypePtr valueType = checkExpression(n->value.get(), scope);
+        if (member != nullptr) {
+            checkCompatible(member->resolved_type, valueType, diagnostics::codes::SEM003,
+                             "el valor asignado no coincide con el tipo de '." + n->member_name +
+                                 "'.",
+                             n->line, n->column);
+        }
+        n->symbol = member;
+        n->resolved_type = valueType;
         return;
     }
     if (auto* n = dynamic_cast<ExpressionStatement*>(stmt)) {
@@ -245,8 +311,17 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
         return n->resolved_type;
     }
     if (auto* n = dynamic_cast<PropertyAssignExpr*>(expr)) {
-        checkExpression(n->object.get(), scope);  // member_name: ver PropertyAssignment arriba
-        n->resolved_type = checkExpression(n->value.get(), scope);
+        Symbol* member = resolveMemberAccess(n->object.get(), n->member_name, scope, n->line,
+                                             n->column);
+        TypePtr valueType = checkExpression(n->value.get(), scope);
+        if (member != nullptr) {
+            checkCompatible(member->resolved_type, valueType, diagnostics::codes::SEM003,
+                             "el valor asignado no coincide con el tipo de '." + n->member_name +
+                                 "'.",
+                             n->line, n->column);
+        }
+        n->symbol = member;
+        n->resolved_type = valueType;
         return n->resolved_type;
     }
     if (auto* n = dynamic_cast<TernaryExpression*>(expr)) {
@@ -376,29 +451,52 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
         if (!n->resolved_type) n->resolved_type = makeErrorType();
         return n->resolved_type;
     }
-    if (dynamic_cast<ThisExpression*>(expr)) {
-        // Tipar 'this' requiere saber en que clase se esta parado -- ver
-        // docs/03_passes_semanticos.md, seccion Clases y Objetos.
-        expr->resolved_type = makeErrorType();
-        return expr->resolved_type;
+    if (auto* n = dynamic_cast<ThisExpression*>(expr)) {
+        Scope* classScope = findEnclosingClassScope(scope);
+        if (classScope == nullptr) {
+            reporter_.error(diagnostics::codes::SEM015,
+                             "'this' solo puede usarse dentro de un metodo de clase.", n->line,
+                             n->column);
+            n->resolved_type = makeErrorType();
+            return n->resolved_type;
+        }
+        auto* cls = dynamic_cast<ClassSymbol*>(classScope->owner);
+        n->symbol = classScope->owner;
+        n->resolved_type = cls ? makeClassType(cls) : makeErrorType();
+        return n->resolved_type;
     }
     if (auto* n = dynamic_cast<NewExpression*>(expr)) {
-        for (auto& arg : n->arguments) checkExpression(arg.get(), scope);
-        // n->symbol ya lo resolvio NameResolver (verifica que la clase
-        // exista). No se valida todavia el constructor (SEM008 pendiente).
+        std::vector<TypePtr> argTypes;
+        for (auto& arg : n->arguments) argTypes.push_back(checkExpression(arg.get(), scope));
+        // n->symbol ya lo resolvio NameResolver (verifica que la clase exista).
         auto* cls = n->symbol ? dynamic_cast<ClassSymbol*>(n->symbol) : nullptr;
+        if (cls != nullptr) {
+            Symbol* ctor = lookupMember(cls, "constructor");
+            auto* ctorFn = ctor ? dynamic_cast<FunctionSymbol*>(ctor) : nullptr;
+            if (ctorFn != nullptr && ctorFn->resolved_type) {
+                checkArguments(ctorFn->resolved_type->param_types, argTypes, n->line, n->column);
+            } else if (ctorFn == nullptr && !n->arguments.empty()) {
+                // "si existe" (PDF): sin constructor definido, no deberia
+                // recibir argumentos.
+                reporter_.error(diagnostics::codes::SEM008,
+                                 "la clase '" + cls->name +
+                                     "' no tiene 'constructor', pero se le pasaron argumentos.",
+                                 n->line, n->column);
+            }
+        }
         n->resolved_type = cls ? makeClassType(cls) : makeErrorType();
         return n->resolved_type;
     }
     if (auto* n = dynamic_cast<CallExpression*>(expr)) {
         TypePtr calleeType = checkExpression(n->callee.get(), scope);
-        for (auto& arg : n->arguments) checkExpression(arg.get(), scope);
-        // Validacion de numero/tipo de argumentos: pendiente (SEM008),
-        // necesita poder resolver llamadas a metodos ademas de funciones
-        // sueltas.
-        n->resolved_type =
-            (calleeType && calleeType->kind == TypeKind::Function) ? calleeType->return_type
-                                                                     : makeErrorType();
+        std::vector<TypePtr> argTypes;
+        for (auto& arg : n->arguments) argTypes.push_back(checkExpression(arg.get(), scope));
+        if (calleeType && calleeType->kind == TypeKind::Function) {
+            checkArguments(calleeType->param_types, argTypes, n->line, n->column);
+            n->resolved_type = calleeType->return_type;
+        } else {
+            n->resolved_type = makeErrorType();
+        }
         return n->resolved_type;
     }
     if (auto* n = dynamic_cast<ArrayAccessExpression*>(expr)) {
@@ -422,9 +520,11 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
         return n->resolved_type;
     }
     if (auto* n = dynamic_cast<MemberAccessExpression*>(expr)) {
-        checkExpression(n->object.get(), scope);
-        // member_name sin resolver: ver docs/03_passes_semanticos.md.
-        n->resolved_type = makeErrorType();
+        Symbol* member =
+            resolveMemberAccess(n->object.get(), n->member_name, scope, n->line, n->column);
+        n->symbol = member;
+        n->resolved_type = (member != nullptr && member->resolved_type) ? member->resolved_type
+                                                                          : makeErrorType();
         return n->resolved_type;
     }
 
