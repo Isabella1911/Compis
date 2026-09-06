@@ -30,6 +30,7 @@ GENERATED  := generated/CompiscriptLexer.cpp generated/CompiscriptParser.cpp \
 SEMANTIC_SRC := src/semantic/scope.cpp \
                 src/semantic/type.cpp \
                 src/semantic/declaration_collector.cpp \
+                src/semantic/inheritance_resolver.cpp \
                 src/semantic/name_resolver.cpp \
                 src/semantic/type_checker.cpp \
                 src/semantic/printer.cpp

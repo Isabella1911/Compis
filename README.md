@@ -232,8 +232,15 @@ no expone ningún tipo de ANTLR en su firma.
       [`docs/03_passes_semanticos.md`](docs/03_passes_semanticos.md)). Probado con
       fixtures dedicados por código (`sem003_*`, `sem004_*`, `sem005_*`, `sem013_*`)
       más `tipos.cps` (funciones, arreglos, `for`, `switch`, ternario) sin falsos positivos.
-- [ ] Resto de los passes semánticos (Etapa 3): herencia, control de flujo (`SEM006`/`SEM007`),
-      clases/`this`/miembros, closures, código muerto — ver [`docs/03_passes_semanticos.md`](docs/03_passes_semanticos.md)
+- [x] **InheritanceResolver** (`inheritance_resolver.h/.cpp`): resuelve
+      `ClassSymbol::base_class_name` al `ClassSymbol* base_class` real (funciona
+      con clases declaradas en cualquier orden), y detecta herencia circular
+      (`SEM014`). Corre entre `DeclarationCollector` y `NameResolver`. Probado:
+      `herencia.cps` (cadena de 3 niveles, referencia hacia adelante) sin
+      diagnósticos; base inexistente → `SEM013`; ciclo → `SEM014`.
+- [ ] Resto de los passes semánticos (Etapa 3): clases/`this`/miembros heredados,
+      validación de argumentos, control de flujo (`SEM006`/`SEM007`), closures,
+      código muerto — ver [`docs/03_passes_semanticos.md`](docs/03_passes_semanticos.md)
       (ya actualizado con lo que se resolvió arriba).
 - [ ] IDE, batería de pruebas por regla y checklist de entrega — ver [`docs/04_ide_y_entrega.md`](docs/04_ide_y_entrega.md).
 

@@ -47,8 +47,10 @@ using FunctionSymbolPtr = std::shared_ptr<FunctionSymbol>;
 // donde viven sus atributos/metodos.
 class ClassSymbol : public Symbol {
 public:
-    std::optional<std::string> base_class_name;
-    Scope* class_scope = nullptr;  // no propietario
+    std::optional<std::string> base_class_name;  // tal como se escribio (':' Identifier)
+    ClassSymbol* base_class = nullptr;  // resuelto por InheritanceResolver; null hasta entonces
+                                         // (y null para siempre si no hay ':' o si no resolvio)
+    Scope* class_scope = nullptr;       // no propietario
 };
 using ClassSymbolPtr = std::shared_ptr<ClassSymbol>;
 
