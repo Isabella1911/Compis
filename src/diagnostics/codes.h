@@ -31,6 +31,7 @@ constexpr const char* SEM010 = "SEM010";  // Acceso a atributo/metodo inexistent
 constexpr const char* SEM011 = "SEM011";  // Parametro de funcion sin anotacion de tipo (exigido por decision de lenguaje)
 constexpr const char* SEM012 = "SEM012";  // Codigo muerto (instrucciones tras return/break/continue)
 constexpr const char* SEM013 = "SEM013";  // Nombre de tipo invalido (ni primitivo ni clase declarada)
+constexpr const char* SEM014 = "SEM014";  // Herencia circular entre clases
 
 }  // namespace codes
 }  // namespace diagnostics
