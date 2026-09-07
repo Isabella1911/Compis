@@ -10,7 +10,7 @@ namespace semantic {
 
 // Texto indentado con cada scope y sus simbolos, recursivo. Es el "Estado
 // de la tabla de simbolos por cada entorno" que pide el enunciado como
-// salida -- todavia sin tipos resueltos (eso llega con el sistema de tipos).
+// salida; se muestran anotaciones declaradas y metadatos de captura.
 std::string printScopeTree(const Scope* scope);
 
 }  // namespace semantic

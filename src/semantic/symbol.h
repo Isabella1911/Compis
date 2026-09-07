@@ -28,6 +28,9 @@ public:
     int declared_line = 0;
     int declared_column = 0;
     bool is_mutable = true;  // false para 'const'
+    bool is_rejected = false;  // declaracion duplicada, conservada para recuperacion
+    Scope* declaring_scope = nullptr;  // no propietario
+    ast::Statement* declaration = nullptr;  // no propietario; variables/constantes inferidas
 
     virtual ~Symbol() = default;
 };
@@ -41,11 +44,13 @@ public:
     ast::TypeAnnotationPtr return_type;  // null -> se asume void
     Scope* function_scope = nullptr;     // no propietario; lo crea quien arma la tabla
 
-    // Variables resueltas fuera de esta funcion pero usadas dentro de su
+    // Variables externas no globales requeridas directa o transitivamente por su
     // cuerpo (closures). Lo llena ClosureAnalyzer; no valida nada, es
     // informacion para cuando se generen closures reales en tiempo de
     // ejecucion (fuera de este proyecto). No propietario, sin duplicados.
     std::vector<Symbol*> captured;
+    // Receptor lexico necesario por funciones anidadas dentro de un metodo.
+    ClassSymbol* captured_this = nullptr;
 };
 using FunctionSymbolPtr = std::shared_ptr<FunctionSymbol>;
 

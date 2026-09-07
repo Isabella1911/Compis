@@ -1,0 +1,1 @@
+function f() {} print(f());

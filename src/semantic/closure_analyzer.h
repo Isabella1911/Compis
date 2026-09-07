@@ -1,18 +1,9 @@
 #ifndef COMPISCRIPT_SEMANTIC_CLOSURE_ANALYZER_H
 #define COMPISCRIPT_SEMANTIC_CLOSURE_ANALYZER_H
 
-// No valida nada: recorre el cuerpo de cada funcion (incluidas las
-// anidadas) y anota en FunctionSymbol::captured cada variable resuelta
-// fuera de su propio Scope (function_scope) pero usada dentro -- es
-// exactamente lo que hace falta saber para implementar closures reales en
-// tiempo de ejecucion mas adelante (fuera de este proyecto). Corre
-// despues de NameResolver: necesita que cada IdentifierExpression ya
-// tenga su `symbol` y su `scope` resueltos.
-//
-// Cuenta como "capturada" cualquier variable que no se declare dentro del
-// propio cuerpo de la funcion (incluida una variable global) -- no solo
-// las de una funcion contenedora inmediata. Es una simplificacion
-// deliberada; se puede refinar si el equipo lo necesita.
+// Capturas estaticas de variables/constantes/parametros de entornos exteriores.
+// Excluye globales, funciones y clases; propaga capturas por funciones intermedias.
+// El receptor lexico se registra por separado como captured_this. No hay runtime.
 
 #include "ast/nodes.h"
 #include "scope.h"
@@ -39,8 +30,9 @@ private:
     void walkStatement(ast::Statement* stmt, Scope* funcScope, FunctionSymbol* fn);
     void walkExpression(ast::Expression* expr, Scope* funcScope, FunctionSymbol* fn);
 
-    // ¿La resolucion de `name` en `useSiteScope` vino de fuera de `funcScope`?
-    bool isCaptured(Scope* useSiteScope, Scope* funcScope, const std::string& name) const;
+    void capture(Symbol* symbol, Scope* funcScope);
+    void captureThis(ClassSymbol* cls, Scope* funcScope);
+
 };
 
 }  // namespace semantic

@@ -1,0 +1,334 @@
+{
+  "falta_llave.cps": [
+    "SYN001"
+  ],
+  "no_declarada.cps": [
+    "SEM001"
+  ],
+  "redeclaracion.cps": [
+    "SEM002"
+  ],
+  "sem001_ambito_bloque.cps": [
+    "SEM001"
+  ],
+  "sem001_closure_inexistente.cps": [
+    "SEM001"
+  ],
+  "sem001_new_inexistente.cps": [
+    "SEM001"
+  ],
+  "sem001_sin_cascadas.cps": [
+    "SEM001"
+  ],
+  "sem002_clase_redeclarada_uso.cps": [
+    "SEM002"
+  ],
+  "sem002_colision_clase_variable.cps": [
+    "SEM002"
+  ],
+  "sem002_colision_funcion_variable.cps": [
+    "SEM002"
+  ],
+  "sem002_constante_redeclarada_uso.cps": [
+    "SEM002"
+  ],
+  "sem002_funcion_redeclarada_uso.cps": [
+    "SEM002"
+  ],
+  "sem002_parametro_redeclarado.cps": [
+    "SEM002"
+  ],
+  "sem002_variable_redeclarada_uso.cps": [
+    "SEM002"
+  ],
+  "sem003_clase_destino.cps": [
+    "SEM003"
+  ],
+  "sem003_const_expression.cps": [
+    "SEM003"
+  ],
+  "sem003_const_member.cps": [
+    "SEM003"
+  ],
+  "sem003_const_reassignment.cps": [
+    "SEM003"
+  ],
+  "sem003_funcion_destino.cps": [
+    "SEM003"
+  ],
+  "sem003_indice_expression.cps": [
+    "SEM003"
+  ],
+  "sem003_metodo_destino.cps": [
+    "SEM003"
+  ],
+  "sem003_miembro_expression.cps": [
+    "SEM003"
+  ],
+  "sem003_new_destino.cps": [
+    "SEM003"
+  ],
+  "sem003_temporal_destino.cps": [
+    "SEM003"
+  ],
+  "sem003_tipo_asignacion.cps": [
+    "SEM003"
+  ],
+  "sem004_arreglo_mixto.cps": [
+    "SEM004"
+  ],
+  "sem004_arreglo_void.cps": [
+    "SEM004"
+  ],
+  "sem004_catch_tipo.cps": [
+    "SEM004"
+  ],
+  "sem004_comparacion.cps": [
+    "SEM004"
+  ],
+  "sem004_comparar_void.cps": [
+    "SEM004"
+  ],
+  "sem004_division.cps": [
+    "SEM004"
+  ],
+  "sem004_funcion_aritmetica.cps": [
+    "SEM004"
+  ],
+  "sem004_igualdad.cps": [
+    "SEM004"
+  ],
+  "sem004_indexar_entero.cps": [
+    "SEM004"
+  ],
+  "sem004_indice_string.cps": [
+    "SEM004"
+  ],
+  "sem004_logica.cps": [
+    "SEM004"
+  ],
+  "sem004_modulo.cps": [
+    "SEM004"
+  ],
+  "sem004_negacion.cps": [
+    "SEM004"
+  ],
+  "sem004_or.cps": [
+    "SEM004"
+  ],
+  "sem004_resta.cps": [
+    "SEM004"
+  ],
+  "sem004_suma_mixta.cps": [
+    "SEM004"
+  ],
+  "sem004_switch_case.cps": [
+    "SEM004"
+  ],
+  "sem004_ternario_ramas.cps": [
+    "SEM004"
+  ],
+  "sem004_tipo_aritmetica.cps": [
+    "SEM004"
+  ],
+  "sem004_unario.cps": [
+    "SEM004"
+  ],
+  "sem005_condicion_no_booleana.cps": [
+    "SEM005"
+  ],
+  "sem005_do_while_no_booleano.cps": [
+    "SEM005"
+  ],
+  "sem005_for_no_booleano.cps": [
+    "SEM005"
+  ],
+  "sem005_if_no_booleano.cps": [
+    "SEM005"
+  ],
+  "sem005_ternario_no_booleano.cps": [
+    "SEM005"
+  ],
+  "sem005_while_no_booleano.cps": [
+    "SEM005"
+  ],
+  "sem006_break_externo.cps": [
+    "SEM006"
+  ],
+  "sem006_break_fuera_de_bucle.cps": [
+    "SEM006"
+  ],
+  "sem006_continue_externo.cps": [
+    "SEM006"
+  ],
+  "sem006_continue_funcion_en_bucle.cps": [
+    "SEM006"
+  ],
+  "sem006_continue_switch.cps": [
+    "SEM006"
+  ],
+  "sem006_funcion_en_bucle.cps": [
+    "SEM006"
+  ],
+  "sem006_switch_sin_bucle.cps": [
+    "SEM006"
+  ],
+  "sem007_return_fuera_de_funcion.cps": [
+    "SEM007"
+  ],
+  "sem008_argumentos_constructor.cps": [
+    "SEM008"
+  ],
+  "sem008_argumentos_metodo.cps": [
+    "SEM008"
+  ],
+  "sem008_constructor_posterior.cps": [
+    "SEM008"
+  ],
+  "sem008_constructor_tipo.cps": [
+    "SEM008"
+  ],
+  "sem008_funcion_antes_muchos.cps": [
+    "SEM008"
+  ],
+  "sem008_funcion_antes_pocos.cps": [
+    "SEM008"
+  ],
+  "sem008_funcion_antes_tipo.cps": [
+    "SEM008"
+  ],
+  "sem008_funcion_despues_muchos.cps": [
+    "SEM008"
+  ],
+  "sem008_funcion_despues_pocos.cps": [
+    "SEM008"
+  ],
+  "sem008_funcion_despues_tipo.cps": [
+    "SEM008"
+  ],
+  "sem008_metodo_heredado_posterior.cps": [
+    "SEM008"
+  ],
+  "sem008_metodo_posterior.cps": [
+    "SEM008"
+  ],
+  "sem008_sin_constructor_argumentos.cps": [
+    "SEM008"
+  ],
+  "sem009_retorno_incompatible.cps": [
+    "SEM009"
+  ],
+  "sem009_retorno_vacio.cps": [
+    "SEM009"
+  ],
+  "sem009_void_con_valor.cps": [
+    "SEM009"
+  ],
+  "sem010_miembro_faltante.cps": [
+    "SEM010"
+  ],
+  "sem010_miembro_inexistente.cps": [
+    "SEM010"
+  ],
+  "sem010_objeto_entero.cps": [
+    "SEM010"
+  ],
+  "sem011_funcion_autoasignacion.cps": [
+    "SEM011",
+    "SEM003"
+  ],
+  "sem011_parametro_sin_tipo.cps": [
+    "SEM011"
+  ],
+  "sem012_bloque_termina.cps": [
+    "SEM012"
+  ],
+  "sem012_break.cps": [
+    "SEM012"
+  ],
+  "sem012_break_continue_ramas.cps": [
+    "SEM012"
+  ],
+  "sem012_codigo_muerto.cps": [
+    "SEM012"
+  ],
+  "sem012_continue.cps": [
+    "SEM012"
+  ],
+  "sem012_retorno_estructural.cps": [
+    "SEM012"
+  ],
+  "sem013_herencia_base_inexistente.cps": [
+    "SEM013"
+  ],
+  "sem013_tipo_invalido.cps": [
+    "SEM013"
+  ],
+  "sem014_ciclo_instanciado.cps": [
+    "SEM014"
+  ],
+  "sem014_ciclo_miembro.cps": [
+    "SEM014",
+    "SEM010"
+  ],
+  "sem014_herencia_circular.cps": [
+    "SEM014"
+  ],
+  "sem015_this_fuera_de_clase.cps": [
+    "SEM015"
+  ],
+  "sem015_this_global.cps": [
+    "SEM015"
+  ],
+  "sem016_no_invocable.cps": [
+    "SEM016"
+  ],
+  "sem016_sin_cascadas.cps": [
+    "SEM016"
+  ],
+  "sem017_constructor_no_metodo.cps": [
+    "SEM017"
+  ],
+  "sem017_new_no_clase.cps": [
+    "SEM017"
+  ],
+  "sem018_foreach_entero.cps": [
+    "SEM018"
+  ],
+  "sem019_arreglo_vacio_sin_contexto.cps": [
+    "SEM019"
+  ],
+  "sem019_inferencia_circular.cps": [
+    "SEM019"
+  ],
+  "sem019_variable_sin_tipo.cps": [
+    "SEM019"
+  ],
+  "sem019_void_inicializador.cps": [
+    "SEM019"
+  ],
+  "sem019_void_print.cps": [
+    "SEM019"
+  ],
+  "sem020_bucle_no_garantiza.cps": [
+    "SEM020"
+  ],
+  "sem020_foreach_vacio.cps": [
+    "SEM020"
+  ],
+  "sem020_retorno_parcial.cps": [
+    "SEM020"
+  ],
+  "sem020_sin_retorno.cps": [
+    "SEM020"
+  ],
+  "sem020_switch_sin_default.cps": [
+    "SEM020"
+  ],
+  "sem020_try_parcial.cps": [
+    "SEM020"
+  ],
+  "syn001_const_sin_inicializar.cps": [
+    "SYN001"
+  ]
+}

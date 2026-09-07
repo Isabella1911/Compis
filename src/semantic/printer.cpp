@@ -59,6 +59,7 @@ std::string signatureText(const Symbol& symbol) {
             }
             signature += "]";
         }
+        if (fn->captured_this) signature += "  [captura this: " + fn->captured_this->name + "]";
         return signature;
     }
     if (auto* cls = dynamic_cast<const ClassSymbol*>(&symbol)) {

@@ -7,16 +7,38 @@ namespace semantic {
 
 using namespace compiscript::ast;
 
-bool ClosureAnalyzer::isCaptured(Scope* useSiteScope, Scope* funcScope,
-                                  const std::string& name) const {
-    bool pastFuncScope = false;
-    for (Scope* s = useSiteScope; s != nullptr; s = s->parent()) {
-        if (s->resolveLocal(name)) {
-            return pastFuncScope;
-        }
-        if (s == funcScope) pastFuncScope = true;
+void ClosureAnalyzer::captureThis(ClassSymbol* cls, Scope* funcScope) {
+    if (!cls) return;
+    Scope* ancestor = funcScope;
+    while (ancestor && ancestor != cls->class_scope) ancestor = ancestor->parent();
+    if (!ancestor) return;
+    for (Scope* scope = funcScope; scope != cls->class_scope; scope = scope->parent()) {
+        if (scope->kind() != ScopeKind::Function) continue;
+        // El metodo recibe this directamente; las funciones interiores deben capturarlo.
+        if (scope->parent() != cls->class_scope)
+            if (auto* fn = dynamic_cast<FunctionSymbol*>(scope->owner)) fn->captured_this = cls;
     }
-    return false;  // no deberia pasar: NameResolver ya la resolvio antes
+}
+
+void ClosureAnalyzer::capture(Symbol* symbol, Scope* funcScope) {
+    if (!symbol || !symbol->declaring_scope) return;
+    Scope* declarationScope = symbol->declaring_scope;
+    if (declarationScope->kind() == ScopeKind::Class) {
+        captureThis(dynamic_cast<ClassSymbol*>(declarationScope->owner), funcScope);
+        return;
+    }
+    if (symbol->kind == SymbolKind::Function || symbol->kind == SymbolKind::Class ||
+        declarationScope->kind() == ScopeKind::Global) return;
+    // Un local de esta funcion (incluidos bloques hijos) no es una captura.
+    for (Scope* scope = declarationScope; scope; scope = scope->parent())
+        if (scope == funcScope) return;
+    for (Scope* scope = funcScope; scope && scope != declarationScope; scope = scope->parent()) {
+        if (scope->kind() != ScopeKind::Function) continue;
+        if (auto* fn = dynamic_cast<FunctionSymbol*>(scope->owner)) {
+            if (std::find(fn->captured.begin(), fn->captured.end(), symbol) == fn->captured.end())
+                fn->captured.push_back(symbol);
+        }
+    }
 }
 
 void ClosureAnalyzer::run(Program& program) {
@@ -75,6 +97,8 @@ void ClosureAnalyzer::findFunctions(Statement* stmt) {
 void ClosureAnalyzer::analyzeFunctionBody(FunctionDeclaration* fnDecl) {
     auto* fn = dynamic_cast<FunctionSymbol*>(fnDecl->symbol);
     if (fn == nullptr) return;
+    fn->captured.clear();
+    fn->captured_this = nullptr;
     Scope* funcScope = fnDecl->body->scope;
     for (auto& stmt : fnDecl->body->statements) walkStatement(stmt.get(), funcScope, fn);
     // Una funcion anidada declarada dentro de este cuerpo ya se analiza
@@ -96,12 +120,7 @@ void ClosureAnalyzer::walkStatement(Statement* stmt, Scope* funcScope, FunctionS
         return;
     }
     if (auto* n = dynamic_cast<AssignmentStatement*>(stmt)) {
-        if (n->symbol != nullptr && isCaptured(n->scope, funcScope, n->target_name)) {
-            if (std::find(fn->captured.begin(), fn->captured.end(), n->symbol) ==
-                fn->captured.end()) {
-                fn->captured.push_back(n->symbol);
-            }
-        }
+        capture(n->symbol, funcScope);
         walkExpression(n->value.get(), funcScope, fn);
         return;
     }
@@ -168,21 +187,17 @@ void ClosureAnalyzer::walkStatement(Statement* stmt, Scope* funcScope, FunctionS
         if (n->value) walkExpression(n->value.get(), funcScope, fn);
         return;
     }
-    // BreakStatement, ContinueStatement, ClassDeclaration (una clase
-    // anidada no es una funcion, no participa de esta captura): nada que
-    // recorrer aca.
+    if (auto* n = dynamic_cast<ClassDeclaration*>(stmt)) {
+        for (auto& member : n->members) walkStatement(member.get(), funcScope, fn);
+    }
+    // BreakStatement y ContinueStatement no usan variables.
 }
 
 void ClosureAnalyzer::walkExpression(Expression* expr, Scope* funcScope, FunctionSymbol* fn) {
     if (expr == nullptr) return;
 
     if (auto* n = dynamic_cast<IdentifierExpression*>(expr)) {
-        if (n->symbol != nullptr && isCaptured(n->scope, funcScope, n->name)) {
-            if (std::find(fn->captured.begin(), fn->captured.end(), n->symbol) ==
-                fn->captured.end()) {
-                fn->captured.push_back(n->symbol);
-            }
-        }
+        capture(n->symbol, funcScope);
         return;
     }
     if (auto* n = dynamic_cast<AssignmentExpression*>(expr)) {
@@ -232,7 +247,9 @@ void ClosureAnalyzer::walkExpression(Expression* expr, Scope* funcScope, Functio
         walkExpression(n->object.get(), funcScope, fn);
         return;
     }
-    // LiteralExpression, ThisExpression: no referencian variables externas.
+    if (auto* n = dynamic_cast<ThisExpression*>(expr))
+        captureThis(dynamic_cast<ClassSymbol*>(n->symbol), funcScope);
+    // Los literales no referencian variables externas.
 }
 
 }  // namespace semantic

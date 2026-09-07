@@ -51,6 +51,7 @@ void DeclarationCollector::collectStatement(Statement* stmt, Scope* scope) {
         sym->declared_line = n->line;
         sym->declared_column = n->column;
         sym->is_mutable = true;
+        sym->declaration = n;
         declareOrReport(scope, sym);
         n->symbol = sym.get();
         return;
@@ -63,6 +64,7 @@ void DeclarationCollector::collectStatement(Statement* stmt, Scope* scope) {
         sym->declared_line = n->line;
         sym->declared_column = n->column;
         sym->is_mutable = false;
+        sym->declaration = n;
         declareOrReport(scope, sym);
         n->symbol = sym.get();
         return;
