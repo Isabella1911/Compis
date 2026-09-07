@@ -7,8 +7,9 @@
 # Uso normal:
 #   make              -> genera el parser (si hace falta) y compila compiscript(.exe)
 #   make run FILE=tests/fixtures/valid/hello.cps
-#   make test         -> corre todos los fixtures de tests/fixtures/valid e invalid
-#   make test-symbols -> corre la prueba unitaria de Scope/Symbol (no necesita ANTLR)
+#   make test         -> corre fixtures + unitarios (symbols, semantic, runtime/GC)
+#   make test-symbols -> Scope/Symbol (sin ANTLR)
+#   make test-runtime -> heap + mark-and-sweep + descriptores (sin ANTLR)
 #   make clean        -> borra los binarios y el codigo generado por ANTLR
 
 DEPS        := .deps
@@ -38,6 +39,11 @@ SEMANTIC_SRC := src/semantic/scope.cpp \
                 src/semantic/control_flow_checker.cpp \
                 src/semantic/closure_analyzer.cpp \
                 src/semantic/printer.cpp
+
+RUNTIME_SRC := src/runtime/heap.cpp \
+               src/runtime/gc.cpp \
+               src/runtime/descriptor_builder.cpp
+
 # Subconjunto que necesita la prueba unitaria de la tabla de simbolos: no
 # arrastra declaration_collector.cpp (depende del AST) ni printer.cpp.
 SYMBOL_TEST_SRC := src/semantic/scope.cpp
@@ -56,12 +62,14 @@ UNAME_S := $(shell uname -s 2>/dev/null)
 ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
 BIN             := compiscript.exe
 TEST_SYMBOLS_BIN := symbol_table_test.exe
+TEST_RUNTIME_BIN := runtime_gc_test.exe
 else
 BIN             := compiscript
 TEST_SYMBOLS_BIN := symbol_table_test
+TEST_RUNTIME_BIN := runtime_gc_test
 endif
 
-.PHONY: all build setup generate run test test-symbols test-semantic clean
+.PHONY: all build setup generate run test test-symbols test-semantic test-runtime clean
 
 all: build
 
@@ -83,7 +91,7 @@ $(BIN): $(SRC) $(HEADERS)
 run: build
 	./$(BIN) $(FILE)
 
-test: build test-symbols test-semantic
+test: build test-symbols test-semantic test-runtime
 	python3 tests/fixture_runner_test.py
 	python3 tests/run_fixtures.py ./$(BIN)
 
@@ -103,6 +111,21 @@ output/semantic_test: tests/semantic_test.cpp $(SEMANTIC_SRC) src/diagnostics/re
 test-semantic: output/semantic_test
 	python3 -c 'import subprocess; subprocess.run(["./output/semantic_test"], check=True, timeout=20)'
 
+# Runtime/GC (fuera de Proyecto 2): heap + mark-and-sweep + descriptores.
+# Solo necesita scope/type del semantic layer; no ANTLR ni pases.
+$(TEST_RUNTIME_BIN): tests/runtime_gc_test.cpp $(RUNTIME_SRC) \
+                     src/semantic/scope.cpp src/semantic/type.cpp \
+                     src/diagnostics/reporter.cpp $(HEADERS)
+	$(CXX) -std=c++17 -O0 -g -Wall -I src \
+	    tests/runtime_gc_test.cpp $(RUNTIME_SRC) \
+	    src/semantic/scope.cpp src/semantic/type.cpp \
+	    src/diagnostics/reporter.cpp \
+	    -o $(TEST_RUNTIME_BIN)
+
+test-runtime: $(TEST_RUNTIME_BIN)
+	./$(TEST_RUNTIME_BIN)
+
 clean:
-	rm -f compiscript compiscript.exe symbol_table_test symbol_table_test.exe output/semantic_test
+	rm -f compiscript compiscript.exe symbol_table_test symbol_table_test.exe \
+	      runtime_gc_test runtime_gc_test.exe output/semantic_test
 	rm -rf generated
