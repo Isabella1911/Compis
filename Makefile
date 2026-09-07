@@ -18,10 +18,12 @@ ANTLR4CPP   := $(DEPS)/antlr4cpp
 
 CXX        := g++
 CXXFLAGS   := -std=c++17 -O0 -g -Wall \
-              -I $(ANTLR4CPP)/include/antlr4-runtime \
+              -isystem $(ANTLR4CPP)/include/antlr4-runtime \
               -I generated \
               -I src
 LDFLAGS    := $(ANTLR4CPP)/lib/libantlr4-runtime.a
+
+HEADERS     := $(wildcard src/*/*.h)
 
 GRAMMAR    := grammar/Compiscript.g4
 GENERATED  := generated/CompiscriptLexer.cpp generated/CompiscriptParser.cpp \
@@ -59,7 +61,7 @@ BIN             := compiscript
 TEST_SYMBOLS_BIN := symbol_table_test
 endif
 
-.PHONY: all build setup generate test test-symbols clean
+.PHONY: all build setup generate run test test-symbols test-semantic clean
 
 all: build
 
@@ -75,41 +77,32 @@ generate: $(GENERATED)
 
 build: $(BIN)
 
-$(BIN): $(SRC)
+$(BIN): $(SRC) $(HEADERS)
 	$(CXX) $(CXXFLAGS) $(SRC) $(LDFLAGS) -o $(BIN)
 
 run: build
 	./$(BIN) $(FILE)
 
-test: build
-	@ok=0; fail=0; \
-	for f in tests/fixtures/valid/*.cps; do \
-	    [ -e "$$f" ] || continue; \
-	    if ./$(BIN) "$$f" > /dev/null 2>&1; then \
-	        echo "OK      $$f"; ok=$$((ok+1)); \
-	    else \
-	        echo "FALLO   $$f (se esperaba que compilara sin errores)"; fail=$$((fail+1)); \
-	    fi; \
-	done; \
-	for f in tests/fixtures/invalid/*.cps; do \
-	    [ -e "$$f" ] || continue; \
-	    if ./$(BIN) "$$f" > /dev/null 2>&1; then \
-	        echo "FALLO   $$f (se esperaba un error y acepto)"; fail=$$((fail+1)); \
-	    else \
-	        echo "OK      $$f"; ok=$$((ok+1)); \
-	    fi; \
-	done; \
-	echo "----"; echo "$$ok ok, $$fail fallos"; \
-	[ "$$fail" -eq 0 ]
+test: build test-symbols test-semantic
+	python3 tests/fixture_runner_test.py
+	python3 tests/run_fixtures.py ./$(BIN)
 
 # No depende de $(GENERATED) ni de ANTLR4CPP a proposito: semantic/ no
 # incluye nada de ANTLR, asi que esta prueba compila (mucho) mas rapido.
-$(TEST_SYMBOLS_BIN): tests/symbol_table_test.cpp $(SYMBOL_TEST_SRC)
+$(TEST_SYMBOLS_BIN): tests/symbol_table_test.cpp $(SYMBOL_TEST_SRC) $(HEADERS)
 	$(CXX) -std=c++17 -O0 -g -Wall -I src tests/symbol_table_test.cpp $(SYMBOL_TEST_SRC) -o $(TEST_SYMBOLS_BIN)
 
 test-symbols: $(TEST_SYMBOLS_BIN)
 	./$(TEST_SYMBOLS_BIN)
 
+# Regresiones de metadatos y recuperacion, usando AST propio sin depender de ANTLR.
+output/semantic_test: tests/semantic_test.cpp $(SEMANTIC_SRC) src/diagnostics/reporter.cpp $(HEADERS)
+	mkdir -p output
+	$(CXX) -std=c++17 -O0 -g -Wall -I src tests/semantic_test.cpp $(SEMANTIC_SRC) src/diagnostics/reporter.cpp -o $@
+
+test-semantic: output/semantic_test
+	python3 -c 'import subprocess; subprocess.run(["./output/semantic_test"], check=True, timeout=20)'
+
 clean:
-	rm -f compiscript compiscript.exe symbol_table_test symbol_table_test.exe
+	rm -f compiscript compiscript.exe symbol_table_test symbol_table_test.exe output/semantic_test
 	rm -rf generated

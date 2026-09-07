@@ -6,15 +6,8 @@
 // simbolos ya poblada por DeclarationCollector. Reporta SEM001 cuando algo
 // no existe.
 //
-// Deliberadamente NO resuelve todavia:
-//   - nombres de miembro (`obj.campo`, `this.campo`): resolverlos requiere
-//     saber el tipo estatico de `obj`, y el sistema de tipos es la
-//     siguiente rebanada.
-//   - la palabra `this`: su validez depende del contexto de clase, que es
-//     una regla semantica propia ("Clases y Objetos" en el PDF), no un
-//     caso de "variable no declarada".
-//   - numero/tipo de argumentos en llamadas: eso es la rebanada de
-//     "Funciones y Procedimientos".
+// TypeChecker resuelve miembros y this y valida argumentos una vez preparadas
+// las firmas. Este pase se ocupa solamente de nombres del entorno lexico.
 
 #include "ast/nodes.h"
 #include "diagnostics/reporter.h"

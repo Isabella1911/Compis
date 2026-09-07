@@ -7,8 +7,7 @@
 // programador escribio", un Type ya sabe, por ejemplo, a que ClassSymbol
 // se refiere un nombre de clase.
 //
-// Ver docs/02_sistema_de_tipos.md para el diseño completo y las
-// decisiones pendientes.
+// Ver docs/03_passes_semanticos.md para las decisiones vigentes.
 
 #include <memory>
 #include <string>
@@ -23,7 +22,7 @@ namespace semantic {
 class ClassSymbol;  // adelante, definido en symbol.h
 class Scope;        // adelante, definido en scope.h
 
-enum class TypeKind { Integer, String, Boolean, Null, Void, Array, Function, Class, Error };
+enum class TypeKind { Integer, String, Boolean, Null, Void, Array, Function, Class, EmptyElement, Error };
 
 // TypeKind::Error es un comodin: representa "no se pudo determinar el
 // tipo" (porque ya hubo un error antes). Comparado contra CUALQUIER otro
@@ -54,6 +53,9 @@ TypePtr makeBooleanType();
 TypePtr makeNullType();
 TypePtr makeVoidType();
 TypePtr makeErrorType();
+// Elemento aun no determinado de []; no representa un error de analisis.
+TypePtr makeEmptyElementType();
+TypePtr commonType(const TypePtr& left, const TypePtr& right);
 TypePtr makeArrayType(TypePtr element);
 TypePtr makeClassType(ClassSymbol* classSymbol);
 TypePtr makeFunctionType(std::vector<TypePtr> params, TypePtr returnType);

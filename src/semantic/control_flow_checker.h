@@ -1,20 +1,9 @@
 #ifndef COMPISCRIPT_SEMANTIC_CONTROL_FLOW_CHECKER_H
 #define COMPISCRIPT_SEMANTIC_CONTROL_FLOW_CHECKER_H
 
-// Control de flujo puro: no necesita tipos ni tabla de simbolos, solo
-// recorre el AST llevando un par de banderas ("estoy dentro de un bucle",
-// "estoy dentro de una funcion"). Reporta:
-//   - SEM006: 'break'/'continue' fuera de un while/do-while/for/foreach.
-//   - SEM007: 'return' fuera de una funcion.
-//   - SEM012: codigo inalcanzable (instrucciones despues de un
-//     return/break/continue dentro de la misma lista de statements).
-//
-// Decision de lenguaje (ver README, seccion de decisiones, punto 5): la
-// gramatica permite 'break'/'continue' dentro de un 'switch' sin que haya
-// un bucle envolvente, pero se sigue la regla LITERAL del enunciado --
-// switch NO cuenta como bucle. Si el equipo decide lo contrario, el unico
-// lugar que hay que tocar es el caso de SwitchStatement en
-// control_flow_checker.cpp (pasar `insideLoop` en vez de mantenerlo).
+// Valida contextos de break/continue/return, retornos completos y codigo muerto.
+// El resumen estructural combina caminos sin construir un CFG ni ejecutar codigo.
+// switch no habilita break/continue: solo los bucles introducen ese contexto.
 
 #include "ast/nodes.h"
 #include "diagnostics/reporter.h"
@@ -29,6 +18,12 @@ public:
     void run(ast::Program& program);
 
 private:
+    enum Flow : unsigned { FallsThrough = 1, Returns = 2, Breaks = 4, Continues = 8 };
+    unsigned flowOf(ast::Statement* stmt) const;
+    unsigned flowOf(const std::vector<ast::StatementPtr>& statements) const;
+    unsigned loopFlow(ast::Block* body, ast::Expression* condition,
+                      bool runsOnce, bool omittedMeansTrue = false) const;
+
     void checkStatement(ast::Statement* stmt, bool insideLoop, bool insideFunction);
 
     // Reporta SEM012 en el primer statement inalcanzable de la lista (uno

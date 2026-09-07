@@ -39,7 +39,8 @@ public:
 
     // Inserta `symbol` en este scope. Si ya hay un simbolo con el mismo
     // nombre EN ESTE MISMO scope, no lo reemplaza y retorna ese simbolo
-    // existente (para que el llamador arme un diagnostico con la linea de
+    // existente; retiene el rechazado sin hacerlo visible (para que el AST siga
+    // siendo valido y el llamador arme un diagnostico con la linea de
     // la declaracion original). Retorna nullptr si la insercion fue
     // exitosa.
     SymbolPtr declare(SymbolPtr symbol);
@@ -58,11 +59,14 @@ public:
 
     const std::vector<std::unique_ptr<Scope>>& children() const { return children_; }
     const std::unordered_map<std::string, SymbolPtr>& symbols() const { return symbols_; }
+    const std::vector<SymbolPtr>& rejectedSymbols() const { return rejected_symbols_; }
 
 private:
     ScopeKind kind_;
     Scope* parent_;
     std::unordered_map<std::string, SymbolPtr> symbols_;
+    // No participan en resolve(); mantienen vivos los enlaces del AST y owner.
+    std::vector<SymbolPtr> rejected_symbols_;
     std::vector<std::unique_ptr<Scope>> children_;
 };
 

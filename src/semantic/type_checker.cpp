@@ -1,5 +1,7 @@
 #include "type_checker.h"
 
+#include <unordered_set>
+
 #include "diagnostics/codes.h"
 #include "symbol.h"
 
@@ -12,13 +14,14 @@ TypeChecker::TypeChecker(diagnostics::DiagnosticReporter& reporter) : reporter_(
 
 TypePtr TypeChecker::resolveDeclaredType(const ast::TypeAnnotationPtr& annotation, Scope* scope) {
     if (!annotation) return nullptr;
-    return resolveTypeAnnotation(annotation.get(), scope, reporter_);
+    if (!annotation->resolved_type)
+        annotation->resolved_type = resolveTypeAnnotation(annotation.get(), scope, reporter_);
+    return annotation->resolved_type;
 }
 
 bool TypeChecker::checkCompatible(const TypePtr& expected, const TypePtr& actual, const char* code,
                                    const std::string& message, int line, int column) {
-    if (!expected || !actual) return true;  // uno de los dos ya es un tipo desconocido/no resuelto
-    if (expected->equals(*actual)) return true;
+    if (expected && actual && expected->equals(*actual)) return true;
     reporter_.error(code, message, line, column);
     return false;
 }
@@ -38,7 +41,9 @@ Scope* TypeChecker::findEnclosingClassScope(Scope* scope) const {
 }
 
 Symbol* TypeChecker::lookupMember(ClassSymbol* cls, const std::string& name) const {
-    for (ClassSymbol* current = cls; current != nullptr; current = current->base_class) {
+    std::unordered_set<ClassSymbol*> visited;
+    for (ClassSymbol* current = cls; current != nullptr && visited.insert(current).second;
+         current = current->base_class) {
         if (current->class_scope == nullptr) continue;
         if (auto sym = current->class_scope->resolveLocal(name)) return sym.get();
     }
@@ -90,7 +95,74 @@ void TypeChecker::checkArguments(const std::vector<TypePtr>& paramTypes,
     }
 }
 
+void TypeChecker::prepareSymbol(Symbol* symbol) {
+    Scope* scope = symbol->declaring_scope;
+    if (auto* cls = dynamic_cast<ClassSymbol*>(symbol)) {
+        symbol->resolved_type = makeClassType(cls);
+    } else if (auto* fn = dynamic_cast<FunctionSymbol*>(symbol)) {
+        std::vector<TypePtr> params;
+        for (auto& param : fn->params) {
+            params.push_back(param.declared_type ? resolveDeclaredType(param.declared_type, scope)
+                                                 : makeErrorType());
+        }
+        fn->resolved_type = makeFunctionType(std::move(params), fn->return_type
+            ? resolveDeclaredType(fn->return_type, scope) : makeVoidType());
+    } else if (symbol->declared_type) {
+        // Las anotaciones de parametros se interpretan en el entorno de declaracion
+        // de la funcion, no entre sus locales, que pueden ocultar nombres de clases.
+        Scope* typeScope = symbol->kind == SymbolKind::Parameter ? scope->parent() : scope;
+        symbol->resolved_type = resolveDeclaredType(symbol->declared_type, typeScope);
+    } else if (symbol->kind == SymbolKind::Parameter) {
+        reporter_.error(diagnostics::codes::SEM011, "el parametro '" + symbol->name +
+            "' requiere una anotacion de tipo.", symbol->declared_line, symbol->declared_column);
+        symbol->resolved_type = makeErrorType();
+    }
+}
+
+void TypeChecker::prepareScope(Scope* scope) {
+    for (const auto& entry : scope->symbols()) prepareSymbol(entry.second.get());
+    for (const auto& symbol : scope->rejectedSymbols()) prepareSymbol(symbol.get());
+    for (const auto& child : scope->children()) prepareScope(child.get());
+}
+
+TypePtr TypeChecker::symbolType(Symbol* symbol, int line, int column) {
+    if (!symbol) return makeErrorType();  // NameResolver o resolveMemberAccess ya informaron
+    if (!symbol->resolved_type && symbol->declaration) checkStatement(symbol->declaration);
+    if (!symbol->resolved_type || symbol->resolved_type->kind == TypeKind::EmptyElement) {
+        reporter_.error(diagnostics::codes::SEM019,
+            "no se puede determinar el tipo de '" + symbol->name +
+            "' (falta anotacion, arreglo vacio o dependencia circular).", line, column);
+        symbol->resolved_type = makeErrorType();
+    }
+    return symbol->resolved_type;
+}
+
+bool TypeChecker::checkWritable(Symbol* symbol, int line, int column) {
+    if (!symbol) return false;  // nombre/miembro inexistente ya informado
+    if (!symbol->is_mutable || symbol->kind == SymbolKind::Constant ||
+        symbol->kind == SymbolKind::Function || symbol->kind == SymbolKind::Class) {
+        reporter_.error(diagnostics::codes::SEM003,
+            "'" + symbol->name + "' no es un destino mutable de asignacion.", line, column);
+        return false;
+    }
+    return true;
+}
+
+bool TypeChecker::checkLvalue(Expression* expression) {
+    if (dynamic_cast<IdentifierExpression*>(expression) ||
+        dynamic_cast<MemberAccessExpression*>(expression))
+        return checkWritable(expression->symbol, expression->line, expression->column);
+    // const impide cambiar la referencia, no los elementos del arreglo referenciado.
+    if (dynamic_cast<ArrayAccessExpression*>(expression))
+        return expression->resolved_type && expression->resolved_type->kind != TypeKind::Error;
+    reporter_.error(diagnostics::codes::SEM003, "el destino de asignacion no es asignable.",
+                    expression->line, expression->column);
+    return false;
+}
+
 void TypeChecker::run(Program& program) {
+    checked_.clear();
+    prepareScope(program.scope);
     for (auto& stmt : program.statements) {
         checkStatement(stmt.get());
     }
@@ -101,6 +173,7 @@ void TypeChecker::run(Program& program) {
 // ---------------------------------------------------------------------
 
 void TypeChecker::checkStatement(Statement* stmt) {
+    if (!stmt || !checked_.insert(stmt).second) return;
     Scope* scope = stmt->scope;
 
     if (auto* n = dynamic_cast<VariableDeclaration*>(stmt)) {
@@ -120,7 +193,14 @@ void TypeChecker::checkStatement(Statement* stmt) {
         } else if (initType) {
             finalType = initType;  // inferido del inicializador
         } else {
-            finalType = makeErrorType();  // 'let x;' sin tipo ni inicializador
+            reporter_.error(diagnostics::codes::SEM019,
+                "la variable '" + n->name + "' necesita un tipo o inicializador.", n->line, n->column);
+            finalType = makeErrorType();
+        }
+        if (finalType && finalType->kind == TypeKind::Void) {
+            reporter_.error(diagnostics::codes::SEM019, "no se puede almacenar un valor void.",
+                            n->line, n->column);
+            finalType = makeErrorType();
         }
         n->resolved_type = finalType;
         if (n->symbol) n->symbol->resolved_type = finalType;
@@ -136,14 +216,19 @@ void TypeChecker::checkStatement(Statement* stmt) {
                                  "'.",
                              n->line, n->column);
         }
+        if (finalType && finalType->kind == TypeKind::Void) {
+            reporter_.error(diagnostics::codes::SEM019, "no se puede almacenar un valor void.",
+                            n->line, n->column);
+            finalType = makeErrorType();
+        }
         n->resolved_type = finalType;
         if (n->symbol) n->symbol->resolved_type = finalType;
         return;
     }
     if (auto* n = dynamic_cast<AssignmentStatement*>(stmt)) {
         TypePtr valueType = checkExpression(n->value.get(), scope);
-        TypePtr targetType = n->symbol ? n->symbol->resolved_type : nullptr;
-        checkCompatible(targetType, valueType, diagnostics::codes::SEM003,
+        TypePtr targetType = symbolType(n->symbol, n->line, n->column);
+        if (checkWritable(n->symbol, n->line, n->column)) checkCompatible(targetType, valueType, diagnostics::codes::SEM003,
                          "el valor asignado no coincide con el tipo de '" + n->target_name + "'.",
                          n->line, n->column);
         n->resolved_type = valueType;
@@ -153,8 +238,8 @@ void TypeChecker::checkStatement(Statement* stmt) {
         Symbol* member = resolveMemberAccess(n->object.get(), n->member_name, scope, n->line,
                                              n->column);
         TypePtr valueType = checkExpression(n->value.get(), scope);
-        if (member != nullptr) {
-            checkCompatible(member->resolved_type, valueType, diagnostics::codes::SEM003,
+        if (checkWritable(member, n->line, n->column)) {
+            checkCompatible(symbolType(member, n->line, n->column), valueType, diagnostics::codes::SEM003,
                              "el valor asignado no coincide con el tipo de '." + n->member_name +
                                  "'.",
                              n->line, n->column);
@@ -168,7 +253,9 @@ void TypeChecker::checkStatement(Statement* stmt) {
         return;
     }
     if (auto* n = dynamic_cast<PrintStatement*>(stmt)) {
-        checkExpression(n->expression.get(), scope);
+        if (checkExpression(n->expression.get(), scope)->kind == TypeKind::Void)
+            reporter_.error(diagnostics::codes::SEM019, "print requiere un valor, no void.",
+                            n->line, n->column);
         return;
     }
     if (auto* n = dynamic_cast<Block*>(stmt)) {
@@ -214,6 +301,9 @@ void TypeChecker::checkStatement(Statement* stmt) {
     }
     if (auto* n = dynamic_cast<ForeachStatement*>(stmt)) {
         TypePtr iterableType = checkExpression(n->iterable.get(), scope);
+        if (iterableType->kind != TypeKind::Array && iterableType->kind != TypeKind::Error)
+            reporter_.error(diagnostics::codes::SEM018, "foreach requiere un arreglo.",
+                            n->iterable->line, n->iterable->column);
         TypePtr elementType = (iterableType && iterableType->kind == TypeKind::Array)
                                   ? iterableType->element_type
                                   : makeErrorType();
@@ -254,31 +344,13 @@ void TypeChecker::checkStatement(Statement* stmt) {
         }
         auto* fn = dynamic_cast<FunctionSymbol*>(funcScope->owner);
         if (fn == nullptr) return;
-        TypePtr expected = fn->return_type ? resolveDeclaredType(fn->return_type, scope)
-                                            : makeVoidType();
+        TypePtr expected = fn->resolved_type->return_type;
         checkCompatible(expected, valueType, diagnostics::codes::SEM009,
                          "el valor de 'return' no coincide con el tipo de retorno declarado.",
                          n->line, n->column);
         return;
     }
     if (auto* n = dynamic_cast<FunctionDeclaration*>(stmt)) {
-        Scope* funcScope = n->body->scope;
-        for (auto& param : n->params) {
-            TypePtr paramType = resolveDeclaredType(param.declared_type, n->scope);
-            if (auto sym = funcScope->resolveLocal(param.name)) sym->resolved_type = paramType;
-        }
-        if (n->symbol) {
-            auto* fn = dynamic_cast<FunctionSymbol*>(n->symbol);
-            if (fn) {
-                std::vector<TypePtr> paramTypes;
-                for (auto& param : n->params) {
-                    paramTypes.push_back(resolveDeclaredType(param.declared_type, n->scope));
-                }
-                TypePtr returnType =
-                    n->return_type ? resolveDeclaredType(n->return_type, n->scope) : makeVoidType();
-                fn->resolved_type = makeFunctionType(std::move(paramTypes), returnType);
-            }
-        }
         for (auto& s : n->body->statements) checkStatement(s.get());
         return;
     }
@@ -304,7 +376,7 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
     if (auto* n = dynamic_cast<AssignmentExpression*>(expr)) {
         TypePtr targetType = checkExpression(n->target.get(), scope);
         TypePtr valueType = checkExpression(n->value.get(), scope);
-        checkCompatible(targetType, valueType, diagnostics::codes::SEM003,
+        if (checkLvalue(n->target.get())) checkCompatible(targetType, valueType, diagnostics::codes::SEM003,
                          "el valor asignado no coincide con el tipo de la variable.", n->line,
                          n->column);
         n->resolved_type = targetType ? targetType : valueType;
@@ -314,8 +386,8 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
         Symbol* member = resolveMemberAccess(n->object.get(), n->member_name, scope, n->line,
                                              n->column);
         TypePtr valueType = checkExpression(n->value.get(), scope);
-        if (member != nullptr) {
-            checkCompatible(member->resolved_type, valueType, diagnostics::codes::SEM003,
+        if (checkWritable(member, n->line, n->column)) {
+            checkCompatible(symbolType(member, n->line, n->column), valueType, diagnostics::codes::SEM003,
                              "el valor asignado no coincide con el tipo de '." + n->member_name +
                                  "'.",
                              n->line, n->column);
@@ -336,7 +408,7 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
                               n->line, n->column)) {
             n->resolved_type = makeErrorType();
         } else {
-            n->resolved_type = thenType ? thenType : elseType;
+            n->resolved_type = commonType(thenType, elseType);
         }
         return n->resolved_type;
     }
@@ -355,7 +427,10 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
                                        n->line, n->column);
             result = ok ? makeBooleanType() : makeErrorType();
         } else if (op == "==" || op == "!=") {
-            checkCompatible(leftType, rightType, diagnostics::codes::SEM004,
+            if (leftType->kind == TypeKind::Void || rightType->kind == TypeKind::Void)
+                reporter_.error(diagnostics::codes::SEM004, "no se pueden comparar valores void.",
+                                n->line, n->column);
+            else checkCompatible(leftType, rightType, diagnostics::codes::SEM004,
                              "no se puede comparar con '" + op + "' operandos de tipos distintos.",
                              n->line, n->column);
             result = makeBooleanType();
@@ -380,10 +455,7 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
             } else if (bothString) {
                 result = makeStringType();
             } else if (leftUnknown || rightUnknown) {
-                // Alguno de los dos lados todavia no tiene tipo resuelto
-                // (p. ej. un acceso a miembro, que esta pendiente hasta
-                // resolver herencia -- ver docs/03_passes_semanticos.md).
-                // No reportar en cascada por algo que ya se sabe que falta.
+                // Un operando ya tiene un diagnostico; evitar cascadas.
                 result = makeErrorType();
             } else {
                 reporter_.error(diagnostics::codes::SEM004,
@@ -433,29 +505,34 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
         TypePtr elementType;
         for (auto& element : n->elements) {
             TypePtr elType = checkExpression(element.get(), scope);
+            if (elType->kind == TypeKind::Void) {
+                reporter_.error(diagnostics::codes::SEM004, "un arreglo no puede contener void.",
+                                element->line, element->column);
+                elType = makeErrorType();
+            }
             if (!elementType) {
                 elementType = elType;
             } else {
-                checkCompatible(elementType, elType, diagnostics::codes::SEM004,
+                if (checkCompatible(elementType, elType, diagnostics::codes::SEM004,
                                  "todos los elementos de un arreglo deben ser del mismo tipo.",
-                                 element->line, element->column);
+                                 element->line, element->column))
+                    elementType = commonType(elementType, elType);
             }
         }
-        n->resolved_type = makeArrayType(elementType ? elementType : makeErrorType());
+        n->resolved_type = makeArrayType(elementType ? elementType : makeEmptyElementType());
         return n->resolved_type;
     }
     if (auto* n = dynamic_cast<IdentifierExpression*>(expr)) {
         // SEM001 (no declarado) ya lo reporto NameResolver; si symbol es
         // null aca es justamente ese caso, no hay que reportar de nuevo.
-        n->resolved_type = n->symbol ? n->symbol->resolved_type : makeErrorType();
-        if (!n->resolved_type) n->resolved_type = makeErrorType();
+        n->resolved_type = symbolType(n->symbol, n->line, n->column);
         return n->resolved_type;
     }
     if (auto* n = dynamic_cast<ThisExpression*>(expr)) {
         Scope* classScope = findEnclosingClassScope(scope);
         if (classScope == nullptr) {
             reporter_.error(diagnostics::codes::SEM015,
-                             "'this' solo puede usarse dentro de un metodo de clase.", n->line,
+                             "'this' solo puede usarse dentro del ambito lexico de una clase.", n->line,
                              n->column);
             n->resolved_type = makeErrorType();
             return n->resolved_type;
@@ -470,12 +547,18 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
         for (auto& arg : n->arguments) argTypes.push_back(checkExpression(arg.get(), scope));
         // n->symbol ya lo resolvio NameResolver (verifica que la clase exista).
         auto* cls = n->symbol ? dynamic_cast<ClassSymbol*>(n->symbol) : nullptr;
+        if (n->symbol && !cls)
+            reporter_.error(diagnostics::codes::SEM017, "new requiere un nombre de clase.",
+                            n->line, n->column);
         if (cls != nullptr) {
             Symbol* ctor = lookupMember(cls, "constructor");
             auto* ctorFn = ctor ? dynamic_cast<FunctionSymbol*>(ctor) : nullptr;
+            if (ctor && !ctorFn)
+                reporter_.error(diagnostics::codes::SEM017, "constructor debe ser un metodo.",
+                                n->line, n->column);
             if (ctorFn != nullptr && ctorFn->resolved_type) {
                 checkArguments(ctorFn->resolved_type->param_types, argTypes, n->line, n->column);
-            } else if (ctorFn == nullptr && !n->arguments.empty()) {
+            } else if (ctor == nullptr && !n->arguments.empty()) {
                 // "si existe" (PDF): sin constructor definido, no deberia
                 // recibir argumentos.
                 reporter_.error(diagnostics::codes::SEM008,
@@ -495,6 +578,9 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
             checkArguments(calleeType->param_types, argTypes, n->line, n->column);
             n->resolved_type = calleeType->return_type;
         } else {
+            if (calleeType && calleeType->kind != TypeKind::Error)
+                reporter_.error(diagnostics::codes::SEM016, "el valor no es invocable.",
+                                n->line, n->column);
             n->resolved_type = makeErrorType();
         }
         return n->resolved_type;
@@ -507,9 +593,13 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
                          n->index->column);
         if (arrayType && arrayType->kind == TypeKind::Array) {
             n->resolved_type = arrayType->element_type;
+            if (n->resolved_type->kind == TypeKind::EmptyElement) {
+                reporter_.error(diagnostics::codes::SEM019,
+                    "anote el tipo del arreglo vacio antes de acceder a sus elementos.", n->line, n->column);
+                n->resolved_type = makeErrorType();
+            }
         } else if (!arrayType || arrayType->kind == TypeKind::Error) {
-            // El tipo de 'array' todavia no se pudo resolver (p. ej. viene
-            // de un acceso a miembro pendiente) -- no reportar en cascada.
+            // El error del operando ya fue informado.
             n->resolved_type = makeErrorType();
         } else {
             reporter_.error(diagnostics::codes::SEM004,
@@ -523,8 +613,7 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
         Symbol* member =
             resolveMemberAccess(n->object.get(), n->member_name, scope, n->line, n->column);
         n->symbol = member;
-        n->resolved_type = (member != nullptr && member->resolved_type) ? member->resolved_type
-                                                                          : makeErrorType();
+        n->resolved_type = symbolType(member, n->line, n->column);
         return n->resolved_type;
     }
 

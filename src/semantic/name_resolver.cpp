@@ -183,7 +183,7 @@ void NameResolver::resolveExpression(Expression* expr, Scope* scope) {
         return;
     }
 
-    // LiteralExpression, ThisExpression: nada que resolver en esta rebanada.
+    // LiteralExpression, ThisExpression: no requieren busqueda de nombre.
 }
 
 }  // namespace semantic

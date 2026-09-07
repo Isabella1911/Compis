@@ -6,8 +6,11 @@ namespace semantic {
 Scope::Scope(ScopeKind kind, Scope* parent) : kind_(kind), parent_(parent) {}
 
 SymbolPtr Scope::declare(SymbolPtr symbol) {
+    symbol->declaring_scope = this;
     auto existing = symbols_.find(symbol->name);
     if (existing != symbols_.end()) {
+        symbol->is_rejected = true;
+        rejected_symbols_.push_back(symbol);
         return existing->second;
     }
     symbols_[symbol->name] = symbol;

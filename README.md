@@ -17,51 +17,27 @@ reemplazó el contenido de `main`.
 
 ---
 
-## 1. Qué hace el pipeline hasta ahora
+## 1. Pipeline actual
 
-```
-program.cps
-    │
-    ▼
-CompiscriptLexer / CompiscriptParser   (generados por ANTLR desde grammar/Compiscript.g4)
-    │
-    ▼
-Parse Tree de ANTLR
-    │
-    ▼
-AstBuilder (Visitor)                    src/frontend/ast_builder.cpp
-    │
-    ▼
-AST propio                              src/ast/nodes.h
-    │
-    ├──► printTree() / toDot()          src/ast/printer.cpp
-    │
-    ▼
-DeclarationCollector (Pass 1)           src/semantic/declaration_collector.cpp
-    │  recorre el AST, crea un Scope por cada funcion/clase/bloque,
-    │  declara cada variable/constante/parametro/funcion/clase,
-    │  reporta SEM002 si algo se redeclara en el mismo ambito
-    ▼
-SymbolTable poblada                     src/semantic/scope.h
-    │
-    ▼
-NameResolver (Pass 2)                   src/semantic/name_resolver.cpp
-    │  recorre el AST otra vez, esta vez entrando a las expresiones;
-    │  resuelve cada identificador usado contra la tabla de simbolos
-    │  (llena AstNode::symbol), reporta SEM001 si no existe
-    │
-    ├──► printScopeTree()               src/semantic/printer.cpp
-    │
-    ▼
-Compiler::compile() -> CompilationResult   src/compiler/compiler.cpp
-                                            { ast, diagnostics, symbol_table }
+```text
+.cps → ANTLR → AstBuilder → AST propio
+     → DeclarationCollector → InheritanceResolver → NameResolver
+     → TypeChecker: preparar firmas y tipos → validar cuerpos y expresiones
+     → ControlFlowChecker → ClosureAnalyzer
+     → diagnósticos, tabla de símbolos y AST visualizable
 ```
 
-Lo que **todavía no** está implementado: nombres de miembro (`obj.campo`,
-`this.campo` — necesitan el tipo estatico de `obj`), validacion de `this`
-fuera de una clase, numero/tipo de argumentos en llamadas, sistema de
-tipos, y el resto de las validaciones semanticas del PDF. `resolved_type`
-sigue en `nullptr` en cada nodo del AST.
+La fachada `Compiler::compile()` devuelve `{ ast, diagnostics, symbol_table }`.
+La IDE utiliza el mismo ejecutable y muestra sus resultados. El proyecto analiza
+el programa fuente; no incluye ejecución, generación de código ni runtime.
+
+Los pases semánticos incluyen recuperación segura de redeclaraciones y ciclos,
+firmas independientes del orden textual, mutabilidad y destinos de asignación,
+invocabilidad, argumentos, retornos, flujo estructural, arreglos, `foreach`,
+`catch`, miembros y capturas multinivel.
+
+El detalle de implementación, decisiones y límites está en
+[docs/03_passes_semanticos.md](docs/03_passes_semanticos.md).
 
 ---
 
@@ -79,8 +55,9 @@ Después, desde la raíz del repo:
 ```bash
 make                                            # genera el parser (si hace falta) y compila
 make run FILE=tests/fixtures/valid/hello.cps    # corre un archivo .cps
-make test                                       # corre todos los fixtures de tests/fixtures/
+make test                                       # símbolos, semántica, runner y fixtures con códigos esperados
 make test-symbols                               # prueba unitaria de Scope/Symbol (no necesita ANTLR)
+make test-semantic                              # regresiones sobre AST y capturas (sin ANTLR)
 make clean                                      # borra los binarios y el codigo generado
 ```
 
@@ -89,6 +66,21 @@ binario imprime los diagnósticos (si hay), el AST en texto indentado, la
 tabla de símbolos (un `Scope` por línea, indentado por anidamiento), y
 exporta `output/ast.dot` (renderizable con `dot -Tpng output/ast.dot -o
 ast.png`, igual que Compis ya hace con su autómata LR(0)).
+
+Para abrir la IDE:
+
+```bash
+python3 ide/ide_app.py
+```
+
+Necesita Python con Tkinter; Graphviz (`dot`) permite renderizar el AST y
+`tkinterdnd2` es opcional para arrastrar archivos. `Compilar` construye el
+compilador mediante make; `Ejecutar` analiza el `.cps` guardado.
+El instalador de dependencias está preparado para Linux x86-64.
+
+El runner exige los códigos de `tests/fixtures/expected.json`, salida controlada,
+posiciones válidas y terminación antes de cinco segundos por fixture. Un crash,
+un timeout o un código de error diferente hacen fallar la prueba.
 
 ---
 
@@ -112,16 +104,23 @@ ast.png`, igual que Compis ya hace con su autómata LR(0)).
 │   ├── compiler/
 │   │   ├── result.h              #   CompilationResult
 │   │   └── compiler.cpp/.h       #   fachada publica: Compiler::compile(source)
-│   └── semantic/                 # Etapa 2: simbolos (listo), tipos y mas passes despues
+│   └── semantic/                 # Símbolos, tipos, herencia, flujo y capturas
 │       ├── symbol.h                    #   Symbol, FunctionSymbol, ClassSymbol
 │       ├── scope.h/.cpp                #   Scope: declare/resolve/resolveLocal, pila de tablas
 │       ├── symbol_table.h              #   SymbolTable: dueno del scope global
 │       ├── declaration_collector.h/.cpp #  Pass 1: AST -> puebla la tabla de simbolos
 │       ├── name_resolver.h/.cpp        #   Pass 2: resuelve identificadores usados, SEM001
+│       ├── type.h/.cpp, type_checker.h/.cpp # tipos, preparación de firmas y validación
+│       ├── inheritance_resolver.h/.cpp  #   enlaces de herencia y ciclos
+│       ├── control_flow_checker.h/.cpp  #   contexto, retornos y código muerto
+│       ├── closure_analyzer.h/.cpp      #   capturas y receptor léxico
 │       └── printer.h/.cpp              #   texto indentado del arbol de scopes
 ├── tests/
 │   ├── fixtures/{valid,invalid}/
-│   └── symbol_table_test.cpp     #   prueba unitaria de Scope/Symbol, sin AST ni compilador
+│   ├── symbol_table_test.cpp     #   prueba unitaria de Scope/Symbol
+│   ├── semantic_test.cpp         #   regresiones sobre AST y metadatos
+│   ├── run_fixtures.py           #   códigos exactos, salida y timeout
+│   └── fixture_runner_test.py    #   pruebas del runner
 ├── tools/setup.sh                # instala el toolchain (JRE+antlr+cmake+runtime), sin sudo
 └── Makefile
 ```
@@ -136,21 +135,18 @@ no expone ningún tipo de ANTLR en su firma.
 
 1. **No existe `float`.** `baseType` es exactamente `'boolean' | 'integer' |
    'string' | Identifier`. No se agrega salvo que el profesor lo exija.
-2. **Los parámetros y el retorno pueden ir sin anotación de tipo**
-   (`parameter: Identifier (':' type)?`). El AST lo refleja con
-   `declared_type == nullptr`; la Etapa 3 decide si eso es error (`SEM011`,
-   ya reservado en `codes.h`) o si asume un tipo por defecto.
+2. **Los parámetros requieren anotación semánticamente.** Aunque la gramática
+   permite omitirla, se emite `SEM011` y se recupera con tipo `Error`. Omitir el
+   retorno de una función significa `Void` interno. No hay inferencia de parámetros.
 3. **El parámetro del `catch` no lleva tipo en la gramática**
    (`'catch' '(' Identifier ')'`). Se fija `string` por decisión de equipo.
-4. **`switch` no exige booleano**: el sujeto y cada `case` son `expression`
-   arbitraria. Cada `case` debe ser comparable con el tipo del sujeto (a
-   decidir en la Etapa 3).
-5. **`break`/`continue` son sintácticamente válidos dentro de un
-   `switch`**, no solo dentro de bucles (la gramática los permite en
-   cualquier `statement*`, incluido el de `switchCase`). La Etapa 3 decide
-   si eso es un error semántico.
-6. **`string + integer` — pendiente de decidir.** Recomendado: no
-   permitirlo, obliga a conversión explícita.
+4. **La implementación conserva sujetos de `switch` comparables con sus casos**
+   (`SEM004` para incompatibilidad). El PDF exige un sujeto booleano: esta
+   discrepancia requiere aclaración para la entrega; no se cambió la política
+   existente durante la corrección de pases.
+5. **`switch` no cuenta como bucle**: `break`/`continue` requieren un bucle
+   contenedor (`SEM006`), y una función anidada reinicia ese contexto.
+6. **`string + integer` no se permite.** `+` acepta dos enteros o dos strings.
 7. **No existe `throw`.** `try/catch` se valida sintáctica y
    semánticamente, pero no hay sentencia para lanzar errores propios.
 8. **`if`/`while`/`do-while`/`for`/`foreach` exigen bloque con llaves**,
@@ -187,7 +183,7 @@ no expone ningún tipo de ANTLR en su firma.
 - [x] AST exportable a texto y a DOT.
 - [x] Batería mínima de pruebas (`make test`) con casos válidos e inválidos.
 
-### Etapa 2 — Símbolos y tipos (en progreso, por rebanadas)
+### Etapa 2 — Símbolos y pases semánticos
 
 - [x] **Tabla de símbolos** (`src/semantic/symbol.h`, `scope.h/.cpp`, `symbol_table.h`):
       `Symbol`/`FunctionSymbol`/`ClassSymbol`, `Scope` (declare/resolve/resolveLocal,
@@ -207,9 +203,8 @@ no expone ningún tipo de ANTLR en su firma.
       expresiones (no solo las declaraciones), resuelve cada identificador
       usado contra la tabla de símbolos (llena `AstNode::symbol` en
       `IdentifierExpression`, `NewExpression`, y en el target de
-      `AssignmentStatement`), y reporta `SEM001` si no existe. Deliberadamente
-      no resuelve todavía nombres de miembro (`obj.campo`, necesita el tipo
-      de `obj`) ni valida `this` fuera de una clase. **Ya conectado** —
+      `AssignmentStatement`), y reporta `SEM001` si no existe. Delega los miembros (`obj.campo`),
+      el contexto de `this` y las llamadas a `TypeChecker`. **Ya conectado** —
       corre justo después de `DeclarationCollector` en `Compiler::compile()`.
       Probado: `SEM001` dispara con una variable no declarada, y
       `completo.cps` (clases, herencia, recursión, `this`, cadenas
@@ -221,15 +216,14 @@ no expone ningún tipo de ANTLR en su firma.
       tabla de símbolos, `SEM013` si no es válido). `Symbol` ahora tiene
       `resolved_type`; `Scope` tiene `owner` (el `Symbol` dueño del scope, para
       poder responder "¿en qué función/clase estoy parado?"). Ver
-      [`docs/02_sistema_de_tipos.md`](docs/02_sistema_de_tipos.md) para el diseño completo.
+      [la guía técnica](docs/03_passes_semanticos.md) para el diseño completo.
 - [x] **TypeChecker** (Pass 3, `type_checker.h/.cpp`): llena `resolved_type` en
       todo el árbol y valida tipos en operaciones aritméticas/lógicas/comparaciones
       (`SEM004`), asignaciones (`SEM003`), condiciones de `if`/`while`/`do-while`/`for`/
       ternario (`SEM005`), tipo de retorno (`SEM009`), compatibilidad `switch`/`case`,
       tipos de elementos de arreglo e índices. **Ya conectado**, corre después de
-      `NameResolver`. Deliberadamente no resuelve todavía `obj.campo` ni valida
-      argumentos de llamadas (necesitan resolver herencia primero — ver
-      [`docs/03_passes_semanticos.md`](docs/03_passes_semanticos.md)). Probado con
+      `NameResolver`. Prepara todas las firmas antes de revisar los cuerpos y resuelve
+      miembros y argumentos sin depender del orden de declaración. Probado con
       fixtures dedicados por código (`sem003_*`, `sem004_*`, `sem005_*`, `sem013_*`)
       más `tipos.cps` (funciones, arreglos, `for`, `switch`, ternario) sin falsos positivos.
 - [x] **InheritanceResolver** (`inheritance_resolver.h/.cpp`): resuelve
@@ -251,24 +245,35 @@ no expone ningún tipo de ANTLR en su firma.
 - [x] **ControlFlowChecker** (`control_flow_checker.h/.cpp`): `break`/`continue`
       fuera de un bucle (`SEM006`; `switch` no cuenta como bucle, decisión
       literal del PDF ya tomada), `return` fuera de una función (`SEM007`),
-      código muerto (`SEM012`, una sola vez por bloque). Pass independiente,
-      no necesita tipos ni tabla de símbolos.
+      código muerto estructural (`SEM012`, una vez por lista) y caminos que
+      alcanzan el final de funciones con retorno (`SEM020`). Pass independiente.
 - [x] **ClosureAnalyzer** (`closure_analyzer.h/.cpp`): identifica qué
-      variables externas usa cada función anidada y las guarda en
+      variables no globales necesita cada función anidada y las guarda en
       `FunctionSymbol::captured` (no valida nada — información para
-      generación de código futura). Visible en `printScopeTree()` como
+      generación de código futura). Propaga capturas por funciones intermedias
+      y registra `captured_this` por separado. Visible en `printScopeTree()` como
       `[captura: ...]` junto a la firma de la función.
       Probado: `sem006_*`, `sem007_*`, `sem012_*` disparan su código exacto;
       `control_flow_y_closures.cps` (break/continue/return correctos, una
       función anidada capturando el parámetro de su contenedora) sin
       diagnósticos y con la captura visible en la tabla de símbolos.
 
-**Con esto, el análisis semántico completo del Proyecto 2 está
-implementado** (~25 reglas del PDF). Lo único que queda de todo el
-proyecto es IDE y batería de pruebas por regla:
-- [ ] IDE, batería de pruebas por regla y checklist de entrega — ver [`docs/04_ide_y_entrega.md`](docs/04_ide_y_entrega.md).
+- [x] Recuperación segura de símbolos rechazados y búsquedas de herencia con
+      clases visitadas; parámetros sin tipo reportados con `SEM011`.
+- [x] Asignaciones verifican destino y mutabilidad; `new`, llamadas, `foreach`
+      y tipos no inferibles tienen diagnósticos explícitos (`SEM016`–`SEM019`).
+- [x] `catch` tiene tipo resuelto `string`; arreglos vacíos usan un marcador
+      contextual propio, sin ocultar errores con `TypeKind::Error`.
+- [x] IDE conectada al frontend actual y batería ampliada por regla, incluyendo
+      códigos esperados, recuperación, orden de firmas y metadatos de capturas.
 
-### Fuera de Proyecto 2 (preparación para más adelante)
+La guía [03_passes_semanticos.md](docs/03_passes_semanticos.md) documenta las
+políticas de `this`, constantes, retornos y capturas, y las discrepancias del PDF
+sobre `float` y `switch`. No se añaden subtipado ni contratos de override porque
+el enunciado proporcionado no especifica esas reglas. La validación visual y
+robustez adicional de la IDE se mantienen como trabajo independiente.
 
-- [ ] Generación de código y runtime, incluido el garbage collector — ver
-      [`docs/05_generacion_de_codigo_y_runtime.md`](docs/05_generacion_de_codigo_y_runtime.md).
+### Fuera de Proyecto 2
+
+Generación de código, IR, ejecución de programas y runtime, incluido el garbage
+collector. No se implementan en esta fase.
