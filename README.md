@@ -76,11 +76,15 @@ python3 ide/ide_app.py
 Necesita Python con Tkinter; Graphviz (`dot`) permite renderizar el AST y
 `tkinterdnd2` es opcional para arrastrar archivos. `Compilar` construye el
 compilador mediante make; `Ejecutar` analiza el `.cps` guardado.
-El instalador de dependencias está preparado para Linux x86-64.
+Las líneas con diagnóstico de error se resaltan en el editor. Detalle de
+uso en [ide/IDE.md](ide/IDE.md). El instalador de dependencias está
+preparado para Linux x86-64.
 
 El runner exige los códigos de `tests/fixtures/expected.json`, salida controlada,
 posiciones válidas y terminación antes de cinco segundos por fixture. Un crash,
 un timeout o un código de error diferente hacen fallar la prueba.
+El checklist de entrega (IDE + batería + docs) está en
+[docs/04_ide_y_entrega.md](docs/04_ide_y_entrega.md).
 
 ---
 
@@ -266,12 +270,13 @@ no expone ningún tipo de ANTLR en su firma.
       contextual propio, sin ocultar errores con `TypeKind::Error`.
 - [x] IDE conectada al frontend actual y batería ampliada por regla, incluyendo
       códigos esperados, recuperación, orden de firmas y metadatos de capturas.
+- [x] Resaltado de líneas con error en la IDE y documentación de entrega
+      ([ide/IDE.md](ide/IDE.md), [docs/04_ide_y_entrega.md](docs/04_ide_y_entrega.md)).
 
 La guía [03_passes_semanticos.md](docs/03_passes_semanticos.md) documenta las
 políticas de `this`, constantes, retornos y capturas, y las discrepancias del PDF
 sobre `float` y `switch`. No se añaden subtipado ni contratos de override porque
-el enunciado proporcionado no especifica esas reglas. La validación visual y
-robustez adicional de la IDE se mantienen como trabajo independiente.
+el enunciado proporcionado no especifica esas reglas.
 
 ### Fuera de Proyecto 2
 

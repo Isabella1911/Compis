@@ -216,6 +216,8 @@ class Tema:
     # ── Highlights interactivos del editor ──
     CURRENT_LINE  = "#222831"   # Fondo de la línea actual
     MATCH_BRACKET = "#305978"   # Fondo del bracket pareado
+    ERROR_LINE    = "#3a2220"   # Fondo de líneas con diagnóstico de error
+    ERROR_GUTTER  = "#ff8f7a"   # Número de línea con error en el gutter
     DND_HINT      = "#145b86"   # Estado del toolbar mientras se arrastra
 
     # ── Resaltado de sintaxis (estilo VSCode Dark+) ──
@@ -466,10 +468,15 @@ class EditorConNumeros(ttk.Frame):
         self.text.tag_configure("match_bracket",
                                   background=Tema.MATCH_BRACKET,
                                   foreground=Tema.FG)
-        # Las pasadas posteriores no deben tapar `current_line`.
+        # Líneas con diagnóstico de error (tras Ejecutar análisis).
+        self.text.tag_configure("error_line",
+                                  background=Tema.ERROR_LINE)
+        # Las pasadas posteriores no deben tapar `current_line` / `error_line`.
         # Las líneas de sintaxis se aplican _por encima_ (no usan background).
+        self.text.tag_lower("error_line")
         self.text.tag_lower("current_line")
 
+        self._lineas_error = set()
         self._lineas_dibujadas = 0
 
     def _yview_sync(self, *args):
@@ -729,13 +736,44 @@ class EditorConNumeros(ttk.Frame):
             if not bbox:
                 continue
             y = bbox[1] + 1
+            color = (Tema.ERROR_GUTTER if i in self._lineas_error
+                     else Tema.FG_MUTED)
             c.create_text(
                 int(c["width"]) - 6, y,
                 anchor="ne",
                 text=str(i),
-                fill=Tema.FG_MUTED,
+                fill=color,
                 font=(FUENTE_MONO_NAME, FUENTE_MONO_SIZE - 1),
             )
+
+    # ── Marcado de líneas con diagnóstico ─────────────────────────────
+
+    def marcar_errores(self, lineas):
+        """Resalta en el editor las líneas reportadas por el compilador."""
+        self.limpiar_errores()
+        validas = {int(n) for n in lineas if isinstance(n, int) and n >= 1}
+        if not validas:
+            return
+        self._lineas_error = validas
+        try:
+            total = int(self.text.index("end-1c").split(".")[0])
+            for n in sorted(validas):
+                if n > total:
+                    continue
+                inicio = f"{n}.0"
+                fin = f"{n}.0 lineend +1c"
+                self.text.tag_add("error_line", inicio, fin)
+        except (tk.TclError, ValueError):
+            pass
+        self._redibujar_gutter()
+
+    def limpiar_errores(self):
+        self._lineas_error = set()
+        try:
+            self.text.tag_remove("error_line", "1.0", "end")
+        except tk.TclError:
+            pass
+        self._redibujar_gutter()
 
     # ── Operaciones de archivo ────────────────────────────────────────
 
@@ -753,6 +791,7 @@ class EditorConNumeros(ttk.Frame):
         self._cargando = False
         self.ruta = ruta
         self._marcar_modificado(False)
+        self.limpiar_errores()
         self._redibujar_gutter()
         self._resaltar_linea_actual()
         # Resaltar inmediatamente al cargar (sin debounce).
@@ -1980,6 +2019,13 @@ class IDE:
         self._ultimos_diagnosticos = diagnosticos
         self._tabla_diagnosticos.cargar(diagnosticos)
 
+        # Resaltar en el editor las líneas con error (requisito IDE).
+        lineas_err = {
+            d["linea"] for d in diagnosticos
+            if d.get("severidad") == "error" and d.get("linea", 0) >= 1
+        }
+        self._editores["fuente"].marcar_errores(lineas_err)
+
         # Errores estructurados
         self._renderizar_errores(diagnosticos, stderr)
 
@@ -2070,6 +2116,15 @@ class IDE:
             ed.text.mark_set("insert", idx)
             ed.text.see(idx)
             ed.text.focus_set()
+            # Refuerza el resaltado de esa línea si ya está marcada como error.
+            if linea in ed._lineas_error:
+                try:
+                    ed.text.tag_remove("error_line", f"{linea}.0",
+                                        f"{linea}.0 lineend +1c")
+                    ed.text.tag_add("error_line", f"{linea}.0",
+                                     f"{linea}.0 lineend +1c")
+                except tk.TclError:
+                    pass
             self._on_editor_cursor(ed)
         except tk.TclError:
             pass
@@ -2232,6 +2287,7 @@ class IDE:
         self._ultimo_stderr = ""
         self._ultimo_codigo = None
         self._ultimos_diagnosticos = []
+        self._editores["fuente"].limpiar_errores()
         self._actualizar_estado()
         self._set_toolbar("Consola limpia")
 
