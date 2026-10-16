@@ -1,6 +1,8 @@
 #include "printer.h"
 
+#include <algorithm>
 #include <sstream>
+#include <vector>
 
 namespace compiscript {
 namespace semantic {
@@ -67,12 +69,60 @@ std::string signatureText(const Symbol& symbol) {
     return typeText(symbol.declared_type);
 }
 
+std::string frameOffset(int offset) {
+    return offset >= 0 ? "fp+" + std::to_string(offset) : "fp" + std::to_string(offset);
+}
+
+// Lo que agrego codegen/FrameLayout (y el layout de clases de la parte 2):
+// donde vive cada simbolo en tiempo de ejecucion. Vacio si no se genero
+// codigo (p. ej. porque hubo errores).
+std::string codegenText(const Symbol& symbol) {
+    if (auto* fn = dynamic_cast<const FunctionSymbol*>(&symbol)) {
+        if (fn->label.empty()) return "";
+        return "  [" + fn->label + ", frame " + std::to_string(fn->frame_size) +
+               " bytes, anidamiento " + std::to_string(fn->nesting_depth) +
+               (fn->is_method ? ", metodo" : "") + "]";
+    }
+    if (auto* cls = dynamic_cast<const ClassSymbol*>(&symbol)) {
+        if (cls->instance_size == 0) return "";
+        return "  [instancia " + std::to_string(cls->instance_size) + " bytes]";
+    }
+
+    std::string size = std::to_string(symbol.size) + " bytes";
+    // Solo se muestra el nombre del TAC cuando difiere del fuente (sombreado).
+    std::string alias = (!symbol.ir_name.empty() && symbol.ir_name != symbol.name)
+                            ? ", en TAC " + symbol.ir_name
+                            : "";
+    switch (symbol.storage) {
+        case StorageKind::None: return "";
+        case StorageKind::Global: return "  [global " + symbol.ir_name + ", " + size + "]";
+        case StorageKind::Param:
+            return "  [param " + frameOffset(symbol.offset) + ", " + size + alias + "]";
+        case StorageKind::Local:
+            return "  [local " + frameOffset(symbol.offset) + ", " + size + alias + "]";
+        case StorageKind::Field:
+            return "  [atributo +" + std::to_string(symbol.offset) + ", " + size + "]";
+    }
+    return "";
+}
+
 void printRec(const Scope* scope, int depth, std::ostringstream& out) {
     std::string indent(static_cast<size_t>(depth) * 2, ' ');
     out << indent << "Scope(" << scopeKindName(scope->kind()) << ")\n";
-    for (const auto& [name, symbol] : scope->symbols()) {
-        out << indent << "  " << symbolKindName(symbol->kind) << " " << name << " : "
-            << signatureText(*symbol) << "  (linea " << symbol->declared_line << ")\n";
+
+    // symbols() es un unordered_map: se ordena por posicion de declaracion
+    // para que la salida sea estable entre corridas (IDE, pruebas).
+    std::vector<const Symbol*> ordered;
+    for (const auto& entry : scope->symbols()) ordered.push_back(entry.second.get());
+    std::sort(ordered.begin(), ordered.end(), [](const Symbol* a, const Symbol* b) {
+        if (a->declared_line != b->declared_line) return a->declared_line < b->declared_line;
+        return a->declared_column < b->declared_column;
+    });
+
+    for (const Symbol* symbol : ordered) {
+        out << indent << "  " << symbolKindName(symbol->kind) << " " << symbol->name << " : "
+            << signatureText(*symbol) << "  (linea " << symbol->declared_line << ")"
+            << codegenText(*symbol) << "\n";
     }
     for (const auto& child : scope->children()) {
         printRec(child.get(), depth + 1, out);

@@ -48,7 +48,7 @@ CompilationResult Compiler::compile(const std::string& source) {
             frameLayout.run(*result.ast, result.symbol_table);
 
             codegen::TacGenerator generator;
-            result.tac = generator.generate(*result.ast, frameLayout.mainFrameSize());
+            result.tac = generator.generate(*result.ast, frameLayout);
             result.has_tac = true;
         }
     }

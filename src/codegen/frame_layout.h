@@ -14,14 +14,25 @@
 //     fp - 4         direccion de retorno
 //     fp - 8 - 4*k   variable local k
 //
-// Las variables del scope global no van en ningun frame: son globales
-// estaticas (g_<nombre>). Las de bloques del nivel superior (dentro de un
-// if/while fuera de toda funcion) son locales del frame de `main`.
+// Toda variable declarada fuera de una funcion es global estatica
+// (g_<nombre>), incluso si esta dentro de un bloque del nivel superior
+// (un if/while fuera de toda funcion): `main` nunca se reentra, asi que no
+// necesita registro de activacion propio y su frame es 0. Las globales
+// sombreadas reciben sufijo (g_x, g_x_1, ...).
+//
+// Dentro de una funcion, cada local tiene su propia casilla (no se reusan
+// casillas entre bloques hermanos) y los nombres repetidos por sombreado
+// reciben sufijo en el TAC (x, x@1, ...).
 //
 // Los atributos de clase (StorageKind::Field) y ClassSymbol::instance_size
 // NO se calculan aqui: son de la parte 2 (gen_classes.cpp).
 
+#include <set>
+#include <string>
+#include <vector>
+
 #include "ast/nodes.h"
+#include "semantic/symbol.h"
 #include "semantic/symbol_table.h"
 
 namespace compiscript {
@@ -31,11 +42,31 @@ class FrameLayout {
 public:
     void run(ast::Program& program, semantic::SymbolTable& table);
 
-    // Bytes de locales del frame de `main` (codigo de nivel superior).
-    int mainFrameSize() const { return main_frame_size_; }
+    // Bytes de locales del frame de `main`. Siempre 0 (ver arriba); se
+    // deja como dato para que la fase de MIPS no tenga que suponerlo.
+    int mainFrameSize() const { return 0; }
+
+    // Variables globales en orden de declaracion en el codigo fuente.
+    const std::vector<semantic::Symbol*>& globals() const { return globals_; }
 
 private:
-    int main_frame_size_ = 0;
+    // Lo que se va acumulando mientras se recorre el cuerpo de UNA funcion
+    // (o el nivel superior, con fn == nullptr).
+    struct FrameState {
+        semantic::FunctionSymbol* fn = nullptr;
+        int locals = 0;
+        std::set<std::string> used_names;
+    };
+
+    void walkStatements(const std::vector<ast::StatementPtr>& statements, FrameState& state);
+    void walkStatement(ast::Statement* stmt, FrameState& state);
+    void placeVariable(semantic::Symbol* symbol, FrameState& state);
+    void layoutFunction(ast::FunctionDeclaration* decl, semantic::FunctionSymbol* enclosing,
+                        semantic::ClassSymbol* ownerClass);
+
+    std::vector<semantic::Symbol*> globals_;
+    FrameState top_level_;
+    std::set<std::string> used_labels_;
 };
 
 }  // namespace codegen

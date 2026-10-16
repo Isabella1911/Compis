@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "ast/nodes.h"
+#include "frame_layout.h"
 #include "ir/tac.h"
 #include "semantic/symbol.h"
 #include "temp_allocator.h"
@@ -34,7 +35,9 @@ namespace codegen {
 
 class TacGenerator {
 public:
-    ir::TacProgram generate(ast::Program& program, int mainFrameSize);
+    // `layout` ya tiene que haber corrido sobre el mismo programa: de ahi
+    // salen las globales y los nombres/offsets de cada variable.
+    ir::TacProgram generate(ast::Program& program, const FrameLayout& layout);
 
 private:
     // ---------------------------------------------------------------

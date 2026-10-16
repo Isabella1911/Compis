@@ -8,15 +8,17 @@ using ir::Instruction;
 using ir::OpCode;
 using ir::Operand;
 
-ir::TacProgram TacGenerator::generate(Program& program, int mainFrameSize) {
+ir::TacProgram TacGenerator::generate(Program& program, const FrameLayout& layout) {
     program_ = ir::TacProgram();
     contexts_.clear();
     next_label_ = 0;
 
+    for (semantic::Symbol* g : layout.globals()) program_.globals.push_back({g->ir_name, g->size});
+
     // main va primero en la salida, pero termina de generarse al final
     // (despues de las funciones que declara): se le reserva el lugar 0.
     program_.functions.emplace_back();
-    beginFunction("main", nullptr, mainFrameSize);
+    beginFunction("main", nullptr, layout.mainFrameSize());
     genStatements(program.statements);
     endFunction();
 

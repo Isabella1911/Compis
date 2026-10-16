@@ -1,5 +1,5 @@
 // Parte 2: listas, acceso por indice y foreach.
-// Ver docs/reparto_tac/parte2_funciones_clases_listas.md, seccion 2.4.
+// Ver el documento de reparto de la parte 2, seccion 2.4.
 
 #include "tac_generator.h"
 
