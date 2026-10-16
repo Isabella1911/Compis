@@ -1,0 +1,9 @@
+# Finales de línea: LF en el repo y en todo checkout (Linux, WSL y Windows).
+# Sin esto, core.autocrlf=true en Windows deja CRLF y bash/make fallan en WSL.
+* text=auto eol=lf
+
+# Binarios: nunca convertir.
+*.png binary
+*.jpg binary
+*.pdf binary
+*.jar binary
