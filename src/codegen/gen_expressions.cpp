@@ -18,6 +18,10 @@ bool isStringType(const Expression* e) {
     return e->resolved_type && e->resolved_type->kind == TypeKind::String;
 }
 
+bool isRelational(const std::string& op) {
+    return op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=";
+}
+
 // El lexer deja el literal con sus comillas: "hola" -> hola. Las
 // secuencias de escape (\n, \") se dejan tal cual; son las mismas que
 // entiende .asciiz en MIPS.
@@ -51,7 +55,20 @@ Operand TacGenerator::genIdentifier(IdentifierExpression* n) {
 Operand TacGenerator::genBinary(BinaryExpression* n) {
     const std::string& op = n->op;
 
-    if (op == "&&" || op == "||") return todo("parte 1", "operador logico " + op);
+    if (op == "&&" || op == "||") {
+        // Como valor (p. ej. `let ok = a && b;`): se evalua con saltos para
+        // respetar el cortocircuito y se materializa en 1 o 0.
+        std::string falseLabel = newLabel();
+        std::string endLabel = newLabel();
+        genCond(n, "", falseLabel);
+        Operand result = newTemp();
+        emitCopy(result, Operand::makeInt(1));
+        emitGoto(endLabel);
+        emitLabel(falseLabel);
+        emitCopy(result, Operand::makeInt(0));
+        emitLabel(endLabel);
+        return result;
+    }
 
     // Orden de evaluacion: izquierda y despues derecha, como en TypeScript.
     Operand left = genExpr(n->left.get());
@@ -105,13 +122,89 @@ Operand TacGenerator::genAssignment(AssignmentExpression* n) {
     return loadVar(target->symbol);
 }
 
-Operand TacGenerator::genTernary(TernaryExpression* /*n*/) {
-    return todo("parte 1", "ternario");
+Operand TacGenerator::genTernary(TernaryExpression* n) {
+    std::string elseLabel = newLabel();
+    std::string endLabel = newLabel();
+
+    genCond(n->condition.get(), "", elseLabel);
+    Operand thenValue = genExpr(n->then_expr.get());
+    // Las dos ramas escriben el MISMO temporal; queda reservado mientras se
+    // evalua la rama else.
+    Operand result = newTemp();
+    assignTo(result, thenValue);
+    emitGoto(endLabel);
+
+    emitLabel(elseLabel);
+    assignTo(result, genExpr(n->else_expr.get()));
+    emitLabel(endLabel);
+    return result;
 }
 
-void TacGenerator::genCond(Expression* /*expr*/, const std::string& /*trueLabel*/,
-                           const std::string& /*falseLabel*/) {
-    todo("parte 1", "condicion");
+// Codigo con saltos (apuntes: "codigo de corto circuito"). Cada caso emite
+// solo los saltos necesarios segun cual de las dos salidas cae de largo:
+//   ambas etiquetas -> if c goto T; goto F
+//   solo T          -> if c goto T            (falso sigue de largo)
+//   solo F          -> ifFalse c goto F       (verdadero sigue de largo)
+void TacGenerator::genCond(Expression* expr, const std::string& trueLabel,
+                           const std::string& falseLabel) {
+    if (auto* n = dynamic_cast<BinaryExpression*>(expr)) {
+        if (n->op == "&&") {
+            // Si la izquierda es falsa, ya no se evalua la derecha.
+            std::string leftFalse = falseLabel.empty() ? newLabel() : falseLabel;
+            genCond(n->left.get(), "", leftFalse);
+            genCond(n->right.get(), trueLabel, falseLabel);
+            if (falseLabel.empty()) emitLabel(leftFalse);
+            return;
+        }
+        if (n->op == "||") {
+            // Si la izquierda es verdadera, ya no se evalua la derecha.
+            std::string leftTrue = trueLabel.empty() ? newLabel() : trueLabel;
+            genCond(n->left.get(), leftTrue, "");
+            genCond(n->right.get(), trueLabel, falseLabel);
+            if (trueLabel.empty()) emitLabel(leftTrue);
+            return;
+        }
+        // Comparacion entre enteros (o punteros): un solo salto relacional,
+        // sin materializar el booleano. Entre strings compara contenido y
+        // pasa por __str_eq (caso general de abajo).
+        bool stringOperands = isStringType(n->left.get()) && isStringType(n->right.get());
+        if (isRelational(n->op) && !stringOperands) {
+            Operand left = genExpr(n->left.get());
+            Operand right = genExpr(n->right.get());
+            release(left);
+            release(right);
+            if (!trueLabel.empty()) {
+                emitIfRel(left, n->op, right, trueLabel);
+                if (!falseLabel.empty()) emitGoto(falseLabel);
+            } else if (!falseLabel.empty()) {
+                emitIfFalseRel(left, n->op, right, falseLabel);
+            }
+            return;
+        }
+    }
+    if (auto* n = dynamic_cast<UnaryExpression*>(expr)) {
+        if (n->op == "!") {
+            genCond(n->operand.get(), falseLabel, trueLabel);  // se intercambian las salidas
+            return;
+        }
+    }
+    if (auto* n = dynamic_cast<LiteralExpression*>(expr)) {
+        if (n->kind == LiteralKind::Boolean) {
+            const std::string& target = n->value == "true" ? trueLabel : falseLabel;
+            if (!target.empty()) emitGoto(target);
+            return;
+        }
+    }
+
+    // Caso general: cualquier valor booleano (variable, llamada, ...).
+    Operand value = genExpr(expr);
+    release(value);
+    if (!trueLabel.empty()) {
+        emitIf(value, trueLabel);
+        if (!falseLabel.empty()) emitGoto(falseLabel);
+    } else if (!falseLabel.empty()) {
+        emitIfFalse(value, falseLabel);
+    }
 }
 
 }  // namespace codegen
