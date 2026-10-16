@@ -1,5 +1,5 @@
 // Parte 2: funciones, llamadas, return y closures.
-// Ver docs/reparto_tac/parte2_funciones_clases_listas.md, seccion 2.1 y 2.2.
+// Ver el documento de reparto de la parte 2, seccion 2.1 y 2.2.
 
 #include "tac_generator.h"
 

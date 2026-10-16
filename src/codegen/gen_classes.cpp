@@ -1,5 +1,5 @@
 // Parte 2: clases, new, atributos, metodos y this.
-// Ver docs/reparto_tac/parte2_funciones_clases_listas.md, seccion 2.3.
+// Ver el documento de reparto de la parte 2, seccion 2.3.
 
 #include "tac_generator.h"
 
