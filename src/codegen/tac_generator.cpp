@@ -218,6 +218,54 @@ Operand TacGenerator::internString(const std::string& value) {
 
 Operand TacGenerator::varOperand(semantic::Symbol* symbol) { return Operand::makeVar(symbol); }
 
+bool TacGenerator::isCaptured(semantic::Symbol* symbol) const {
+    // ClosureAnalyzer cuenta como capturada tambien a una global; esas no
+    // necesitan enlace de acceso (viven en g_<nombre>), asi que se excluyen.
+    if (symbol->storage != semantic::StorageKind::Local &&
+        symbol->storage != semantic::StorageKind::Param) {
+        return false;
+    }
+    const semantic::FunctionSymbol* fn = contexts_.back().fn.symbol;
+    if (fn == nullptr) return false;
+    for (const semantic::Symbol* c : fn->captured) {
+        if (c == symbol) return true;
+    }
+    return false;
+}
+
+Operand TacGenerator::loadVar(semantic::Symbol* symbol) {
+    if (isCaptured(symbol)) return genCapturedLoad(symbol);
+    return varOperand(symbol);
+}
+
+void TacGenerator::storeVar(semantic::Symbol* symbol, const Operand& value) {
+    if (isCaptured(symbol)) {
+        genCapturedStore(symbol, value);
+        release(value);
+        return;
+    }
+    assignTo(varOperand(symbol), value);
+}
+
+void TacGenerator::assignTo(const Operand& dst, const Operand& value) {
+    auto& code = current().fn.code;
+    if (value.isTemp() && !code.empty()) {
+        Instruction& last = code.back();
+        bool producesValue = last.code == OpCode::Copy || last.code == OpCode::Binary ||
+                             last.code == OpCode::Unary || last.code == OpCode::Load ||
+                             last.code == OpCode::Call || last.code == OpCode::Alloc;
+        // Un temporal se consume una sola vez, asi que si lo acaba de
+        // escribir la instruccion anterior nadie mas lo va a leer.
+        if (producesValue && last.dst.isTemp() && last.dst.temp == value.temp) {
+            last.dst = dst;
+            release(value);
+            return;
+        }
+    }
+    emitCopy(dst, value);
+    release(value);
+}
+
 void TacGenerator::pushLoop(const std::string& breakLabel, const std::string& continueLabel) {
     current().loops.push_back({breakLabel, continueLabel});
 }

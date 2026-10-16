@@ -97,6 +97,20 @@ private:
     ir::Operand internString(const std::string& value);
     ir::Operand varOperand(semantic::Symbol* symbol);
 
+    // Lectura/escritura de una variable del programa. Si la variable es de
+    // una funcion contenedora (closure), delegan en genCapturedLoad/Store
+    // (parte 2); si no, es un operando directo.
+    ir::Operand loadVar(semantic::Symbol* symbol);
+    void storeVar(semantic::Symbol* symbol, const ir::Operand& value);
+    // ¿`symbol` es una variable local/parametro de OTRA funcion (una
+    // contenedora), usada desde la funcion que se esta generando?
+    bool isCaptured(semantic::Symbol* symbol) const;
+    // `dst = value` y libera value. Si value es el temporal que acaba de
+    // calcular la instruccion anterior, en vez de emitir una copia se
+    // reescribe el destino de esa instruccion: `t0 = a + b; x = t0`
+    // queda como `x = a + b`.
+    void assignTo(const ir::Operand& dst, const ir::Operand& value);
+
     // Pila de bucles de la funcion actual, para break/continue (y foreach).
     void pushLoop(const std::string& breakLabel, const std::string& continueLabel);
     void popLoop();
@@ -154,6 +168,12 @@ private:
     void genFunctionDeclaration(ast::FunctionDeclaration* n);
     void genReturn(ast::ReturnStatement* n);
     ir::Operand genCall(ast::CallExpression* n);
+    // Variable de una funcion contenedora usada dentro de una funcion
+    // anidada: se llega a su frame siguiendo los enlaces de acceso
+    // (fp[4]). Las llaman loadVar/storeVar cuando isCaptured(symbol).
+    // genCapturedStore NO debe liberar `value`: storeVar lo libera despues.
+    ir::Operand genCapturedLoad(semantic::Symbol* symbol);
+    void genCapturedStore(semantic::Symbol* symbol, const ir::Operand& value);
 
     // ---------------------------------------------------------------
     // Parte 2: clases y objetos (gen_classes.cpp)

@@ -17,5 +17,13 @@ void TacGenerator::genReturn(ReturnStatement* /*n*/) { todo("parte 2", "return")
 
 Operand TacGenerator::genCall(CallExpression* /*n*/) { return todo("parte 2", "llamada"); }
 
+Operand TacGenerator::genCapturedLoad(semantic::Symbol* symbol) {
+    return todo("parte 2", "leer variable capturada '" + symbol->name + "'");
+}
+
+void TacGenerator::genCapturedStore(semantic::Symbol* symbol, const Operand& /*value*/) {
+    todo("parte 2", "escribir variable capturada '" + symbol->name + "'");
+}
+
 }  // namespace codegen
 }  // namespace compiscript
