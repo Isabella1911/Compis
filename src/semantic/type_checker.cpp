@@ -238,6 +238,13 @@ void TypeChecker::checkStatement(Statement* stmt) {
     }
     if (auto* n = dynamic_cast<TryCatchStatement*>(stmt)) {
         checkStatement(n->try_block.get());
+        // La variable del catch no tiene nodo de declaracion: DeclarationCollector
+        // la anota como string (decision de lenguaje, README §4.3) en el scope
+        // del catch, pero nadie le fijaba resolved_type -- quedaba como Error y
+        // se aceptaba en cualquier contexto (p. ej. `let x: integer = e;`).
+        if (auto sym = n->catch_block->scope->resolveLocal(n->error_name)) {
+            sym->resolved_type = makeStringType();
+        }
         checkStatement(n->catch_block.get());
         return;
     }
