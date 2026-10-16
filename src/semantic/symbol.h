@@ -19,6 +19,10 @@ class Scope;  // adelante, definido en scope.h
 
 enum class SymbolKind { Variable, Constant, Parameter, Function, Class };
 
+// Donde vive el valor en tiempo de ejecucion. Lo fija codegen/FrameLayout
+// (Global/Param/Local) o el layout de clases de la parte 2 (Field).
+enum class StorageKind { None, Global, Param, Local, Field };
+
 class Symbol {
 public:
     std::string name;
@@ -28,6 +32,17 @@ public:
     int declared_line = 0;
     int declared_column = 0;
     bool is_mutable = true;  // false para 'const'
+
+    // --- Informacion para generacion de codigo (Proyecto 2, TAC) ---
+    StorageKind storage = StorageKind::None;
+    // Param/Local: bytes relativos a fp (ver registro de activacion en
+    // docs/08). Field: bytes desde el inicio del objeto. Global: no aplica.
+    int offset = 0;
+    int size = 0;          // siempre 4 por ahora: todo valor es una palabra
+    // Nombre con el que aparece en el TAC: g_<nombre> para globales; para
+    // locales el nombre fuente, con sufijo @n si otro simbolo de la misma
+    // funcion ya lo usa (sombreado).
+    std::string ir_name;
 
     virtual ~Symbol() = default;
 };
@@ -46,6 +61,12 @@ public:
     // informacion para cuando se generen closures reales en tiempo de
     // ejecucion (fuera de este proyecto). No propietario, sin duplicados.
     std::vector<Symbol*> captured;
+
+    // --- Generacion de codigo ---
+    std::string label;      // fn_<nombre>, fn_<externa>_<interna>, <Clase>_<metodo>
+    int frame_size = 0;     // bytes de locales en su registro de activacion
+    int nesting_depth = 0;  // 0 = declarada en el nivel superior (o metodo de clase)
+    bool is_method = false; // metodo o constructor: 'this' es el parametro 0
 };
 using FunctionSymbolPtr = std::shared_ptr<FunctionSymbol>;
 
@@ -57,6 +78,9 @@ public:
     ClassSymbol* base_class = nullptr;  // resuelto por InheritanceResolver; null hasta entonces
                                          // (y null para siempre si no hay ':' o si no resolvio)
     Scope* class_scope = nullptr;       // no propietario
+
+    // --- Generacion de codigo (lo llena la parte 2) ---
+    int instance_size = 0;  // bytes de un objeto, atributos heredados incluidos
 };
 using ClassSymbolPtr = std::shared_ptr<ClassSymbol>;
 

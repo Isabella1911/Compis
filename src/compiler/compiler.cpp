@@ -1,5 +1,7 @@
 #include "compiler.h"
 
+#include "codegen/frame_layout.h"
+#include "codegen/tac_generator.h"
 #include "diagnostics/reporter.h"
 #include "frontend/parser_driver.h"
 #include "semantic/closure_analyzer.h"
@@ -40,6 +42,15 @@ CompilationResult Compiler::compile(const std::string& source) {
 
         semantic::ClosureAnalyzer closureAnalyzer;
         closureAnalyzer.run(*result.ast);
+
+        if (!reporter.has_errors()) {
+            codegen::FrameLayout frameLayout;
+            frameLayout.run(*result.ast, result.symbol_table);
+
+            codegen::TacGenerator generator;
+            result.tac = generator.generate(*result.ast, frameLayout.mainFrameSize());
+            result.has_tac = true;
+        }
     }
 
     result.diagnostics = reporter.sorted();
