@@ -267,7 +267,7 @@ void TacGenerator::assignTo(const Operand& dst, const Operand& value) {
 }
 
 void TacGenerator::pushLoop(const std::string& breakLabel, const std::string& continueLabel) {
-    current().loops.push_back({breakLabel, continueLabel});
+    current().loops.push_back({breakLabel, continueLabel, current().try_depth});
 }
 
 void TacGenerator::popLoop() { current().loops.pop_back(); }
@@ -275,6 +275,12 @@ void TacGenerator::popLoop() { current().loops.pop_back(); }
 const TacGenerator::LoopLabels* TacGenerator::currentLoop() const {
     const auto& loops = contexts_.back().loops;
     return loops.empty() ? nullptr : &loops.back();
+}
+
+void TacGenerator::closeTryHandlers(int depth) {
+    for (int d = current().try_depth; d > depth; d--) {
+        emit(Instruction{OpCode::TryEnd});
+    }
 }
 
 Operand TacGenerator::todo(const std::string& owner, const std::string& what) {

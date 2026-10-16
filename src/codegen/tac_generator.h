@@ -47,6 +47,7 @@ private:
     struct LoopLabels {
         std::string break_label;
         std::string continue_label;
+        int try_depth = 0;  // try abiertos cuando empezo el bucle
     };
 
     // Estado de la funcion que se esta generando. Es una pila porque una
@@ -56,6 +57,7 @@ private:
         ir::TacFunction fn;
         TempAllocator temps;
         std::vector<LoopLabels> loops;
+        int try_depth = 0;  // try_begin sin su try_end, en este punto del codigo
     };
 
     // Abre un bloque `func`. Lo que se emita hasta endFunction() va dentro.
@@ -115,6 +117,11 @@ private:
     void pushLoop(const std::string& breakLabel, const std::string& continueLabel);
     void popLoop();
     const LoopLabels* currentLoop() const;  // null si no hay bucle abierto
+
+    // Emite un try_end por cada try abierto por encima de `depth`. Lo usan
+    // break/continue (hasta la profundidad del bucle) y return (hasta 0)
+    // cuando saltan fuera de un try: si no, el handler quedaria colgado.
+    void closeTryHandlers(int depth);
 
     // Marca una construccion que todavia no se traduce: emite un
     // comentario `# TODO(<owner>): <what>` y devuelve la constante 0 para
