@@ -36,6 +36,19 @@ SEMANTIC_SRC := src/semantic/scope.cpp \
                 src/semantic/control_flow_checker.cpp \
                 src/semantic/closure_analyzer.cpp \
                 src/semantic/printer.cpp
+# Generacion de codigo intermedio (Proyecto 2). Todos los archivos ya
+# estan listados, incluidos los de cada parte del reparto, para que nadie
+# tenga que tocar el Makefile al implementar su parte.
+CODEGEN_SRC := src/ir/tac.cpp \
+               src/ir/tac_printer.cpp \
+               src/codegen/temp_allocator.cpp \
+               src/codegen/frame_layout.cpp \
+               src/codegen/tac_generator.cpp \
+               src/codegen/gen_expressions.cpp \
+               src/codegen/gen_statements.cpp \
+               src/codegen/gen_functions.cpp \
+               src/codegen/gen_classes.cpp \
+               src/codegen/gen_arrays.cpp
 # Subconjunto que necesita la prueba unitaria de la tabla de simbolos: no
 # arrastra declaration_collector.cpp (depende del AST) ni printer.cpp.
 SYMBOL_TEST_SRC := src/semantic/scope.cpp
@@ -48,7 +61,12 @@ SRC        := src/main.cpp \
               src/frontend/parser_driver.cpp \
               src/compiler/compiler.cpp \
               $(SEMANTIC_SRC) \
+              $(CODEGEN_SRC) \
               $(GENERATED)
+
+# Los headers tambien son dependencia: sin esto, cambiar un .h (p. ej.
+# symbol.h o tac.h) no recompilaba nada.
+HEADERS    := $(wildcard src/*/*.h)
 
 UNAME_S := $(shell uname -s 2>/dev/null)
 ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
@@ -75,7 +93,7 @@ generate: $(GENERATED)
 
 build: $(BIN)
 
-$(BIN): $(SRC)
+$(BIN): $(SRC) $(HEADERS)
 	$(CXX) $(CXXFLAGS) $(SRC) $(LDFLAGS) -o $(BIN)
 
 run: build

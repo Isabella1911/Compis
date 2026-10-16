@@ -6,6 +6,7 @@
 
 #include "ast/nodes.h"
 #include "diagnostics/diagnostic.h"
+#include "ir/tac.h"
 #include "semantic/symbol_table.h"
 
 namespace compiscript {
@@ -18,6 +19,10 @@ struct CompilationResult {
     // queda con el scope global vacio, sin necesidad de que el que
     // consume CompilationResult tenga que chequear null primero.
     semantic::SymbolTable symbol_table;
+    // Codigo intermedio. Solo se genera si no hubo ningun error (paso 4
+    // del enunciado); has_tac dice si `tac` es valido.
+    bool has_tac = false;
+    ir::TacProgram tac;
 
     bool success() const {
         return std::none_of(diagnostics.begin(), diagnostics.end(),
