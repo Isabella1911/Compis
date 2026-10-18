@@ -46,8 +46,8 @@ Operand TacGenerator::genLiteral(LiteralExpression* n) {
 
 Operand TacGenerator::genIdentifier(IdentifierExpression* n) {
     if (dynamic_cast<semantic::FunctionSymbol*>(n->symbol) != nullptr) {
-        // Una funcion usada como valor (no llamada): es de la parte 2.
-        return todo("parte 2", "funcion '" + n->name + "' usada como valor");
+        // Supuesto (seccion 11): las funciones no escapan como valores.
+        return todo("parte 2", "funcion '" + n->name + "' usada como valor (no soportado)");
     }
     return loadVar(n->symbol);
 }

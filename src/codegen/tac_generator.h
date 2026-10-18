@@ -22,6 +22,7 @@
 // que preguntar de donde vino el valor.
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "ast/nodes.h"
@@ -211,6 +212,9 @@ private:
     ir::TacProgram program_;
     std::vector<FunctionContext> contexts_;
     int next_label_ = 0;
+    // Declaraciones de clase indexadas por simbolo: genNew necesita los
+    // inicializadores de atributos (y los de las bases).
+    std::unordered_map<semantic::ClassSymbol*, ast::ClassDeclaration*> class_decls_;
 };
 
 }  // namespace codegen

@@ -585,22 +585,227 @@ L3:
 
 ## 11. Funciones, closures, clases y listas
 
-> Pendiente: esta sección la escribe quien implementa
-> `src/codegen/gen_functions.cpp`, `gen_classes.cpp` y `gen_arrays.cpp`.
-> Lo que ya está fijado y la sección tiene que respetar:
+Implementación en `src/codegen/gen_functions.cpp`, `gen_classes.cpp` y
+`gen_arrays.cpp`. Los `.cps` de esta sección están en `tests/tac/p2_*.cps`.
 
-- **Etiquetas:** `fn_<nombre>`, `fn_<externa>_<interna>`, `<Clase>_<metodo>`
-  y `<Clase>_constructor`. Las calcula `FrameLayout` y están en
-  `FunctionSymbol::label`.
-- **Llamadas:** la convención de la sección 5 y el registro de activación de
-  la sección 6, con `this` como parámetro 0.
-- **Closures:**
-  - Una variable de una función contenedora se lee y escribe desde la
-    función anidada siguiendo los enlaces de acceso: `t = fp[4]`, `n` veces,
-    y luego `t[offset]`.
-  - El generador delega esos accesos en `genCapturedLoad`/`genCapturedStore`.
-  - Las variables capturadas están en `FunctionSymbol::captured`.
-- **`return` dentro de un `try`:** llama a `closeTryHandlers(0)` antes del
-  `return`.
-- **Errores de tiempo de ejecución** (por ejemplo, un índice fuera de rango):
-  `param <mensaje>` y luego `call __raise, 1`.
+### Supuestos
+
+1. **Despacho estático sin vtables.** `obj.metodo()` llama a la etiqueta del
+   `FunctionSymbol` que resolvió el semántico (la declaración más cercana
+   subiendo por la herencia). No hay tabla de métodos en el objeto.
+2. **Las funciones no escapan.** No se soporta `let f = g;` ni pasar una
+   función como valor. Solo se llaman por nombre (o como método). Una
+   función anidada solo se invoca desde el ámbito que la contiene (o desde
+   otra anidada del mismo árbol), nunca se guarda en una variable.
+3. **Layout de listas:** en el heap, palabra 0 = longitud; las siguientes
+   son los elementos (`[4]`, `[8]`, …). Índice fuera de rango →
+   `call __raise, 1` con el mensaje `"indice fuera de rango"`.
+4. **Layout de objetos:** atributos en orden de declaración, **base
+   primero**. Cada atributo ocupa 4 bytes. `ClassSymbol::instance_size` es
+   el total. El constructor se busca en la clase y en sus bases; se llama
+   después de `alloc` y de los inicializadores de atributos.
+
+### 11.1 Funciones y `return`
+
+```cps
+function fact(n: integer): integer {
+  if (n <= 1) { return 1; }
+  return n * fact(n - 1);
+}
+print(fact(5));
+```
+
+```
+func main, frame=0, temps=1
+    param 5
+    t0 = call fn_fact, 1
+    print_int t0
+endfunc
+
+func fn_fact, frame=0, temps=1
+    ifFalse n <= 1 goto L0
+    return 1
+L0:
+    t0 = n - 1
+    param t0
+    t0 = call fn_fact, 1
+    t0 = n * t0
+    return t0
+endfunc
+```
+
+Los argumentos se evalúan de izquierda a derecha y los `param` se emiten
+de derecha a izquierda. Un `return` dentro de un `try` emite `try_end`
+antes (ver 11.6).
+
+### 11.2 Closures (funciones anidadas)
+
+```cps
+function contador(inicio: integer): integer {
+  function siguiente(): integer {
+    return inicio + 1;
+  }
+  return siguiente();
+}
+print(contador(5));
+```
+
+```
+func fn_contador_siguiente, frame=0, temps=2
+    t0 = fp[4]             ← frame de contador (enlace de acceso)
+    t1 = t0[8]             ← parametro inicio en ese frame
+    t0 = t1 + 1
+    return t0
+endfunc
+
+func fn_contador, frame=0, temps=1
+    link fp                ← al llamar a la anidada, su enlace es este frame
+    t0 = call fn_contador_siguiente, 0
+    return t0
+endfunc
+```
+
+- Al llamar a una función con `nesting_depth > 0` se emite `link` con el
+  frame de su contenedora directa (subiendo `fp[4]` si hace falta).
+- Leer/escribir una variable capturada: `genCapturedLoad` /
+  `genCapturedStore` suben `nesting_depth_actual - nesting_depth_dueña`
+  veces por `fp[4]` y luego usan `symbol->offset`.
+
+### 11.3 Clases, `new` y `this`
+
+```cps
+class Punto {
+  let x: integer;
+  let y: integer;
+  function constructor(x: integer, y: integer) {
+    this.x = x;
+    this.y = y;
+  }
+  function suma(): integer {
+    return this.x + this.y;
+  }
+}
+let p: Punto = new Punto(3, 4);
+print(p.suma());
+```
+
+```
+func main, frame=0, temps=1
+    t0 = alloc 8
+    t0[0] = 0              ← inicializador ausente: 0
+    t0[4] = 0
+    param 4
+    param 3
+    param t0               ← this
+    call Punto_constructor, 3
+    g_p = t0
+    param g_p
+    t0 = call Punto_suma, 1
+    print_int t0
+endfunc
+
+func Punto_constructor, frame=0, temps=1
+    t0 = fp[8]             ← this
+    t0[0] = x
+    t0 = fp[8]
+    t0[4] = y
+endfunc
+```
+
+`this` es `fp[8]`. En un método, el receptor es el último `param` antes
+del `call` (parámetro 0 del frame).
+
+### 11.4 Herencia
+
+```cps
+class Animal {
+  let nombre: string;
+  function constructor(nombre: string) { this.nombre = nombre; }
+  function hablar(): string { return this.nombre; }
+}
+class Perro : Animal {
+  function ladrar(): string { return this.nombre; }
+}
+let p: Perro = new Perro("Toby");
+print(p.hablar());
+print(p.ladrar());
+```
+
+```
+    t0 = alloc 4           ← instance_size de Perro = 4 (atributo heredado)
+    t0[0] = 0
+    param str_0
+    param t0
+    call Animal_constructor, 2
+    g_p = t0
+    param g_p
+    t0 = call Animal_hablar, 1
+    print_str t0
+    param g_p
+    t0 = call Perro_ladrar, 1
+    print_str t0
+```
+
+El atributo `nombre` queda en `+0` tanto en `Animal` como en `Perro`.
+`hablar` se despacha a `Animal_hablar` porque Perro no lo redefine.
+
+### 11.5 Listas y `foreach`
+
+```cps
+let nums: integer[] = [10, 20, 30];
+print(nums[1]);
+nums[1] = 99;
+```
+
+```
+    t0 = alloc 16
+    t0[0] = 3
+    t0[4] = 10
+    t0[8] = 20
+    t0[12] = 30
+    g_nums = t0
+    t0 = g_nums[0]         ← longitud
+    if 1 < 0 goto L1
+    if 1 < t0 goto L0
+L1:
+    param str_0
+    call __raise, 1
+L0:
+    t0 = 1 * 4
+    t0 = t0 + 4
+    t1 = g_nums[t0]
+    print_int t1
+```
+
+`foreach` usa un temporal como índice oculto, `pushLoop` para
+`break`/`continue`, y escribe cada elemento en la variable del bucle
+(global o local, según el ámbito).
+
+### 11.6 `return` dentro de un `try`
+
+```cps
+function busca(xs: integer[]): integer {
+  try {
+    if (xs[0] == 1) { return 1; }
+  } catch (e) {
+    print(e);
+  }
+  return 0;
+}
+```
+
+```
+    try_begin L0
+    ...
+    ifFalse t1 == 1 goto L2
+    try_end                ← cierra el handler antes de salir
+    return 1
+L2:
+    try_end
+    goto L1
+L0:
+    e = call __error_message, 0
+    print_str e
+L1:
+    return 0
+```

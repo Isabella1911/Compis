@@ -25,7 +25,7 @@
 // reciben sufijo en el TAC (x, x@1, ...).
 //
 // Los atributos de clase (StorageKind::Field) y ClassSymbol::instance_size
-// NO se calculan aqui: son de la parte 2 (gen_classes.cpp).
+// se calculan en layoutClassFields (parte 2): base primero, luego propios.
 
 #include <set>
 #include <string>
@@ -63,10 +63,14 @@ private:
     void placeVariable(semantic::Symbol* symbol, FrameState& state);
     void layoutFunction(ast::FunctionDeclaration* decl, semantic::FunctionSymbol* enclosing,
                         semantic::ClassSymbol* ownerClass);
+    // Atributos de instancia: offsets desde el inicio del objeto, con los
+    // heredados en las mismas posiciones que en la base.
+    void layoutClassFields(semantic::ClassSymbol* cls);
 
     std::vector<semantic::Symbol*> globals_;
     FrameState top_level_;
     std::set<std::string> used_labels_;
+    std::set<semantic::ClassSymbol*> laid_out_classes_;
 };
 
 }  // namespace codegen

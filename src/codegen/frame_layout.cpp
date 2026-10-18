@@ -1,5 +1,8 @@
 #include "frame_layout.h"
 
+#include <algorithm>
+#include <vector>
+
 #include "semantic/scope.h"
 
 namespace compiscript {
@@ -10,6 +13,7 @@ using semantic::ClassSymbol;
 using semantic::FunctionSymbol;
 using semantic::StorageKind;
 using semantic::Symbol;
+using semantic::SymbolKind;
 
 namespace {
 
@@ -32,6 +36,7 @@ std::string uniqueName(const std::string& base, const std::string& separator,
 void FrameLayout::run(Program& program, semantic::SymbolTable& /*table*/) {
     globals_.clear();
     used_labels_.clear();
+    laid_out_classes_.clear();
     top_level_ = FrameState();
     walkStatements(program.statements, top_level_);
 }
@@ -48,8 +53,8 @@ void FrameLayout::walkStatement(Statement* stmt, FrameState& state) {
         return layoutFunction(n, state.fn, nullptr);
     }
     if (auto* n = dynamic_cast<ClassDeclaration*>(stmt)) {
-        // Solo los metodos: los atributos son de la parte 2 (layout de objetos).
         auto* cls = dynamic_cast<ClassSymbol*>(n->symbol);
+        layoutClassFields(cls);
         for (const auto& member : n->members) {
             if (auto* method = dynamic_cast<FunctionDeclaration*>(member.get())) {
                 layoutFunction(method, nullptr, cls);
@@ -99,6 +104,7 @@ void FrameLayout::placeVariable(Symbol* symbol, FrameState& state) {
     if (state.fn == nullptr) {
         symbol->storage = StorageKind::Global;
         symbol->offset = 0;
+        symbol->owner_function = nullptr;
         // '_' y no '@': las globales terminan siendo etiquetas de MIPS.
         symbol->ir_name = uniqueName("g_" + symbol->name, "_", state.used_names);
         globals_.push_back(symbol);
@@ -107,6 +113,7 @@ void FrameLayout::placeVariable(Symbol* symbol, FrameState& state) {
 
     symbol->storage = StorageKind::Local;
     symbol->offset = kFirstLocalOffset - kWordSize * state.locals;
+    symbol->owner_function = state.fn;
     state.locals++;
     symbol->ir_name = uniqueName(symbol->name, "@", state.used_names);
 }
@@ -141,12 +148,48 @@ void FrameLayout::layoutFunction(FunctionDeclaration* decl, FunctionSymbol* encl
         p->storage = StorageKind::Param;
         p->size = kWordSize;
         p->offset = kFirstParamOffset + kWordSize * index;
+        p->owner_function = fn;
         p->ir_name = uniqueName(param.name, "@", state.used_names);
         index++;
     }
 
     walkStatements(decl->body->statements, state);
     fn->frame_size = kWordSize * state.locals;
+}
+
+void FrameLayout::layoutClassFields(ClassSymbol* cls) {
+    if (cls == nullptr || laid_out_classes_.count(cls) > 0) return;
+    // Base primero: los atributos heredados quedan en las mismas posiciones
+    // que en la clase base (despacho estatico sin vtables).
+    if (cls->base_class != nullptr) layoutClassFields(cls->base_class);
+    laid_out_classes_.insert(cls);
+
+    int offset = cls->base_class != nullptr ? cls->base_class->instance_size : 0;
+    if (cls->class_scope == nullptr) {
+        cls->instance_size = offset;
+        return;
+    }
+
+    std::vector<Symbol*> fields;
+    for (const auto& entry : cls->class_scope->symbols()) {
+        Symbol* sym = entry.second.get();
+        if (sym->kind == SymbolKind::Variable || sym->kind == SymbolKind::Constant) {
+            fields.push_back(sym);
+        }
+    }
+    std::sort(fields.begin(), fields.end(), [](const Symbol* a, const Symbol* b) {
+        if (a->declared_line != b->declared_line) return a->declared_line < b->declared_line;
+        return a->declared_column < b->declared_column;
+    });
+
+    for (Symbol* field : fields) {
+        field->storage = StorageKind::Field;
+        field->offset = offset;
+        field->size = kWordSize;
+        field->owner_function = nullptr;
+        offset += kWordSize;
+    }
+    cls->instance_size = offset;
 }
 
 }  // namespace codegen

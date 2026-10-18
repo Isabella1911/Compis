@@ -12,6 +12,7 @@ ir::TacProgram TacGenerator::generate(Program& program, const FrameLayout& layou
     program_ = ir::TacProgram();
     contexts_.clear();
     next_label_ = 0;
+    class_decls_.clear();
 
     for (semantic::Symbol* g : layout.globals()) program_.globals.push_back({g->ir_name, g->size});
 

@@ -15,7 +15,8 @@
 namespace compiscript {
 namespace semantic {
 
-class Scope;  // adelante, definido en scope.h
+class Scope;           // adelante, definido en scope.h
+class FunctionSymbol;  // adelante
 
 enum class SymbolKind { Variable, Constant, Parameter, Function, Class };
 
@@ -43,6 +44,10 @@ public:
     // locales el nombre fuente, con sufijo @n si otro simbolo de la misma
     // funcion ya lo usa (sombreado).
     std::string ir_name;
+    // Funcion que declara este local/parametro (null en globales y campos).
+    // Lo fija FrameLayout; lo usan genCapturedLoad/Store para saber cuantos
+    // enlaces de acceso subir.
+    FunctionSymbol* owner_function = nullptr;
 
     virtual ~Symbol() = default;
 };
