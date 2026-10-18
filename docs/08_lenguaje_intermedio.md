@@ -81,6 +81,7 @@ por línea.
 ```
 global g_<nombre>, <bytes>         ← una por variable global, en orden de declaración
 string str_<n>, "<texto>"          ← una por literal de texto distinto
+vtable <Clase>_vtable, <m0>, <m1>…  ← una por clase: etiqueta del método de cada slot
 
 func main, frame=<bytes>, temps=<n>
     <instrucciones>                ← el código del nivel superior
@@ -111,6 +112,7 @@ endfunc
 | `42`, `-1` | Constante entera. `true` = `1`, `false` = `0`, `null` = `0`. |
 | `str_<n>` | Dirección de un literal de texto. Los literales iguales comparten etiqueta. |
 | `fp` | Base del registro de activación actual. Se usa para los enlaces de acceso. |
+| `<Clase>_vtable` | Dirección de la tabla de métodos de una clase (sección 11.7). |
 
 La tabla de símbolos dice dónde vive cada nombre (sección 7). En la fase de
 MIPS, un `x` local se convierte en `offset($fp)` y un `g_x` en su etiqueta
@@ -135,6 +137,7 @@ de `.data`.
 | `param x` | argumento para la próxima llamada | push en la pila |
 | `link x` | enlace de acceso para la próxima llamada (funciones anidadas) | push en la pila |
 | `x = call f, n` / `call f, n` | llama a `f` con `n` parámetros | `jal f`, resultado en `$v0` |
+| `x = call y, n` / `call y, n` | llamada **indirecta**: `y` tiene la dirección del método (sacada de una vtable) | `jalr` |
 | `return x` / `return` | retorna, con o sin valor | `$v0`, epílogo y `jr $ra` |
 | `x = y[k]` | carga la palabra en la dirección `y + k` | `lw` |
 | `x[k] = y` | guarda `y` en la dirección `x + k` | `sw` |
@@ -195,7 +198,10 @@ generación de código (`src/semantic/symbol.h`):
 | `frame_size` | funciones | bytes de locales |
 | `nesting_depth` | funciones | 0 = nivel superior o método; +1 por cada función que la contiene |
 | `is_method` | funciones | `this` es el parámetro 0 |
-| `instance_size` | clases | bytes de un objeto, con los atributos heredados |
+| `instance_size` | clases | bytes de un objeto: palabra 0 (puntero a la vtable) + atributos, heredados incluidos |
+| `vtable_label`, `vtable` | clases | etiqueta de su tabla de métodos y el método de cada slot |
+| `vtable_slot` | métodos | posición en la vtable (la misma en todas las subclases) |
+| `overridden` | métodos | alguna subclase lo redefine: se llama por la vtable |
 
 `./compiscript archivo.cps` la imprime con esa información, ordenada por
 línea:
@@ -590,19 +596,24 @@ Implementación en `src/codegen/gen_functions.cpp`, `gen_classes.cpp` y
 
 ### Supuestos
 
-1. **Despacho estático sin vtables.** `obj.metodo()` llama a la etiqueta del
-   `FunctionSymbol` que resolvió el semántico (la declaración más cercana
-   subiendo por la herencia). No hay tabla de métodos en el objeto.
+1. **Despacho dinámico con vtables.** Un objeto de una subclase se puede
+   guardar donde se espera su clase base (`let a: Animal = new Perro()`),
+   así que el método que corre lo decide el objeto. Cada clase tiene una
+   vtable y la palabra 0 de cada objeto apunta a la de su clase real. Si un
+   método **no** lo redefine ninguna subclase, se llama directo por su
+   etiqueta (`call Animal_hablar, 1`); si alguna lo redefine, se llama por
+   la vtable (sección 11.7). El constructor nunca pasa por la vtable.
 2. **Las funciones no escapan.** No se soporta `let f = g;` ni pasar una
-   función como valor. Solo se llaman por nombre (o como método). Una
-   función anidada solo se invoca desde el ámbito que la contiene (o desde
-   otra anidada del mismo árbol), nunca se guarda en una variable.
+   función como valor: el semántico lo rechaza con `SEM016`, igual que
+   llamar a algo que no es función. Solo se llaman por nombre (o como
+   método). Una función anidada solo se invoca desde el ámbito que la
+   contiene (o desde otra anidada del mismo árbol).
 3. **Layout de listas:** en el heap, palabra 0 = longitud; las siguientes
    son los elementos (`[4]`, `[8]`, …). Índice fuera de rango →
    `call __raise, 1` con el mensaje `"indice fuera de rango"`.
-4. **Layout de objetos:** atributos en orden de declaración, **base
-   primero**. Cada atributo ocupa 4 bytes. `ClassSymbol::instance_size` es
-   el total. El constructor se busca en la clase y en sus bases; se llama
+4. **Layout de objetos:** palabra 0 = puntero a la vtable; después los
+   atributos en orden de declaración, **base primero** (empiezan en `+4`).
+   Cada atributo ocupa 4 bytes. `ClassSymbol::instance_size` es el total. El constructor se busca en la clase y en sus bases; se llama
    después de `alloc` y de los inicializadores de atributos.
 
 ### 11.1 Funciones y `return`
@@ -690,10 +701,13 @@ print(p.suma());
 ```
 
 ```
+vtable Punto_vtable, Punto_suma
+
 func main, frame=0, temps=1
-    t0 = alloc 8
-    t0[0] = 0              ← inicializador ausente: 0
-    t0[4] = 0
+    t0 = alloc 12          ← 4 (vtable) + 2 atributos
+    t0[0] = Punto_vtable   ← palabra 0: la vtable de la clase real
+    t0[4] = 0              ← inicializador ausente: 0
+    t0[8] = 0
     param 4
     param 3
     param t0               ← this
@@ -706,9 +720,9 @@ endfunc
 
 func Punto_constructor, frame=0, temps=1
     t0 = fp[8]             ← this
-    t0[0] = x
+    t0[4] = x
     t0 = fp[8]
-    t0[4] = y
+    t0[8] = y
 endfunc
 ```
 
@@ -732,8 +746,12 @@ print(p.ladrar());
 ```
 
 ```
-    t0 = alloc 4           ← instance_size de Perro = 4 (atributo heredado)
-    t0[0] = 0
+vtable Animal_vtable, Animal_hablar
+vtable Perro_vtable, Animal_hablar, Perro_ladrar   ← slot 0 heredado, slot 1 propio
+
+    t0 = alloc 8           ← instance_size de Perro = 4 (vtable) + 4 (atributo heredado)
+    t0[0] = Perro_vtable
+    t0[4] = 0
     param str_0
     param t0
     call Animal_constructor, 2
@@ -746,8 +764,9 @@ print(p.ladrar());
     print_str t0
 ```
 
-El atributo `nombre` queda en `+0` tanto en `Animal` como en `Perro`.
-`hablar` se despacha a `Animal_hablar` porque Perro no lo redefine.
+El atributo `nombre` queda en `+4` tanto en `Animal` como en `Perro`, y
+`hablar` ocupa el slot 0 en las dos vtables. Como ninguna subclase redefine
+`hablar` ni `ladrar`, se llaman directo por su etiqueta.
 
 ### 11.5 Listas y `foreach`
 
@@ -809,3 +828,64 @@ L0:
 L1:
     return 0
 ```
+
+### 11.7 Polimorfismo y despacho dinámico
+
+Cuando una subclase redefine un método, toda llamada a ese método se hace
+por la vtable del objeto:
+
+```
+param obj              ← this, como siempre
+t = obj[0]             ← la vtable de la clase real del objeto
+t = t[4*slot]          ← la dirección del método en ese slot
+x = call t, n          ← llamada indirecta
+```
+
+```cps
+class Figura {
+  let lados: integer;
+  function constructor(lados: integer) { this.lados = lados; }
+  function area(): integer { return 0; }
+  function describir(): integer { return this.lados * 100 + this.area(); }
+}
+class Cuadrado : Figura {
+  let lado: integer;
+  function constructor(lado: integer) { this.lados = 4; this.lado = lado; }
+  function area(): integer { return this.lado * this.lado; }
+}
+function medir(f: Figura): integer { return f.area(); }
+let f: Figura = new Cuadrado(3);
+print(f.area());
+```
+
+```
+vtable Figura_vtable, Figura_area, Figura_describir
+vtable Cuadrado_vtable, Cuadrado_area, Figura_describir   ← area redefinida en el slot 0
+
+    t0 = alloc 12
+    t0[0] = Cuadrado_vtable    ← f es un Cuadrado aunque su tipo sea Figura
+    ...
+    param g_f
+    t0 = g_f[0]
+    t0 = t0[0]                 ← slot 0: Cuadrado_area
+    t0 = call t0, 1
+
+func fn_medir, frame=0, temps=1
+    param f
+    t0 = f[0]
+    t0 = t0[0]
+    t0 = call t0, 1            ← Figura_area o Cuadrado_area según el objeto
+    return t0
+endfunc
+```
+
+- La vtable de una subclase empieza con los slots de la base, en el mismo
+  orden; un método redefinido reemplaza su slot y uno nuevo se agrega al
+  final. Por eso `slot` es el mismo para una llamada sin importar la clase
+  real del objeto.
+- `describir` no se redefine, así que `f.describir()` sigue siendo
+  `call Figura_describir, 1`; adentro, `this.area()` sí va por la vtable.
+- Reglas de tipos: una subclase se puede asignar, pasar y devolver donde se
+  espera su base (`SEM003`/`SEM008`/`SEM009` lo aceptan), pero no al revés.
+
+Caso completo: `tests/tac/p2_polimorfismo.cps`.

@@ -1,5 +1,12 @@
 # Generación de código y runtime (fuera de Proyecto 2)
 
+> **Documento histórico (escrito antes de esta entrega).** Eran notas para
+> preparar la generación de código. Lo que se implementó en el Proyecto 2
+> está especificado en [`08_lenguaje_intermedio.md`](08_lenguaje_intermedio.md)
+> y descrito en [`09_arquitectura.md`](09_arquitectura.md). Lo de MIPS,
+> runtime y garbage collector sigue siendo trabajo de la fase siguiente.
+
+
 > Documento 4 de esta serie de "lo que falta", pero de una fase distinta:
 > nada de esto es parte de la rúbrica de `README_SEMANTIC_ANALYSIS.md`
 > (Proyecto 2 termina en análisis semántico). Se deja preparado acá porque

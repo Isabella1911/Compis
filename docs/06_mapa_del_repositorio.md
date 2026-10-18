@@ -1,5 +1,11 @@
 # 06 — Mapa del repositorio y guía rápida
 
+> **Documento histórico.** Describe la versión del código anterior al merge
+> `d1fa312`, que se descartó (incluye archivos como `src/runtime/` que ya no
+> existen en `main`). No refleja el estado actual: para eso ver el
+> [README](../README.md) y [`09_arquitectura.md`](09_arquitectura.md).
+
+
 > Este documento nace de revisar los 3 commits que subió **Cisco890**
 > (`7c396dd`, `4a3b093`, `a2d7929` en `origin/main`, aún no traídos a este
 > `main` local) sobre la base que dejamos nosotros (`61dd444`). Todo lo

@@ -1,5 +1,11 @@
 # IDE, batería de pruebas y entrega final
 
+> **Documento histórico (entrega anterior: análisis semántico).** Describe
+> el plan de IDE y pruebas de esa entrega. El estado actual de la IDE y de la
+> batería está en el [README](../README.md) (secciones 4 y 5) y en
+> [`09_arquitectura.md`](09_arquitectura.md).
+
+
 > Documento 3 de 3. Esto no depende de que el [sistema de tipos](02_sistema_de_tipos.md)
 > ni los [passes semánticos](03_passes_semanticos.md) estén 100% completos
 > — se puede empezar en paralelo, apuntando a lo que ya existe

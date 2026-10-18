@@ -1,5 +1,11 @@
 # 07 — Archivos lógicos: guía profunda
 
+> **Documento histórico.** Describe la versión del código anterior al merge
+> `d1fa312`, que se descartó (incluye archivos como `src/runtime/` que ya no
+> existen en `main`). No refleja el estado actual: para eso ver el
+> [README](../README.md) y [`09_arquitectura.md`](09_arquitectura.md).
+
+
 > Alcance de este documento: **solo `src/`** — el código que realmente
 > implementa el compilador (frontend ANTLR, AST, diagnósticos, fachada,
 > los 6 pases semánticos, y el scaffold de runtime/GC). No repite lo que

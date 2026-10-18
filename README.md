@@ -1,274 +1,214 @@
-# Compiscript — Proyecto 2
+# Compiscript — Proyecto 2: generación de código intermedio
 
-Analizador semántico de **Compiscript** (subconjunto de TypeScript) para el
-curso *Construcción de Compiladores*, UVG. Usa **ANTLR** para la fase
-sintáctica porque así lo exige el enunciado oficial ("se debe implementar
-un analizador sintáctico a partir de la gramática oficial en ANTLR...
-recorriéndolo mediante Listeners o Visitors de ANTLR").
+Compilador de **Compiscript** (subconjunto de TypeScript) para el curso
+*Construcción de Compiladores*, UVG. Toma un archivo `.cps`, lo analiza con
+**ANTLR**, valida las reglas semánticas y, si no hay errores, genera
+**código de tres direcciones (TAC)**. La fase siguiente (Proyecto 3)
+traducirá ese TAC a MIPS para correrlo en MARS.
+
+| Documento | Qué contiene |
+|---|---|
+| Este README | Cómo instalar, compilar, correr, probar y usar la IDE. |
+| [`docs/08_lenguaje_intermedio.md`](docs/08_lenguaje_intermedio.md) | **Especificación del TAC**: instrucciones, operandos, registro de activación, tabla de símbolos extendida, temporales y supuestos. |
+| [`docs/09_arquitectura.md`](docs/09_arquitectura.md) | **Arquitectura**: pipeline, carpetas y cómo cada fase usa la tabla de símbolos. |
+| [`docs/10_ejemplos_de_traduccion.md`](docs/10_ejemplos_de_traduccion.md) | **Ejemplos de traducción**: cada construcción con su `.cps` y el TAC real que genera. |
+| [`docs/02_sistema_de_tipos.md`](docs/02_sistema_de_tipos.md), [`docs/03_passes_semanticos.md`](docs/03_passes_semanticos.md) | Diseño del análisis semántico (entrega anterior, sigue vigente). |
 
 ## Historial
 
 Este repositorio empezó como `Compis`, un compilador didáctico con lexer y
-parser (LL(1)/LR(0)/SLR(1)/LALR(1)) hechos a mano, del curso *Diseño de
-Lenguajes*. Ese trabajo quedó preservado íntegro en la rama
-[`Deprecated`](../../tree/Deprecated) — no es una continuación de ese
-código, sino un proyecto nuevo (stack distinto: ANTLR + C++ generado) que
-reemplazó el contenido de `main`.
+parser hechos a mano, del curso *Diseño de Lenguajes*. Ese trabajo quedó
+preservado en la rama [`Deprecated`](../../tree/Deprecated). El contenido
+actual de `main` es un proyecto nuevo (ANTLR + C++).
 
 ---
 
-## 1. Qué hace el pipeline hasta ahora
+## 1. Pipeline
 
 ```
-program.cps
-    │
-    ▼
-CompiscriptLexer / CompiscriptParser   (generados por ANTLR desde grammar/Compiscript.g4)
-    │
-    ▼
-Parse Tree de ANTLR
-    │
-    ▼
-AstBuilder (Visitor)                    src/frontend/ast_builder.cpp
-    │
-    ▼
-AST propio                              src/ast/nodes.h
-    │
-    ├──► printTree() / toDot()          src/ast/printer.cpp
-    │
-    ▼
-DeclarationCollector (Pass 1)           src/semantic/declaration_collector.cpp
-    │  recorre el AST, crea un Scope por cada funcion/clase/bloque,
-    │  declara cada variable/constante/parametro/funcion/clase,
-    │  reporta SEM002 si algo se redeclara en el mismo ambito
-    ▼
-SymbolTable poblada                     src/semantic/scope.h
-    │
-    ▼
-NameResolver (Pass 2)                   src/semantic/name_resolver.cpp
-    │  recorre el AST otra vez, esta vez entrando a las expresiones;
-    │  resuelve cada identificador usado contra la tabla de simbolos
-    │  (llena AstNode::symbol), reporta SEM001 si no existe
-    │
-    ├──► printScopeTree()               src/semantic/printer.cpp
-    │
-    ▼
-Compiler::compile() -> CompilationResult   src/compiler/compiler.cpp
-                                            { ast, diagnostics, symbol_table }
+programa.cps
+  │
+  ▼  src/frontend/        ANTLR (lexer + parser desde grammar/Compiscript.g4)
+Parse tree ──► AstBuilder ──► AST propio (src/ast/nodes.h)
+  │
+  ▼  src/semantic/        6 pases, cada uno lee y completa la tabla de símbolos
+DeclarationCollector → InheritanceResolver → NameResolver
+  → TypeChecker → ControlFlowChecker → ClosureAnalyzer
+  │
+  ├──► si hubo errores: diagnósticos [SYN/SEMxxx] con línea y columna, sin TAC
+  ▼  src/codegen/         (solo si no hubo ningún error)
+FrameLayout: direcciones, offsets, tamaños, etiquetas y frames
+  → TacGenerator: AST → TAC (con reciclaje de temporales)
+  │
+  ▼  src/ir/
+tac_printer: TAC → texto (pantalla y output/programa.tac)
 ```
 
-Lo que **todavía no** está implementado: nombres de miembro (`obj.campo`,
-`this.campo` — necesitan el tipo estatico de `obj`), validacion de `this`
-fuera de una clase, numero/tipo de argumentos en llamadas, sistema de
-tipos, y el resto de las validaciones semanticas del PDF. `resolved_type`
-sigue en `nullptr` en cada nodo del AST.
+El detalle de cada fase está en [`docs/09_arquitectura.md`](docs/09_arquitectura.md).
 
 ---
 
-## 2. Cómo compilar y correr
+## 2. Instalación (una sola vez por máquina)
 
-Primera vez en una máquina nueva (instala JRE, `antlr.jar`, `cmake` portátil
-y compila el runtime C++ de ANTLR — todo local a `.deps/`, **sin sudo**):
+Requisitos: Linux o **WSL** (en Windows), con `bash`, `make`, `g++`
+(C++17), `curl` y `python3`. Para la IDE, además `python3-tk`. Graphviz
+(`dot`) es opcional, solo para dibujar el AST.
 
 ```bash
+sudo apt install build-essential curl python3 python3-tk graphviz   # si falta algo
 bash tools/setup.sh
 ```
 
-Después, desde la raíz del repo:
-
-```bash
-make                                            # genera el parser (si hace falta) y compila
-make run FILE=tests/fixtures/valid/hello.cps    # corre un archivo .cps
-make test                                       # corre todos los fixtures de tests/fixtures/
-make test-symbols                               # prueba unitaria de Scope/Symbol (no necesita ANTLR)
-make clean                                      # borra los binarios y el codigo generado
-```
-
-`make` regenera el parser solo si `grammar/Compiscript.g4` cambió. El
-binario imprime los diagnósticos (si hay), el AST en texto indentado, la
-tabla de símbolos (un `Scope` por línea, indentado por anidamiento), y
-exporta `output/ast.dot` (renderizable con `dot -Tpng output/ast.dot -o
-ast.png`, igual que Compis ya hace con su autómata LR(0)).
+`tools/setup.sh` descarga y compila **dentro de `.deps/`** (sin sudo) el
+JRE, `antlr-4.13.2-complete.jar`, un `cmake` portátil y el runtime C++ de
+ANTLR. Tarda unos minutos la primera vez; después no hace nada.
 
 ---
 
-## 3. Estructura
+## 3. Compilar y correr
+
+Desde la raíz del repositorio:
+
+```bash
+make                                            # genera el parser (si hace falta) y compila ./compiscript
+make run FILE=tests/tac/p3_programa_completo.cps
+./compiscript --tac tests/tac/p1_temporales.cps # solo el TAC
+make clean                                      # borra binarios y código generado
+```
+
+**Dos modos de salida:**
+
+| Comando | Muestra |
+|---|---|
+| `./compiscript archivo.cps` | Diagnósticos (si hay), AST, tabla de símbolos extendida y código intermedio. Escribe `output/ast.dot` y `output/programa.tac`. |
+| `./compiscript --tac archivo.cps` | Solo el TAC, o solo los diagnósticos si hubo errores. Es el modo que usan las pruebas. |
+
+**Código de salida:** `0` si compiló sin errores, `1` si hubo errores. Si
+hay errores **no se genera TAC** (paso 4 del enunciado).
+
+Ejemplo de diagnóstico:
 
 ```
-├── grammar/Compiscript.g4       # gramatica oficial, sin modificar
-├── generated/                   # salida de ANTLR (gitignored, se regenera con `make`)
+Diagnosticos:
+  [SEM003] error 3:1: el valor asignado no coincide con el tipo de 'x'.
+```
+
+---
+
+## 4. Batería de pruebas
+
+```bash
+make test             # todo: tabla de símbolos + semántica + TAC
+make test-semantic    # solo los casos semánticos
+make test-tac         # solo el TAC contra los esperados
+make test-tac-update  # regenera los .tac esperados (revisar el diff antes de commitear)
+make test-symbols     # solo la prueba unitaria de la tabla de símbolos
+```
+
+Al final imprime un resumen `N ok, M fallos` y sale con código `1` si algo
+falló. El runner es [`tests/run_tests.py`](tests/run_tests.py) (Python 3,
+sin dependencias).
+
+| Carpeta | Qué verifica |
+|---|---|
+| `tests/fixtures/valid/` | Programas correctos: deben compilar sin diagnósticos. Hay al menos uno por regla (`sem001_…` a `sem016_…`, `syn001_…`). |
+| `tests/fixtures/invalid/` | Programas con errores: deben fallar con **exactamente** los códigos de sus líneas `// expect: SEMxxx` (una por error esperado). |
+| `tests/tac/*.cps` + `*.tac` | Casos exitosos de TAC (*golden files*): la salida de `--tac` debe ser idéntica al `.tac`. Si difiere, se muestra el `diff`. Hay uno por construcción (`p1_*`, `p2_*`) y un programa completo (`p3_programa_completo`). |
+| `tests/tac/errores/` | Casos fallidos de TAC: no debe aparecer TAC y deben salir los códigos de `// expect:`. |
+| `tests/symbol_table_test.cpp` | Prueba unitaria de `Scope`/`Symbol`. |
+
+**Agregar un caso:**
+
+- Semántico fallido: crear `tests/fixtures/invalid/<nombre>.cps` con
+  `// expect: SEM0xx` en las primeras líneas.
+- TAC: crear `tests/tac/<nombre>.cps`, correr `make test-tac-update`,
+  **revisar** el `.tac` generado (`git diff tests/tac`) y commitear ambos.
+  Si una prueba falla por un bug del generador, se arregla el generador, no
+  el `.tac` esperado.
+- Después de cambiar casos de `tests/tac/`, regenerar los ejemplos de la
+  documentación con `make docs-ejemplos`.
+
+---
+
+## 5. IDE
+
+```bash
+python3 ide/ide_app.py
+```
+
+En Windows se corre desde WSL (con WSLg la ventana abre sola). Antes hay
+que haber corrido `bash tools/setup.sh` una vez.
+
+| Acción | Cómo |
+|---|---|
+| Abrir / escribir un `.cps` | *Archivo → Cargar archivo .cps…* (Ctrl+O), arrastrar el archivo a la ventana, o *Archivo → Ejemplos* (un ejemplo por construcción, de `tests/tac/`). |
+| Compilar el compilador | **Compilar** (F5): corre `make build`. |
+| Compilar el programa | **Ejecutar** (F6): guarda y corre `./compiscript` sobre el archivo. |
+| Ver errores | Pestañas *Diagnósticos* (doble clic salta a la línea) y *Errores*. |
+| Ver AST y tabla de símbolos | Grupo *Análisis*: texto, y *Tabla de símbolos (columnas)* con dirección/etiqueta, tamaño y frame. |
+| Ver el TAC | Grupo *Código intermedio*. Si hubo errores, avisa que no se generó. |
+| Guardar el TAC | **Guardar TAC** (toolbar, o *Archivo → Guardar TAC…*). |
+| Correr la batería | **Pruebas** (F7): corre `make test` y muestra el resultado en el grupo *Pruebas*. |
+
+---
+
+## 6. Estructura del repositorio
+
+```
+├── grammar/Compiscript.g4        # gramática oficial, sin modificar
+├── generated/                    # salida de ANTLR (gitignored, la regenera make)
 ├── src/
-│   ├── frontend/                 # UNICO lugar que puede incluir ANTLR
-│   │   ├── parser_driver.cpp/.h  #   punto de entrada: source -> AST (sin exponer tipos de ANTLR)
-│   │   ├── ast_builder.cpp/.h    #   Visitor: Parse Tree -> AST propio
-│   │   └── error_listener.cpp/.h #   errores de ANTLR -> Diagnostic (reemplaza el listener por defecto)
-│   ├── ast/
-│   │   ├── nodes.h               #   jerarquia del AST, un nodo por regla real del .g4
-│   │   └── printer.cpp/.h        #   texto indentado + DOT
-│   ├── diagnostics/
-│   │   ├── diagnostic.h          #   struct Diagnostic (severity, codigo, mensaje, linea, columna)
-│   │   ├── codes.h               #   registro de codigos (SYN0xx, SEM0xx)
-│   │   └── reporter.cpp/.h       #   acumula diagnosticos, sin estado global
-│   ├── compiler/
-│   │   ├── result.h              #   CompilationResult
-│   │   └── compiler.cpp/.h       #   fachada publica: Compiler::compile(source)
-│   └── semantic/                 # Etapa 2: simbolos (listo), tipos y mas passes despues
-│       ├── symbol.h                    #   Symbol, FunctionSymbol, ClassSymbol
-│       ├── scope.h/.cpp                #   Scope: declare/resolve/resolveLocal, pila de tablas
-│       ├── symbol_table.h              #   SymbolTable: dueno del scope global
-│       ├── declaration_collector.h/.cpp #  Pass 1: AST -> puebla la tabla de simbolos
-│       ├── name_resolver.h/.cpp        #   Pass 2: resuelve identificadores usados, SEM001
-│       └── printer.h/.cpp              #   texto indentado del arbol de scopes
+│   ├── main.cpp                  # CLI: modo completo y modo --tac
+│   ├── frontend/                 # ÚNICO lugar que incluye ANTLR: source → AST
+│   ├── ast/                      # nodos del AST e impresión (texto y DOT)
+│   ├── diagnostics/              # Diagnostic, códigos SYN/SEM (codes.h), reporter
+│   ├── compiler/                 # fachada: Compiler::compile(source) → CompilationResult
+│   ├── semantic/                 # símbolos, scopes, tipos y los 6 pases semánticos
+│   ├── codegen/                  # FrameLayout, TempAllocator y TacGenerator (gen_*.cpp)
+│   └── ir/                       # estructuras del TAC (tac.h) e impresión
 ├── tests/
-│   ├── fixtures/{valid,invalid}/
-│   └── symbol_table_test.cpp     #   prueba unitaria de Scope/Symbol, sin AST ni compilador
-├── tools/setup.sh                # instala el toolchain (JRE+antlr+cmake+runtime), sin sudo
+│   ├── run_tests.py              # runner de toda la batería
+│   ├── fixtures/{valid,invalid}/ # casos semánticos
+│   ├── tac/                      # casos de TAC (.cps + .tac) y tac/errores/
+│   └── symbol_table_test.cpp
+├── ide/ide_app.py                # IDE (Tkinter)
+├── docs/                         # especificación, arquitectura y ejemplos
+├── tools/setup.sh                # instala el toolchain en .deps/, sin sudo
 └── Makefile
 ```
 
-**Regla verificable**: fuera de `src/frontend/`, nada debería incluir
-headers de ANTLR. `compiler.cpp` solo conoce `frontend/parser_driver.h`, que
-no expone ningún tipo de ANTLR en su firma.
-
 ---
 
-## 4. Decisiones de lenguaje ya cerradas (verificadas línea por línea contra `Compiscript.g4`, no asumidas)
+## 7. Decisiones de lenguaje
 
-1. **No existe `float`.** `baseType` es exactamente `'boolean' | 'integer' |
-   'string' | Identifier`. No se agrega salvo que el profesor lo exija.
-2. **Los parámetros y el retorno pueden ir sin anotación de tipo**
-   (`parameter: Identifier (':' type)?`). El AST lo refleja con
-   `declared_type == nullptr`; la Etapa 3 decide si eso es error (`SEM011`,
-   ya reservado en `codes.h`) o si asume un tipo por defecto.
-3. **El parámetro del `catch` no lleva tipo en la gramática**
-   (`'catch' '(' Identifier ')'`). Se fija `string` por decisión de equipo.
-4. **`switch` no exige booleano**: el sujeto y cada `case` son `expression`
-   arbitraria. Cada `case` debe ser comparable con el tipo del sujeto (a
-   decidir en la Etapa 3).
-5. **`break`/`continue` son sintácticamente válidos dentro de un
-   `switch`**, no solo dentro de bucles (la gramática los permite en
-   cualquier `statement*`, incluido el de `switchCase`). La Etapa 3 decide
-   si eso es un error semántico.
-6. **`string + integer` — pendiente de decidir.** Recomendado: no
-   permitirlo, obliga a conversión explícita.
-7. **No existe `throw`.** `try/catch` se valida sintáctica y
-   semánticamente, pero no hay sentencia para lanzar errores propios.
-8. **`if`/`while`/`do-while`/`for`/`foreach` exigen bloque con llaves**,
-   nunca una sentencia suelta (`ifStatement: ... block ('else' block)?`).
-   Esto **contradice los ejemplos de `Especificaciones.md`**
-   (`if (n < 60) continue;` sin llaves) — se descubrió al correr el fixture
-   `tests/fixtures/valid/completo.cps`: sin llaves, ANTLR rechaza con
-   `missing '{' at 'continue'`. Hay que escribir Compiscript real siempre
-   con llaves, o pedirle al profesor que aclare/corrija el ejemplo.
-9. **El constructor no tiene palabra reservada**: es un
-   `FunctionDeclaration` cuyo `name` es literalmente `"constructor"`.
-10. **Quirk de la gramática (no de esta implementación): `Literal`,
-    `IntegerLiteral` y `StringLiteral` son tres reglas de lexer
-    distintas, pero por el orden de declaración el lexer real SIEMPRE
-    emite el token `Literal`** (nunca los otros dos por separado,
-    verificado corriendo el lexer generado sobre `42` y `"hola"`). Por eso
-    `AstBuilder::visitLiteralExpr` distingue entero de string mirando el
-    texto (si empieza con `"`), no el tipo de token.
+Verificadas contra `Compiscript.g4` y vigentes en esta entrega:
 
----
+1. **No existe `float`.** Los tipos son `integer`, `string`, `boolean`,
+   clases y listas (`integer[]`, `integer[][]`…).
+2. **Todo parámetro lleva anotación de tipo** (`SEM011` si falta), aunque
+   la gramática la deja opcional. El tipo de retorno sí es opcional: sin
+   él, la función es `void`.
+3. **El parámetro del `catch` es `string`** (el mensaje del error).
+4. **`switch` no exige booleano**: cada `case` debe ser del mismo tipo que
+   el sujeto. No hay *fallthrough*: cada `case` termina al final de su
+   cuerpo (por eso no hace falta `break`).
+5. **`break`/`continue` solo dentro de bucles**: dentro de un `switch` que
+   no está en un bucle son `SEM006`.
+6. **`string + integer` no está permitido** (`SEM004`): `+` exige dos
+   `integer` o dos `string`.
+7. **Una subclase se puede usar donde se espera su base**: asignar, pasar
+   como argumento y devolver (`let a: Animal = new Perro()`), pero no al
+   revés. Los métodos redefinidos se despachan por la vtable del objeto
+   (`a.hablar()` corre `Perro_hablar`).
+8. **No existe `throw`.** Los errores de tiempo de ejecución (por ejemplo,
+   índice fuera de rango) los levanta el runtime y los atrapa `try/catch`.
+9. **`if`/`while`/`for`/`foreach` exigen llaves** (`block` en la gramática).
+10. **El constructor es una función llamada `constructor`** dentro de la
+    clase.
+11. **Las funciones, métodos y clases no son valores** (`SEM016`): no se
+    puede hacer `let f = doble;`, `let m = obj.metodo;` ni llamar a algo que
+    no sea una función.
 
-## 5. Estado (checklist)
-
-### Etapa 1 — Fundación (AST + diagnósticos + fachada)
-
-- [x] Toolchain de ANTLR instalado sin sudo (`tools/setup.sh`), reproducible en cualquier máquina del equipo.
-- [x] Parser generado desde `grammar/Compiscript.g4` sin tocar la gramática oficial.
-- [x] Un nodo de AST por cada regla real de la gramática (incluidos ternario, `print`, asignación como expresión, `PropertyAssignment`).
-- [x] Operadores binarios plegados a la izquierda (`a - b - c` -> `((a-b)-c)`).
-- [x] `leftHandSide` con sufijos encadenados a mano (`a.b[0].c()`).
-- [x] Todo nodo tiene `line`/`column`.
-- [x] `DiagnosticErrorListener` propio (nada de errores sintácticos por stderr).
-- [x] `Compiler::compile()` sin estado global entre llamadas.
-- [x] AST exportable a texto y a DOT.
-- [x] Batería mínima de pruebas (`make test`) con casos válidos e inválidos.
-
-### Etapa 2 — Símbolos y tipos (en progreso, por rebanadas)
-
-- [x] **Tabla de símbolos** (`src/semantic/symbol.h`, `scope.h/.cpp`, `symbol_table.h`):
-      `Symbol`/`FunctionSymbol`/`ClassSymbol`, `Scope` (declare/resolve/resolveLocal,
-      pila de tablas con shadowing correcto), `SymbolTable` como dueño del scope
-      global. Probada en aislado (`make test-symbols`, 24 checks).
-- [x] **DeclarationCollector** (`declaration_collector.h/.cpp`): recorre el AST,
-      crea un `Scope` por cada función/clase/bloque (el cuerpo inmediato de una
-      función o clase comparte el scope de sus parámetros/miembros, sin anidar
-      de más), declara cada variable/constante/parámetro/función/clase, y
-      reporta `SEM002` en redeclaraciones dentro del mismo ámbito. **Ya
-      conectado a `Compiler::compile()`** — `CompilationResult` ahora expone
-      `symbol_table` siempre válido (scope global vacío si hubo error
-      sintáctico). Visible con `make run FILE=...` (imprime la tabla de
-      símbolos completa) y probado con fixtures reales, incluida una
-      redeclaración real que dispara `SEM002` de punta a punta.
-- [x] **NameResolver** (`name_resolver.h/.cpp`): recorre el AST entrando a las
-      expresiones (no solo las declaraciones), resuelve cada identificador
-      usado contra la tabla de símbolos (llena `AstNode::symbol` en
-      `IdentifierExpression`, `NewExpression`, y en el target de
-      `AssignmentStatement`), y reporta `SEM001` si no existe. Deliberadamente
-      no resuelve todavía nombres de miembro (`obj.campo`, necesita el tipo
-      de `obj`) ni valida `this` fuera de una clase. **Ya conectado** —
-      corre justo después de `DeclarationCollector` en `Compiler::compile()`.
-      Probado: `SEM001` dispara con una variable no declarada, y
-      `completo.cps` (clases, herencia, recursión, `this`, cadenas
-      `a.b[0].c()`) sigue sin falsos positivos.
-- [x] **Sistema de tipos** (`type.h/.cpp`): clase `Type` (con `equals()` estructural
-      y `TypeKind::Error` como comodín que siempre es compatible, para no generar
-      cascadas de errores), `resolveTypeAnnotation()` para convertir un
-      `TypeAnnotation` en un `Type` real (resolviendo nombres de clase contra la
-      tabla de símbolos, `SEM013` si no es válido). `Symbol` ahora tiene
-      `resolved_type`; `Scope` tiene `owner` (el `Symbol` dueño del scope, para
-      poder responder "¿en qué función/clase estoy parado?"). Ver
-      [`docs/02_sistema_de_tipos.md`](docs/02_sistema_de_tipos.md) para el diseño completo.
-- [x] **TypeChecker** (Pass 3, `type_checker.h/.cpp`): llena `resolved_type` en
-      todo el árbol y valida tipos en operaciones aritméticas/lógicas/comparaciones
-      (`SEM004`), asignaciones (`SEM003`), condiciones de `if`/`while`/`do-while`/`for`/
-      ternario (`SEM005`), tipo de retorno (`SEM009`), compatibilidad `switch`/`case`,
-      tipos de elementos de arreglo e índices. **Ya conectado**, corre después de
-      `NameResolver`. Deliberadamente no resuelve todavía `obj.campo` ni valida
-      argumentos de llamadas (necesitan resolver herencia primero — ver
-      [`docs/03_passes_semanticos.md`](docs/03_passes_semanticos.md)). Probado con
-      fixtures dedicados por código (`sem003_*`, `sem004_*`, `sem005_*`, `sem013_*`)
-      más `tipos.cps` (funciones, arreglos, `for`, `switch`, ternario) sin falsos positivos.
-- [x] **InheritanceResolver** (`inheritance_resolver.h/.cpp`): resuelve
-      `ClassSymbol::base_class_name` al `ClassSymbol* base_class` real (funciona
-      con clases declaradas en cualquier orden), y detecta herencia circular
-      (`SEM014`). Corre entre `DeclarationCollector` y `NameResolver`. Probado:
-      `herencia.cps` (cadena de 3 niveles, referencia hacia adelante) sin
-      diagnósticos; base inexistente → `SEM013`; ciclo → `SEM014`.
-- [x] **Clases y Objetos, y validación de argumentos** (extendido dentro de
-      `TypeChecker`, no un pass nuevo): atributos/métodos heredados vía `.`
-      (`lookupMember()`, busca en la propia clase y sube por `base_class`,
-      `SEM010` si no existe), invocación del constructor (mismo mecanismo,
-      busca `"constructor"`), `this` tipado como la clase contenedora y
-      fuera de contexto (`SEM015`), y número/tipo de argumentos en
-      llamadas a funciones, métodos y constructor (`SEM008`). Probado con
-      `clases_y_objetos.cps` (método y campo heredados a través de una
-      subclase, `this`, constructor y método con argumentos correctos) sin
-      diagnósticos, más fixtures dedicados para cada código nuevo.
-- [x] **ControlFlowChecker** (`control_flow_checker.h/.cpp`): `break`/`continue`
-      fuera de un bucle (`SEM006`; `switch` no cuenta como bucle, decisión
-      literal del PDF ya tomada), `return` fuera de una función (`SEM007`),
-      código muerto (`SEM012`, una sola vez por bloque). Pass independiente,
-      no necesita tipos ni tabla de símbolos.
-- [x] **ClosureAnalyzer** (`closure_analyzer.h/.cpp`): identifica qué
-      variables externas usa cada función anidada y las guarda en
-      `FunctionSymbol::captured` (no valida nada — información para
-      generación de código futura). Visible en `printScopeTree()` como
-      `[captura: ...]` junto a la firma de la función.
-      Probado: `sem006_*`, `sem007_*`, `sem012_*` disparan su código exacto;
-      `control_flow_y_closures.cps` (break/continue/return correctos, una
-      función anidada capturando el parámetro de su contenedora) sin
-      diagnósticos y con la captura visible en la tabla de símbolos.
-
-**Con esto, el análisis semántico completo del Proyecto 2 está
-implementado** (~25 reglas del PDF). Lo único que queda de todo el
-proyecto es IDE y batería de pruebas por regla:
-- [ ] IDE, batería de pruebas por regla y checklist de entrega — ver [`docs/04_ide_y_entrega.md`](docs/04_ide_y_entrega.md).
-
-### Fuera de Proyecto 2 (preparación para más adelante)
-
-- [ ] Generación de código y runtime, incluido el garbage collector — ver
-      [`docs/05_generacion_de_codigo_y_runtime.md`](docs/05_generacion_de_codigo_y_runtime.md).
+Los supuestos del TAC (tamaño de palabra, orden de evaluación, globales
+estáticas, etc.) están en la sección 2 de
+[`docs/08_lenguaje_intermedio.md`](docs/08_lenguaje_intermedio.md).
