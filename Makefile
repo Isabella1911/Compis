@@ -7,7 +7,9 @@
 # Uso normal:
 #   make              -> genera el parser (si hace falta) y compila compiscript(.exe)
 #   make run FILE=tests/fixtures/valid/hello.cps
-#   make test         -> corre todos los fixtures de tests/fixtures/valid e invalid
+#   make test         -> corre toda la bateria: tabla de simbolos, semantica y TAC
+#   make test-semantic / make test-tac -> solo una parte
+#   make test-tac-update -> regenera los .tac esperados (revisar el diff!)
 #   make test-symbols -> corre la prueba unitaria de Scope/Symbol (no necesita ANTLR)
 #   make clean        -> borra los binarios y el codigo generado por ANTLR
 
@@ -77,7 +79,7 @@ BIN             := compiscript
 TEST_SYMBOLS_BIN := symbol_table_test
 endif
 
-.PHONY: all build setup generate test test-symbols clean
+.PHONY: all build setup generate run test test-semantic test-tac test-tac-update docs-ejemplos test-symbols clean
 
 all: build
 
@@ -99,26 +101,33 @@ $(BIN): $(SRC) $(HEADERS)
 run: build
 	./$(BIN) $(FILE)
 
-test: build
-	@ok=0; fail=0; \
-	for f in tests/fixtures/valid/*.cps; do \
-	    [ -e "$$f" ] || continue; \
-	    if ./$(BIN) "$$f" > /dev/null 2>&1; then \
-	        echo "OK      $$f"; ok=$$((ok+1)); \
-	    else \
-	        echo "FALLO   $$f (se esperaba que compilara sin errores)"; fail=$$((fail+1)); \
-	    fi; \
-	done; \
-	for f in tests/fixtures/invalid/*.cps; do \
-	    [ -e "$$f" ] || continue; \
-	    if ./$(BIN) "$$f" > /dev/null 2>&1; then \
-	        echo "FALLO   $$f (se esperaba un error y acepto)"; fail=$$((fail+1)); \
-	    else \
-	        echo "OK      $$f"; ok=$$((ok+1)); \
-	    fi; \
-	done; \
-	echo "----"; echo "$$ok ok, $$fail fallos"; \
-	[ "$$fail" -eq 0 ]
+# La bateria vive en tests/run_tests.py (Python 3, sin dependencias):
+#   - tests/fixtures/valid y invalid: compila / falla con los codigos exactos
+#     de sus lineas '// expect: SEMxxx'
+#   - tests/tac: la salida de --tac contra los .tac esperados (golden files),
+#     y tests/tac/errores: sin TAC y con los codigos esperados
+PYTHON ?= python3
+
+test: build $(TEST_SYMBOLS_BIN)
+	@echo "== Prueba unitaria de la tabla de simbolos =="
+	@./$(TEST_SYMBOLS_BIN)
+	@$(PYTHON) tests/run_tests.py --bin ./$(BIN) todo
+
+test-semantic: build
+	@$(PYTHON) tests/run_tests.py --bin ./$(BIN) semantica
+
+test-tac: build
+	@$(PYTHON) tests/run_tests.py --bin ./$(BIN) tac
+
+# Regenera los .tac esperados. Revisar SIEMPRE `git diff tests/tac` antes de
+# commitear: si no, un bug se vuelve "lo esperado".
+test-tac-update: build
+	@$(PYTHON) tests/run_tests.py --bin ./$(BIN) tac --update
+	@echo "Revisa los cambios con: git diff tests/tac"
+
+# Regenera docs/10_ejemplos_de_traduccion.md a partir de tests/tac/.
+docs-ejemplos:
+	$(PYTHON) tools/gen_ejemplos_doc.py
 
 # No depende de $(GENERATED) ni de ANTLR4CPP a proposito: semantic/ no
 # incluye nada de ANTLR, asi que esta prueba compila (mucho) mas rapido.

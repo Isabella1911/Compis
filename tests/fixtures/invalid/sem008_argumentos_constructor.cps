@@ -1,3 +1,4 @@
+// expect: SEM008
 class Animal {
   let nombre: string;
 

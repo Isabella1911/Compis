@@ -1,3 +1,4 @@
+// expect: SEM008
 class Calculadora {
   function sumar(a: integer, b: integer): integer {
     return a + b;
