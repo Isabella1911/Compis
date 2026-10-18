@@ -32,6 +32,13 @@ Operand Operand::makeFramePtr() {
     return o;
 }
 
+Operand Operand::makeLabel(const std::string& label) {
+    Operand o;
+    o.kind = OperandKind::Label;
+    o.name = label;
+    return o;
+}
+
 Operand Operand::makeVar(semantic::Symbol* symbol) {
     Operand o;
     o.kind = OperandKind::Var;

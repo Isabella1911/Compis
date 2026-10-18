@@ -21,6 +21,10 @@
 // argumentos en llamadas a funciones y metodos, y en el constructor de
 // 'new' (SEM008).
 //
+// Ademas: parametros sin anotacion de tipo (SEM011), funciones, metodos o
+// clases usados como valor y llamadas a algo que no es funcion (SEM016), y
+// la regla de asignacion con subclases (isAssignable en type.h).
+//
 // Deliberadamente NO cubre todavia (ver docs/03_passes_semanticos.md):
 //   - break/continue fuera de bucle (SEM006) y codigo muerto (SEM012): son
 //     control de flujo puro, no necesitan tipos -- pass aparte.
@@ -62,6 +66,11 @@ private:
     bool checkCompatible(const TypePtr& expected, const TypePtr& actual, const char* code,
                           const std::string& message, int line, int column);
 
+    // Como checkCompatible, pero con la regla de asignacion (isAssignable):
+    // acepta una subclase donde se espera su base. Para SEM003/SEM008/SEM009.
+    bool checkAssignable(const TypePtr& target, const TypePtr& value, const char* code,
+                          const std::string& message, int line, int column);
+
     Scope* findEnclosingFunctionScope(Scope* scope) const;
     Scope* findEnclosingClassScope(Scope* scope) const;
 
@@ -82,6 +91,9 @@ private:
                          const std::vector<TypePtr>& argTypes, int line, int column);
 
     diagnostics::DiagnosticReporter& reporter_;
+    // Callee de la llamada que se esta chequeando: el unico contexto donde
+    // un nombre de funcion o metodo es legal sin ser un valor (SEM016).
+    ast::Expression* callee_ = nullptr;
 };
 
 }  // namespace semantic

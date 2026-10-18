@@ -84,6 +84,8 @@ private:
     // Con hasResult devuelve un temporal nuevo con el valor de retorno;
     // sin el, devuelve Operand::none().
     ir::Operand emitCall(const std::string& label, int argc, bool hasResult);
+    // Llamada indirecta: `target` tiene la direccion del metodo (vtable).
+    ir::Operand emitCallIndirect(const ir::Operand& target, int argc, bool hasResult);
     void emitReturn(const ir::Operand& value = ir::Operand::none());
     ir::Operand emitLoad(const ir::Operand& base, const ir::Operand& offset);  // t = base[offset]
     void emitStore(const ir::Operand& base, const ir::Operand& offset,

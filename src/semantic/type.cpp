@@ -41,6 +41,16 @@ bool Type::equals(const Type& other) const {
     }
 }
 
+bool isAssignable(const Type& target, const Type& value) {
+    if (target.equals(value)) return true;
+    if (target.kind != TypeKind::Class || value.kind != TypeKind::Class) return false;
+    // Subclase -> base: subir por la cadena de herencia del valor.
+    for (ClassSymbol* c = value.class_symbol; c != nullptr; c = c->base_class) {
+        if (c == target.class_symbol) return true;
+    }
+    return false;
+}
+
 namespace {
 TypePtr makeSimple(TypeKind kind) {
     auto t = std::make_shared<Type>();

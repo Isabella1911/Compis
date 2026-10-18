@@ -11,7 +11,8 @@ std::string printOperand(const Operand& operand) {
         case OperandKind::Temp: return "t" + std::to_string(operand.temp);
         case OperandKind::IntConst: return std::to_string(operand.value);
         case OperandKind::Var:
-        case OperandKind::String: return operand.name;
+        case OperandKind::String:
+        case OperandKind::Label: return operand.name;
         case OperandKind::FramePtr: return "fp";
     }
     return "?";
@@ -43,7 +44,8 @@ std::string printInstruction(const Instruction& in) {
         case OpCode::Param: return "param " + a;
         case OpCode::Link: return "link " + a;
         case OpCode::Call: {
-            std::string call = "call " + in.label + ", " + std::to_string(in.argc);
+            const std::string target = in.label.empty() ? a : in.label;
+            std::string call = "call " + target + ", " + std::to_string(in.argc);
             return in.dst.isNone() ? call : dst + " = " + call;
         }
         case OpCode::Return: return in.a.isNone() ? "return" : "return " + a;
@@ -67,7 +69,14 @@ std::string printProgram(const TacProgram& program) {
     for (const auto& s : program.strings) {
         out << "string " << s.label << ", \"" << s.value << "\"\n";
     }
-    if (!program.globals.empty() || !program.strings.empty()) out << "\n";
+    for (const auto& v : program.vtables) {
+        out << "vtable " << v.label;
+        for (const auto& m : v.methods) out << ", " << m;
+        out << "\n";
+    }
+    if (!program.globals.empty() || !program.strings.empty() || !program.vtables.empty()) {
+        out << "\n";
+    }
 
     for (size_t i = 0; i < program.functions.size(); i++) {
         const auto& fn = program.functions[i];

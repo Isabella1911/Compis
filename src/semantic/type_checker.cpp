@@ -23,6 +23,14 @@ bool TypeChecker::checkCompatible(const TypePtr& expected, const TypePtr& actual
     return false;
 }
 
+bool TypeChecker::checkAssignable(const TypePtr& target, const TypePtr& value, const char* code,
+                                  const std::string& message, int line, int column) {
+    if (!target || !value) return true;
+    if (isAssignable(*target, *value)) return true;
+    reporter_.error(code, message, line, column);
+    return false;
+}
+
 Scope* TypeChecker::findEnclosingFunctionScope(Scope* scope) const {
     for (Scope* s = scope; s != nullptr; s = s->parent()) {
         if (s->kind() == ScopeKind::Function) return s;
@@ -83,7 +91,7 @@ void TypeChecker::checkArguments(const std::vector<TypePtr>& paramTypes,
         return;
     }
     for (size_t i = 0; i < paramTypes.size(); i++) {
-        checkCompatible(paramTypes[i], argTypes[i], diagnostics::codes::SEM008,
+        checkAssignable(paramTypes[i], argTypes[i], diagnostics::codes::SEM008,
                          "el argumento " + std::to_string(i + 1) +
                              " no coincide con el tipo esperado.",
                          line, column);
@@ -110,7 +118,7 @@ void TypeChecker::checkStatement(Statement* stmt) {
 
         TypePtr finalType;
         if (declaredType && initType) {
-            checkCompatible(declaredType, initType, diagnostics::codes::SEM003,
+            checkAssignable(declaredType, initType, diagnostics::codes::SEM003,
                              "el valor inicial no coincide con el tipo declarado de '" + n->name +
                                  "'.",
                              n->line, n->column);
@@ -131,7 +139,7 @@ void TypeChecker::checkStatement(Statement* stmt) {
         TypePtr declaredType = resolveDeclaredType(n->declared_type, scope);
         TypePtr finalType = declaredType ? declaredType : initType;
         if (declaredType) {
-            checkCompatible(declaredType, initType, diagnostics::codes::SEM003,
+            checkAssignable(declaredType, initType, diagnostics::codes::SEM003,
                              "el valor inicial no coincide con el tipo declarado de '" + n->name +
                                  "'.",
                              n->line, n->column);
@@ -143,7 +151,7 @@ void TypeChecker::checkStatement(Statement* stmt) {
     if (auto* n = dynamic_cast<AssignmentStatement*>(stmt)) {
         TypePtr valueType = checkExpression(n->value.get(), scope);
         TypePtr targetType = n->symbol ? n->symbol->resolved_type : nullptr;
-        checkCompatible(targetType, valueType, diagnostics::codes::SEM003,
+        checkAssignable(targetType, valueType, diagnostics::codes::SEM003,
                          "el valor asignado no coincide con el tipo de '" + n->target_name + "'.",
                          n->line, n->column);
         n->resolved_type = valueType;
@@ -154,7 +162,7 @@ void TypeChecker::checkStatement(Statement* stmt) {
                                              n->column);
         TypePtr valueType = checkExpression(n->value.get(), scope);
         if (member != nullptr) {
-            checkCompatible(member->resolved_type, valueType, diagnostics::codes::SEM003,
+            checkAssignable(member->resolved_type, valueType, diagnostics::codes::SEM003,
                              "el valor asignado no coincide con el tipo de '." + n->member_name +
                                  "'.",
                              n->line, n->column);
@@ -263,7 +271,7 @@ void TypeChecker::checkStatement(Statement* stmt) {
         if (fn == nullptr) return;
         TypePtr expected = fn->return_type ? resolveDeclaredType(fn->return_type, scope)
                                             : makeVoidType();
-        checkCompatible(expected, valueType, diagnostics::codes::SEM009,
+        checkAssignable(expected, valueType, diagnostics::codes::SEM009,
                          "el valor de 'return' no coincide con el tipo de retorno declarado.",
                          n->line, n->column);
         return;
@@ -271,6 +279,15 @@ void TypeChecker::checkStatement(Statement* stmt) {
     if (auto* n = dynamic_cast<FunctionDeclaration*>(stmt)) {
         Scope* funcScope = n->body->scope;
         for (auto& param : n->params) {
+            if (!param.declared_type) {
+                // Decision de lenguaje: todo parametro lleva tipo. Sin el no
+                // se puede validar ninguna llamada ni generar codigo seguro.
+                reporter_.error(diagnostics::codes::SEM011,
+                                 "el parametro '" + param.name + "' de '" + n->name +
+                                     "' necesita una anotacion de tipo (p. ej. '" +
+                                     param.name + ": integer').",
+                                 param.line, param.column);
+            }
             TypePtr paramType = resolveDeclaredType(param.declared_type, n->scope);
             if (auto sym = funcScope->resolveLocal(param.name)) sym->resolved_type = paramType;
         }
@@ -311,7 +328,7 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
     if (auto* n = dynamic_cast<AssignmentExpression*>(expr)) {
         TypePtr targetType = checkExpression(n->target.get(), scope);
         TypePtr valueType = checkExpression(n->value.get(), scope);
-        checkCompatible(targetType, valueType, diagnostics::codes::SEM003,
+        checkAssignable(targetType, valueType, diagnostics::codes::SEM003,
                          "el valor asignado no coincide con el tipo de la variable.", n->line,
                          n->column);
         n->resolved_type = targetType ? targetType : valueType;
@@ -322,7 +339,7 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
                                              n->column);
         TypePtr valueType = checkExpression(n->value.get(), scope);
         if (member != nullptr) {
-            checkCompatible(member->resolved_type, valueType, diagnostics::codes::SEM003,
+            checkAssignable(member->resolved_type, valueType, diagnostics::codes::SEM003,
                              "el valor asignado no coincide con el tipo de '." + n->member_name +
                                  "'.",
                              n->line, n->column);
@@ -362,9 +379,17 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
                                        n->line, n->column);
             result = ok ? makeBooleanType() : makeErrorType();
         } else if (op == "==" || op == "!=") {
-            checkCompatible(leftType, rightType, diagnostics::codes::SEM004,
-                             "no se puede comparar con '" + op + "' operandos de tipos distintos.",
-                             n->line, n->column);
+            // Dos objetos de clases relacionadas por herencia se pueden
+            // comparar (misma referencia o no), en cualquier orden.
+            bool related = leftType && rightType &&
+                           (isAssignable(*leftType, *rightType) ||
+                            isAssignable(*rightType, *leftType));
+            if (!related) {
+                checkCompatible(leftType, rightType, diagnostics::codes::SEM004,
+                                 "no se puede comparar con '" + op +
+                                     "' operandos de tipos distintos.",
+                                 n->line, n->column);
+            }
             result = makeBooleanType();
         } else if (op == "<" || op == "<=" || op == ">" || op == ">=") {
             bool ok = checkCompatible(makeIntegerType(), leftType, diagnostics::codes::SEM004,
@@ -456,6 +481,22 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
         // null aca es justamente ese caso, no hay que reportar de nuevo.
         n->resolved_type = n->symbol ? n->symbol->resolved_type : makeErrorType();
         if (!n->resolved_type) n->resolved_type = makeErrorType();
+        if (n != callee_ && n->symbol != nullptr) {
+            if (n->symbol->kind == SymbolKind::Function) {
+                reporter_.error(diagnostics::codes::SEM016,
+                                 "la funcion '" + n->name +
+                                     "' solo se puede llamar; no se puede usar como valor.",
+                                 n->line, n->column);
+                n->resolved_type = makeErrorType();
+            } else if (n->symbol->kind == SymbolKind::Class) {
+                reporter_.error(diagnostics::codes::SEM016,
+                                 "la clase '" + n->name +
+                                     "' no es un valor; para crear un objeto usa 'new " +
+                                     n->name + "(...)'.",
+                                 n->line, n->column);
+                n->resolved_type = makeErrorType();
+            }
+        }
         return n->resolved_type;
     }
     if (auto* n = dynamic_cast<ThisExpression*>(expr)) {
@@ -495,13 +536,23 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
         return n->resolved_type;
     }
     if (auto* n = dynamic_cast<CallExpression*>(expr)) {
+        // El callee es el unico lugar donde un nombre de funcion o metodo
+        // se puede usar sin ser un valor (ver SEM016).
+        Expression* previousCallee = callee_;
+        callee_ = n->callee.get();
         TypePtr calleeType = checkExpression(n->callee.get(), scope);
+        callee_ = previousCallee;
         std::vector<TypePtr> argTypes;
         for (auto& arg : n->arguments) argTypes.push_back(checkExpression(arg.get(), scope));
         if (calleeType && calleeType->kind == TypeKind::Function) {
             checkArguments(calleeType->param_types, argTypes, n->line, n->column);
             n->resolved_type = calleeType->return_type;
         } else {
+            if (calleeType && calleeType->kind != TypeKind::Error) {
+                reporter_.error(diagnostics::codes::SEM016,
+                                 "solo se pueden llamar funciones y metodos.", n->line,
+                                 n->column);
+            }
             n->resolved_type = makeErrorType();
         }
         return n->resolved_type;
@@ -532,6 +583,13 @@ TypePtr TypeChecker::checkExpression(Expression* expr, Scope* scope) {
         n->symbol = member;
         n->resolved_type = (member != nullptr && member->resolved_type) ? member->resolved_type
                                                                           : makeErrorType();
+        if (member != nullptr && member->kind == SymbolKind::Function && n != callee_) {
+            reporter_.error(diagnostics::codes::SEM016,
+                             "el metodo '" + n->member_name +
+                                 "' solo se puede llamar; no se puede usar como valor.",
+                             n->line, n->column);
+            n->resolved_type = makeErrorType();
+        }
         return n->resolved_type;
     }
 

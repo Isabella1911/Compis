@@ -81,11 +81,14 @@ std::string codegenText(const Symbol& symbol) {
         if (fn->label.empty()) return "";
         return "  [" + fn->label + ", frame " + std::to_string(fn->frame_size) +
                " bytes, anidamiento " + std::to_string(fn->nesting_depth) +
-               (fn->is_method ? ", metodo" : "") + "]";
+               (fn->is_method ? ", metodo" : "") +
+               (fn->vtable_slot >= 0 ? ", slot " + std::to_string(fn->vtable_slot) : "") +
+               (fn->overridden ? ", redefinido" : "") + "]";
     }
     if (auto* cls = dynamic_cast<const ClassSymbol*>(&symbol)) {
         if (cls->instance_size == 0) return "";
-        return "  [instancia " + std::to_string(cls->instance_size) + " bytes]";
+        return "  [instancia " + std::to_string(cls->instance_size) + " bytes, " +
+               cls->vtable_label + "]";
     }
 
     std::string size = std::to_string(symbol.size) + " bytes";

@@ -4,17 +4,21 @@ Pipeline cubierto:
     Compiscript (.cps) -> ANTLR (lexer+parser) -> AST propio
     -> pases semanticos (declaraciones, herencia, nombres, tipos,
        flujo de control, closures) -> diagnosticos + AST + tabla de simbolos
+    -> FrameLayout + TacGenerator -> codigo intermedio (TAC)
 
 La IDE NO reimplementa nada: ejecuta `compiscript(.exe)` (compilado vía
 `make build` a partir de `src/main.cpp`) y reparte su salida en pestañas
 agrupadas para inspeccionar cada producto del compilador (diagnosticos con
-codigo SYN/SEM, AST y tabla de simbolos como texto, y el AST renderizado
-con Graphviz).
+codigo SYN/SEM, AST y tabla de simbolos extendida, el AST renderizado con
+Graphviz y el TAC). Tambien corre la bateria de pruebas (`make test`).
 
 El layout conserva el rediseño original:
     Menú superior + toolbar compacta + panel Proyecto + editor con tabs
-    + área inferior con tres grupos de pestañas (Resultados / Análisis /
-    Visualización) + barra de estado enriquecida.
+    + área inferior con cinco grupos de pestañas (Resultados / Análisis /
+    Visualización / Código intermedio / Pruebas) + barra de estado.
+
+Uso (desde la raiz del repo, en Linux o WSL con python3-tk):
+    python3 ide/ide_app.py
 """
 
 from __future__ import annotations
@@ -173,11 +177,15 @@ def normalizar_ruta_arrastrada(raw):
     return s
 AST_DOT_PATH      = OUTPUT_DIR / "ast.dot"
 AST_PNG_PATH      = OUTPUT_DIR / "ast.png"
+TAC_PATH          = OUTPUT_DIR / "programa.tac"
+EJEMPLOS_DIR      = PROJECT_ROOT / "tests" / "tac"
 ESTADO_IDE_PATH   = PROJECT_ROOT / ".ide_state.json"
 
 # El Makefile encapsula el toolchain real (JRE + antlr.jar + runtime C++ de
 # ANTLR, ver tools/setup.sh); la IDE solo invoca `make build`.
 COMANDO_COMPILACION = ["make", "build"]
+# La bateria completa (tabla de simbolos + semantica + TAC), ver Makefile.
+COMANDO_PRUEBAS = ["make", "test"]
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -253,6 +261,10 @@ EMPTY_STATES = {
     "salida":      "  ▷  Ejecutá Compilar (F5) o Ejecutar análisis (F6)\n"
                     "      para ver la salida del compilador aquí.",
     "errores":     "  ✓  Sin errores.",
+    "tac":         "  ▷  Ejecutá un análisis (F6) para ver el código de tres\n"
+                    "      direcciones generado.",
+    "pruebas":     "  ▷  Presioná 'Correr pruebas' (F7) para ejecutar la\n"
+                    "      batería completa (make test).",
 }
 
 
@@ -314,9 +326,14 @@ FUENTE_UI_SIZE   = 9
 #   Tabla de simbolos:
 #   <arbol impreso por semantic::printScopeTree>
 #   [AST-DOT] Exportado a: output/ast.dot
+#   Codigo intermedio:          (solo si no hubo errores)
+#   <TAC impreso por ir::printProgram>
+#   [TAC] Exportado a: output/programa.tac
 # ──────────────────────────────────────────────────────────────────────
 
-_MARCADORES_SECCION = ("Diagnosticos:", "AST:", "Tabla de simbolos:")
+_MARCADORES_SECCION = ("Diagnosticos:", "AST:", "Tabla de simbolos:",
+                       "Codigo intermedio:")
+_PIES_SECCION = ("[AST-DOT]", "[TAC]")
 
 _PATRON_DIAGNOSTICO = re.compile(
     r"^\s*\[(\w+)\]\s+(error|warning)\s+(\d+):(\d+):\s*(.*)$")
@@ -342,7 +359,7 @@ def parsear_diagnosticos(stdout):
 
 def extraer_bloque(stdout, marcador):
     """Devuelve el texto entre una linea == marcador (p.ej. 'AST:') y el
-    siguiente marcador de seccion conocido (o el pie '[AST-DOT]')."""
+    siguiente marcador de seccion conocido (o un pie '[AST-DOT]'/'[TAC]')."""
     lineas = stdout.splitlines()
     try:
         inicio = next(i for i, l in enumerate(lineas)
@@ -352,7 +369,7 @@ def extraer_bloque(stdout, marcador):
     cuerpo = []
     for l in lineas[inicio + 1:]:
         if (l.strip() in _MARCADORES_SECCION
-                or l.strip().startswith("[AST-DOT]")):
+                or l.strip().startswith(_PIES_SECCION)):
             break
         cuerpo.append(l)
     return "\n".join(cuerpo).strip("\n")
@@ -793,6 +810,90 @@ class EditorConNumeros(ttk.Frame):
 # Tabla visual con ttk.Treeview: diagnosticos de la ultima corrida
 # ──────────────────────────────────────────────────────────────────────
 
+# Una linea de semantic::printScopeTree, p. ej.:
+#   var p : Punto  (linea 16)  [global g_p, 4 bytes]
+#   function suma : () -> integer  (linea 11)  [Punto_suma, frame 0 bytes, anidamiento 0, metodo]
+_PATRON_SIMBOLO = re.compile(
+    r"^(?P<ind>\s*)(?P<clase>\w+) (?P<nombre>\S+) : (?P<tipo>.*?)"
+    r"  \(linea (?P<linea>\d+)\)(?:  \[(?P<extra>.*)\])?\s*$")
+_PATRON_SCOPE = re.compile(r"^(?P<ind>\s*)Scope\((?P<tipo>\w+)\)\s*$")
+_PATRON_TAMANO = re.compile(r"^(?:instancia |frame )?(\d+) bytes$")
+
+
+def parsear_tabla_simbolos(texto):
+    """Convierte la tabla impresa por el compilador en una lista de filas
+    (nivel, es_scope, valores) para mostrarla con columnas."""
+    filas = []
+    for linea in texto.splitlines():
+        m = _PATRON_SCOPE.match(linea)
+        if m:
+            filas.append((len(m.group("ind")) // 2, True,
+                          {"nombre": f"Scope({m.group('tipo')})"}))
+            continue
+        m = _PATRON_SIMBOLO.match(linea)
+        if not m:
+            continue
+        partes = [p.strip() for p in (m.group("extra") or "").split(",") if p.strip()]
+        tamano, frame, ubicacion, otros = "", "", "", []
+        for p in partes:
+            mt = _PATRON_TAMANO.match(p)
+            if mt and p.startswith("frame "):
+                frame = f"{mt.group(1)} B"
+            elif mt:
+                tamano = f"{mt.group(1)} B"
+            elif not ubicacion:
+                ubicacion = p
+            else:
+                otros.append(p)
+        filas.append((len(m.group("ind")) // 2, False, {
+            "nombre": m.group("nombre"), "clase": m.group("clase"),
+            "tipo": m.group("tipo"), "linea": m.group("linea"),
+            "ubicacion": ubicacion, "tamano": tamano, "frame": frame,
+            "otros": ", ".join(otros)}))
+    return filas
+
+
+class TablaSimbolos(ttk.Frame):
+    """Treeview jerarquico (un nodo por Scope) con las columnas que agrega
+    la tabla de simbolos extendida: ubicacion (global/offset/etiqueta),
+    tamano y frame."""
+
+    COLUMNAS = (("clase", "Clase", 80), ("tipo", "Tipo", 230),
+                ("linea", "Línea", 55), ("ubicacion", "Dirección / etiqueta", 170),
+                ("tamano", "Tamaño", 70), ("frame", "Frame", 65),
+                ("otros", "Otros", 200))
+
+    def __init__(self, master):
+        super().__init__(master, style="Card.TFrame")
+        self._tree = ttk.Treeview(self, show="tree headings",
+                                   style="Tabla.Treeview")
+        sy = ttk.Scrollbar(self, orient="vertical", command=self._tree.yview)
+        sx = ttk.Scrollbar(self, orient="horizontal", command=self._tree.xview)
+        self._tree.configure(yscrollcommand=sy.set, xscrollcommand=sx.set)
+        self._tree.grid(row=0, column=0, sticky="nsew")
+        sy.grid(row=0, column=1, sticky="ns")
+        sx.grid(row=1, column=0, sticky="ew")
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
+        self._tree["columns"] = tuple(c for c, _, _ in self.COLUMNAS)
+        self._tree.heading("#0", text="Nombre")
+        self._tree.column("#0", width=200, stretch=False)
+        for c, titulo, ancho in self.COLUMNAS:
+            self._tree.heading(c, text=titulo)
+            self._tree.column(c, width=ancho, anchor="w", stretch=(c == "otros"))
+        self._tree.tag_configure("scope", foreground=Tema.ACCENT)
+
+    def cargar(self, texto):
+        self._tree.delete(*self._tree.get_children())
+        padres = {-1: ""}
+        for nivel, es_scope, v in parsear_tabla_simbolos(texto):
+            padre = padres.get(nivel - 1, "")
+            valores = tuple(v.get(c, "") for c, _, _ in self.COLUMNAS)
+            iid = self._tree.insert(padre, "end", text=v["nombre"], values=valores,
+                                     open=True, tags=("scope",) if es_scope else ())
+            padres[nivel] = iid
+
+
 class TablaDiagnosticos(ttk.Frame):
     """Treeview con codigo/severidad/linea/columna/mensaje. Doble click
     en una fila salta a esa posicion en el editor (via `on_doble_click`)."""
@@ -1074,6 +1175,22 @@ class IDE:
                              activeforeground=Tema.FG)
         m_archivo.add_command(label="Cargar archivo .cps...",
                               command=self.cargar_fuente)
+        m_ejemplos = tk.Menu(m_archivo, tearoff=0,
+                              background=Tema.BG_PANEL, foreground=Tema.FG,
+                              activebackground=Tema.BG_ACTIVE,
+                              activeforeground=Tema.FG)
+        ejemplos = sorted(EJEMPLOS_DIR.glob("*.cps")) if EJEMPLOS_DIR.exists() else []
+        for ruta in ejemplos:
+            m_ejemplos.add_command(
+                label=ruta.stem,
+                command=lambda r=ruta: self.cargar_ejemplo(r))
+        if not ejemplos:
+            m_ejemplos.add_command(label="(no hay ejemplos en tests/tac)",
+                                   state="disabled")
+        m_archivo.add_cascade(label="Ejemplos", menu=m_ejemplos)
+        m_archivo.add_separator()
+        m_archivo.add_command(label="Guardar TAC…",
+                              command=self.guardar_tac)
         m_archivo.add_separator()
         m_archivo.add_command(label="Guardar",
                               accelerator="Ctrl+S",
@@ -1117,6 +1234,8 @@ class IDE:
                             command=self.compilar)
         m_comp.add_command(label="Ejecutar análisis", accelerator="F6",
                             command=self.ejecutar)
+        m_comp.add_command(label="Correr pruebas", accelerator="F7",
+                            command=self.correr_pruebas)
         m_comp.add_separator()
         m_comp.add_command(label="Limpiar consola", accelerator="Ctrl+L",
                             command=self.limpiar_salida)
@@ -1142,6 +1261,8 @@ class IDE:
         m_vis.add_command(label="Mostrar tabla de símbolos",
                            command=lambda: self._seleccionar_seccion(
                                "tabla_simbolos"))
+        m_vis.add_command(label="Mostrar código intermedio",
+                           command=lambda: self._seleccionar_seccion("tac"))
         menubar.add_cascade(label="Visualizar", menu=m_vis)
 
         # Herramientas
@@ -1183,6 +1304,10 @@ class IDE:
 
         ttk.Button(barra, text="⟳  AST",
                     command=self.renderizar_ast).pack(side="left", padx=(0, 8))
+        ttk.Button(barra, text="✓  Pruebas",
+                    command=self.correr_pruebas).pack(side="left", padx=(0, 8))
+        ttk.Button(barra, text="⤓  Guardar TAC",
+                    command=self.guardar_tac).pack(side="left", padx=(0, 8))
         ttk.Button(barra, text="✕  Limpiar",
                     command=self.limpiar_salida).pack(side="left")
 
@@ -1325,6 +1450,10 @@ class IDE:
         nb2 = ttk.Notebook(g2)
         nb2.pack(fill="both", expand=True, padx=8, pady=8)
         self._construir_panel_analisis(nb2)
+        frame_ts = ttk.Frame(nb2, style="Card.TFrame")
+        nb2.add(frame_ts, text="Tabla de símbolos (columnas)")
+        self._tabla_simbolos = TablaSimbolos(frame_ts)
+        self._tabla_simbolos.pack(fill="both", expand=True, padx=6, pady=6)
 
         # Grupo 3: Visualización (AST renderizado con Graphviz)
         g3 = ttk.Frame(self._grupos, style="Card.TFrame")
@@ -1332,6 +1461,57 @@ class IDE:
         nb3 = ttk.Notebook(g3)
         nb3.pack(fill="both", expand=True, padx=8, pady=8)
         self._construir_panel_ast_grafico(nb3)
+
+        # Grupo 4: Código intermedio (TAC)
+        g4 = ttk.Frame(self._grupos, style="Card.TFrame")
+        self._grupos.add(g4, text=" Código intermedio ")
+        self._construir_panel_tac(g4)
+
+        # Grupo 5: Batería de pruebas (make test)
+        g5 = ttk.Frame(self._grupos, style="Card.TFrame")
+        self._grupos.add(g5, text=" Pruebas ")
+        self._construir_panel_pruebas(g5)
+
+    def _construir_panel_tac(self, grupo):
+        cabecera = ttk.Frame(grupo, style="Card.TFrame", padding=(10, 10))
+        cabecera.pack(side="top", fill="x")
+        self._tac_estado = ttk.Label(
+            cabecera, text="Código de tres direcciones (output/programa.tac).",
+            style="Card.TLabel")
+        self._tac_estado.pack(side="left")
+        ttk.Button(cabecera, text="Guardar TAC…",
+                    command=self.guardar_tac).pack(side="right", padx=2)
+        ttk.Button(cabecera, text="Abrir externo (.tac)",
+                    command=lambda: self._abrir_archivo(TAC_PATH)
+                    ).pack(side="right", padx=2)
+        nb = ttk.Notebook(grupo)
+        nb.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        self.paneles["tac"] = self._panel_texto(nb, "TAC")
+        panel = self.paneles["tac"]
+        panel.tag_configure("tac_func", foreground=Tema.ACCENT,
+                             font=(FUENTE_MONO_NAME, FUENTE_MONO_SIZE, "bold"))
+        panel.tag_configure("tac_label", foreground=Tema.WARN)
+        panel.tag_configure("tac_salto", foreground=Tema.INFO)
+        panel.tag_configure("tac_call", foreground=Tema.OK)
+        panel.tag_configure("tac_com", foreground=Tema.FG_MUTED)
+        self._escribir("tac", "")
+
+    def _construir_panel_pruebas(self, grupo):
+        cabecera = ttk.Frame(grupo, style="Card.TFrame", padding=(10, 10))
+        cabecera.pack(side="top", fill="x")
+        self._pruebas_estado = ttk.Label(
+            cabecera,
+            text="Batería: tabla de símbolos, casos semánticos válidos/"
+                 "fallidos y TAC contra los esperados.",
+            style="Card.TLabel")
+        self._pruebas_estado.pack(side="left")
+        ttk.Button(cabecera, text="✓  Correr pruebas",
+                    style="Accent.TButton",
+                    command=self.correr_pruebas).pack(side="right", padx=2)
+        nb = ttk.Notebook(grupo)
+        nb.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        self.paneles["pruebas"] = self._panel_texto(nb, "Resultado")
+        self._escribir("pruebas", "")
 
     def _panel_texto(self, notebook, titulo):
         frame = ttk.Frame(notebook, style="Card.TFrame")
@@ -1514,6 +1694,7 @@ class IDE:
         self.root.bind_all("<Control-o>", lambda _ev: self.cargar_activo())
         self.root.bind_all("<F5>",       lambda _ev: self.compilar())
         self.root.bind_all("<F6>",       lambda _ev: self.ejecutar())
+        self.root.bind_all("<F7>",       lambda _ev: self.correr_pruebas())
         self.root.bind_all("<Control-l>", lambda _ev: self.limpiar_salida())
         self.root.bind_all("<Control-f>", lambda _ev: self.abrir_buscar())
 
@@ -1988,9 +2169,13 @@ class IDE:
 
         # Panel Análisis (AST / tabla de símbolos)
         self._refrescar_panel_analisis()
+        self._tabla_simbolos.cargar(extraer_bloque(stdout, "Tabla de simbolos:"))
 
         # Estado
         errores, warnings = resumen_diagnosticos(diagnosticos)
+
+        # Código intermedio: el compilador solo lo genera si no hubo errores.
+        self._refrescar_panel_tac(stdout, errores)
         if codigo == 0 and errores == 0:
             if warnings:
                 self._set_toolbar(
@@ -2029,8 +2214,14 @@ class IDE:
                 tag = "err" if m.group(2) == "error" else "warn"
             elif stripped.upper().startswith("ERROR"):
                 tag = "err"
-            elif stripped.startswith("[AST-DOT]"):
+            elif stripped.startswith(_PIES_SECCION):
                 tag = "info"
+            elif stripped.startswith("OK ") or re.match(r"^\d+ ok, 0 fallos", stripped):
+                tag = "ok"
+            elif stripped.startswith("FALLO") or re.match(r"^\d+ ok, \d+ fallos", stripped):
+                tag = "err"
+            elif stripped.startswith("== ") and stripped.endswith(" =="):
+                tag = "encabezado"
             elif stripped.startswith("("):
                 tag = "muted"
             if tag:
@@ -2163,6 +2354,148 @@ class IDE:
             cuerpo = f"(no se encontró '{seleccion}' en la última corrida)"
         self._set_text_disabled(self._analisis_text, cuerpo)
 
+    # ── Código intermedio (TAC) ───────────────────────────────────────
+
+    _PATRON_TAC_SALTO = re.compile(r"\b(goto|if|ifFalse)\b")
+    _PATRON_TAC_CALL = re.compile(r"\b(call|param|return|new)\b")
+
+    def _refrescar_panel_tac(self, stdout, errores):
+        if errores:
+            self._escribir(
+                "tac",
+                f"No se genera TAC porque hay {errores} error(es).\n\n"
+                "Corregilos (ver la pestaña Diagnósticos) y volvé a ejecutar "
+                "el análisis.")
+            self.paneles["tac"].configure(state="normal")
+            self.paneles["tac"].tag_add("err", "1.0", "1.end")
+            self.paneles["tac"].configure(state="disabled")
+            self._tac_estado.configure(text="Sin código intermedio (hay errores).")
+            return
+        cuerpo = extraer_bloque(stdout, "Codigo intermedio:")
+        if not cuerpo.strip():
+            self._escribir("tac", "(el compilador no imprimió código intermedio)")
+            self._tac_estado.configure(text="Sin código intermedio.")
+            return
+        self._escribir("tac", cuerpo)
+        self._colorizar_tac(self.paneles["tac"])
+        n = sum(1 for l in cuerpo.splitlines()
+                if l.strip() and not l.lstrip().startswith("#"))
+        self._tac_estado.configure(
+            text=f"{n} líneas de TAC — también en output/programa.tac")
+
+    def _colorizar_tac(self, widget):
+        widget.configure(state="normal")
+        for idx, linea in enumerate(widget.get("1.0", "end-1c").splitlines(),
+                                     start=1):
+            s = linea.strip()
+            if not s:
+                continue
+            ini, fin = f"{idx}.0", f"{idx}.end"
+            if s.startswith("#"):
+                widget.tag_add("tac_com", ini, fin)
+            elif s.startswith(("func ", "endfunc", "class ", "endclass")):
+                widget.tag_add("tac_func", ini, fin)
+            elif s.endswith(":") and " " not in s:
+                widget.tag_add("tac_label", ini, fin)
+            else:
+                for patron, tag in ((self._PATRON_TAC_SALTO, "tac_salto"),
+                                    (self._PATRON_TAC_CALL, "tac_call")):
+                    for m in patron.finditer(linea):
+                        widget.tag_add(tag, f"{idx}.{m.start()}",
+                                       f"{idx}.{m.end()}")
+        widget.configure(state="disabled")
+
+    def guardar_tac(self):
+        if not TAC_PATH.exists():
+            self._reportar_error(
+                "Todavía no hay código intermedio.\n\n"
+                "Ejecutá un análisis (F6) de un programa sin errores primero.")
+            return
+        editor = self._editores["fuente"]
+        sugerido = (Path(editor.ruta).stem + ".tac") if editor.ruta else "programa.tac"
+        destino = self._dialogo_archivo(
+            filedialog.asksaveasfilename,
+            title="Guardar código intermedio",
+            initialfile=sugerido,
+            defaultextension=".tac",
+            filetypes=(("Código de tres direcciones", "*.tac"),
+                       ("Todos", "*.*")),
+        )
+        if not destino:
+            return
+        try:
+            shutil.copyfile(TAC_PATH, destino)
+        except OSError as exc:
+            self._reportar_error(f"No se pudo guardar el TAC:\n{exc}")
+            return
+        self._set_toolbar(f"TAC guardado: {Path(destino).name}", Tema.OK)
+
+    def cargar_ejemplo(self, ruta):
+        editor = self._editores["fuente"]
+        try:
+            editor.cargar(str(ruta))
+        except OSError as exc:
+            self._reportar_error(f"No se pudo abrir {ruta}\n{exc}")
+            return
+        self._refrescar_proyecto()
+        self._editor_tabs.select(self._editor_tab_index["fuente"])
+        self._set_toolbar(f"Ejemplo cargado: {Path(ruta).name}", Tema.OK)
+
+    # ── Batería de pruebas ────────────────────────────────────────────
+
+    def correr_pruebas(self):
+        if self.proceso_activo:
+            messagebox.showinfo("Compis IDE",
+                                  "Ya hay un proceso en ejecucion.")
+            return
+        self.proceso_activo = True
+        self._set_toolbar("Corriendo pruebas…", Tema.WARN)
+        self._pruebas_estado.configure(text="Corriendo make test…")
+        self._iniciar_spinner()
+        self._escribir("pruebas", "$ " + " ".join(COMANDO_PRUEBAS) + "\n\n(corriendo…)")
+        self._seleccionar_seccion("pruebas")
+        threading.Thread(target=self._pruebas_thread, daemon=True).start()
+
+    def _pruebas_thread(self):
+        entorno = dict(os.environ, NO_COLOR="1")
+        try:
+            proc = subprocess.run(
+                COMANDO_PRUEBAS, cwd=str(PROJECT_ROOT),
+                capture_output=True, text=True,
+                encoding="utf-8", errors="replace", env=entorno)
+        except OSError as exc:
+            mensaje = (f"No se pudo ejecutar `make test`.\n{exc}\n"
+                       "Verificá que make, g++ y python3 estén en el PATH.")
+            self.root.after(0, lambda: self._fin_pruebas(None, mensaje))
+            return
+        salida = "$ " + " ".join(COMANDO_PRUEBAS) + "\n" + proc.stdout
+        if proc.stderr:
+            salida += "\n--- stderr ---\n" + proc.stderr
+        self.root.after(0, lambda: self._fin_pruebas(proc.returncode, salida))
+
+    def _fin_pruebas(self, codigo, salida):
+        self._detener_spinner()
+        self.proceso_activo = False
+        self._escribir("pruebas", salida)
+        self._colorizar_consola(self.paneles["pruebas"])
+        self.paneles["pruebas"].see("end")
+        m = None
+        for linea in reversed(salida.splitlines()):
+            m = re.match(r"^\s*(\d+) ok, (\d+) fallos", linea)
+            if m:
+                break
+        if codigo == 0:
+            resumen = f"{m.group(1)} ok, 0 fallos" if m else "todas pasaron"
+            self._set_toolbar(f"Pruebas: {resumen}", Tema.OK)
+        elif m:
+            resumen = f"{m.group(1)} ok, {m.group(2)} fallos"
+            self._set_toolbar(f"Pruebas: {resumen}", Tema.ERR)
+        else:
+            resumen = "no se pudieron correr" if codigo is None else f"falló make (código {codigo})"
+            self._set_toolbar(f"Pruebas: {resumen}", Tema.ERR)
+        self._pruebas_estado.configure(text=f"Último resultado: {resumen}")
+        self._seleccionar_seccion("pruebas")
+
     # ── Abrir externo ─────────────────────────────────────────────────
 
     def _abrir_archivo(self, ruta):
@@ -2220,6 +2553,7 @@ class IDE:
             if isinstance(panel, tk.Text):
                 self._escribir(clave, "")
         self._tabla_diagnosticos.limpiar()
+        self._tabla_simbolos.cargar("")
         self._ast_imagen = None
         self._ast_canvas.delete("all")
         self._ast_canvas.create_text(
@@ -2241,6 +2575,7 @@ class IDE:
         mapeo_grupo = {
             "salida": 0, "diagnosticos": 0, "errores": 0,
             "ast": 1, "tabla_simbolos": 1,
+            "tac": 3, "pruebas": 4,
         }
         if clave not in mapeo_grupo:
             return
@@ -2459,7 +2794,8 @@ class IDE:
             "Ctrl+L          Limpiar consola\n"
             "Ctrl+F          Buscar en el editor\n"
             "F5              Compilar\n"
-            "F6              Ejecutar análisis"
+            "F6              Ejecutar análisis\n"
+            "F7              Correr pruebas (make test)"
         )
 
     def _mostrar_acerca(self):

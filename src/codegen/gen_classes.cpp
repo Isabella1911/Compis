@@ -17,6 +17,7 @@ using semantic::StorageKind;
 namespace {
 
 constexpr int kThisOffset = 8;  // fp + 8: 'this' es el parametro 0
+constexpr int kVtableOffset = 0;  // palabra 0 del objeto: puntero a la vtable
 
 // Inicializadores de atributos propios de una clase, en orden de offset.
 void collectOwnFieldInits(ClassDeclaration* decl,
@@ -56,6 +57,9 @@ Operand TacGenerator::genNew(NewExpression* n) {
     if (cls == nullptr) return todo("parte 2", "new " + n->class_name);
 
     Operand obj = emitAlloc(Operand::makeInt(cls->instance_size));
+    // La vtable es la de la clase real del objeto: es lo que permite que
+    // `let a: Animal = new Perro()` despache a.hablar() a Perro_hablar.
+    emitStore(obj, Operand::makeInt(kVtableOffset), Operand::makeLabel(cls->vtable_label));
 
     // Inicializadores de atributos: base primero, despues la derivada.
     // Sin inicializador se escribe 0 (null/false/0).

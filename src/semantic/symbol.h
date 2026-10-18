@@ -72,6 +72,12 @@ public:
     int frame_size = 0;     // bytes de locales en su registro de activacion
     int nesting_depth = 0;  // 0 = declarada en el nivel superior (o metodo de clase)
     bool is_method = false; // metodo o constructor: 'this' es el parametro 0
+    // Metodos (no el constructor): posicion en la vtable de su clase, la
+    // misma en todas las subclases. -1 si no es metodo.
+    int vtable_slot = -1;
+    // true si alguna subclase lo redefine: entonces una llamada a este
+    // metodo se despacha en tiempo de ejecucion por la vtable del objeto.
+    bool overridden = false;
 };
 using FunctionSymbolPtr = std::shared_ptr<FunctionSymbol>;
 
@@ -85,7 +91,11 @@ public:
     Scope* class_scope = nullptr;       // no propietario
 
     // --- Generacion de codigo (lo llena la parte 2) ---
-    int instance_size = 0;  // bytes de un objeto, atributos heredados incluidos
+    int instance_size = 0;  // bytes de un objeto: palabra 0 (vtable) + atributos, heredados incluidos
+    // Tabla de metodos: el metodo que ejecuta un objeto de esta clase en cada
+    // slot (heredado o redefinido). La palabra 0 de cada objeto apunta aqui.
+    std::string vtable_label;               // <Clase>_vtable
+    std::vector<FunctionSymbol*> vtable;    // no propietario
 };
 using ClassSymbolPtr = std::shared_ptr<ClassSymbol>;
 

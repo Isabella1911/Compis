@@ -20,6 +20,7 @@ namespace {
 constexpr int kWordSize = 4;
 constexpr int kFirstParamOffset = 8;   // fp + 8: parametro 0
 constexpr int kFirstLocalOffset = -8;  // fp - 8: local 0
+constexpr int kObjectHeader = 4;       // palabra 0 de un objeto: puntero a su vtable
 
 // `base` si no esta en `used`; si no, base + separador + 1, 2, ... hasta
 // encontrar uno libre. Lo marca como usado.
@@ -37,8 +38,11 @@ void FrameLayout::run(Program& program, semantic::SymbolTable& /*table*/) {
     globals_.clear();
     used_labels_.clear();
     laid_out_classes_.clear();
+    classes_.clear();
+    vtables_built_.clear();
     top_level_ = FrameState();
     walkStatements(program.statements, top_level_);
+    for (ClassSymbol* cls : classes_) buildVtable(cls);
 }
 
 void FrameLayout::walkStatements(const std::vector<StatementPtr>& statements,
@@ -54,6 +58,7 @@ void FrameLayout::walkStatement(Statement* stmt, FrameState& state) {
     }
     if (auto* n = dynamic_cast<ClassDeclaration*>(stmt)) {
         auto* cls = dynamic_cast<ClassSymbol*>(n->symbol);
+        if (cls != nullptr) classes_.push_back(cls);
         layoutClassFields(cls);
         for (const auto& member : n->members) {
             if (auto* method = dynamic_cast<FunctionDeclaration*>(member.get())) {
@@ -160,11 +165,12 @@ void FrameLayout::layoutFunction(FunctionDeclaration* decl, FunctionSymbol* encl
 void FrameLayout::layoutClassFields(ClassSymbol* cls) {
     if (cls == nullptr || laid_out_classes_.count(cls) > 0) return;
     // Base primero: los atributos heredados quedan en las mismas posiciones
-    // que en la clase base (despacho estatico sin vtables).
+    // que en la clase base, asi un objeto de la subclase se puede usar donde
+    // se espera la base.
     if (cls->base_class != nullptr) layoutClassFields(cls->base_class);
     laid_out_classes_.insert(cls);
 
-    int offset = cls->base_class != nullptr ? cls->base_class->instance_size : 0;
+    int offset = cls->base_class != nullptr ? cls->base_class->instance_size : kObjectHeader;
     if (cls->class_scope == nullptr) {
         cls->instance_size = offset;
         return;
@@ -190,6 +196,45 @@ void FrameLayout::layoutClassFields(ClassSymbol* cls) {
         offset += kWordSize;
     }
     cls->instance_size = offset;
+}
+
+void FrameLayout::buildVtable(ClassSymbol* cls) {
+    if (cls == nullptr || vtables_built_.count(cls) > 0) return;
+    vtables_built_.insert(cls);
+    if (cls->base_class != nullptr) buildVtable(cls->base_class);
+
+    cls->vtable_label = cls->name + "_vtable";
+    cls->vtable = cls->base_class != nullptr ? cls->base_class->vtable
+                                             : std::vector<FunctionSymbol*>();
+    if (cls->class_scope == nullptr) return;
+
+    std::vector<FunctionSymbol*> methods;
+    for (const auto& entry : cls->class_scope->symbols()) {
+        auto* fn = dynamic_cast<FunctionSymbol*>(entry.second.get());
+        // El constructor no es virtual: `new C(...)` siempre sabe cual llamar.
+        if (fn != nullptr && fn->name != "constructor") methods.push_back(fn);
+    }
+    std::sort(methods.begin(), methods.end(), [](const Symbol* a, const Symbol* b) {
+        if (a->declared_line != b->declared_line) return a->declared_line < b->declared_line;
+        return a->declared_column < b->declared_column;
+    });
+
+    for (FunctionSymbol* fn : methods) {
+        int slot = -1;
+        for (size_t i = 0; i < cls->vtable.size(); i++) {
+            if (cls->vtable[i]->name == fn->name) slot = static_cast<int>(i);
+        }
+        if (slot >= 0) {
+            // Redefinicion: mismo slot que en la base. Toda llamada al
+            // metodo de la base pasa a despacharse por la vtable.
+            cls->vtable[slot]->overridden = true;
+            cls->vtable[slot] = fn;
+        } else {
+            slot = static_cast<int>(cls->vtable.size());
+            cls->vtable.push_back(fn);
+        }
+        fn->vtable_slot = slot;
+    }
 }
 
 }  // namespace codegen

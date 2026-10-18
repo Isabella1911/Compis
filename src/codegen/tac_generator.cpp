@@ -15,6 +15,12 @@ ir::TacProgram TacGenerator::generate(Program& program, const FrameLayout& layou
     class_decls_.clear();
 
     for (semantic::Symbol* g : layout.globals()) program_.globals.push_back({g->ir_name, g->size});
+    for (semantic::ClassSymbol* cls : layout.classes()) {
+        ir::VTable vt;
+        vt.label = cls->vtable_label;
+        for (semantic::FunctionSymbol* m : cls->vtable) vt.methods.push_back(m->label);
+        program_.vtables.push_back(std::move(vt));
+    }
 
     // main va primero en la salida, pero termina de generarse al final
     // (despues de las funciones que declara): se le reserva el lugar 0.
@@ -146,6 +152,17 @@ Operand TacGenerator::emitCall(const std::string& label, int argc, bool hasResul
     Instruction in{OpCode::Call};
     in.label = label;
     in.argc = argc;
+    if (hasResult) in.dst = newTemp();
+    Operand result = in.dst;
+    emit(std::move(in));
+    return result;
+}
+
+Operand TacGenerator::emitCallIndirect(const Operand& target, int argc, bool hasResult) {
+    Instruction in{OpCode::Call};
+    in.a = target;
+    in.argc = argc;
+    release(target);  // se lee antes de escribir el resultado: puede reusarse
     if (hasResult) in.dst = newTemp();
     Operand result = in.dst;
     emit(std::move(in));

@@ -70,6 +70,10 @@ Operand TacGenerator::genCall(CallExpression* n) {
     auto* member = dynamic_cast<MemberAccessExpression*>(n->callee.get());
     if (fn->is_method && member != nullptr) {
         thisObj = genExpr(member->object.get());
+    } else if (fn->is_method) {
+        // Metodo llamado sin receptor dentro de su clase: el receptor es
+        // el 'this' actual (parametro 0, fp + 8).
+        thisObj = emitLoad(Operand::makeFramePtr(), Operand::makeInt(8));
     }
 
     // 2) param de derecha a izquierda.
@@ -77,10 +81,20 @@ Operand TacGenerator::genCall(CallExpression* n) {
     for (auto& a : args) release(a);
 
     // 3) Metodo: param this al final (es el parametro 0 en el frame).
+    //    Si alguna subclase lo redefine, la direccion sale de la vtable del
+    //    objeto: t = this[0] (vtable), t = t[4*slot] (metodo).
     int argc = static_cast<int>(n->arguments.size());
+    Operand target = Operand::none();
     if (fn->is_method) {
         emitParam(thisObj);
-        release(thisObj);
+        if (fn->overridden && fn->vtable_slot >= 0) {
+            release(thisObj);
+            Operand vtable = emitLoad(thisObj, Operand::makeInt(0));
+            release(vtable);
+            target = emitLoad(vtable, Operand::makeInt(4 * fn->vtable_slot));
+        } else {
+            release(thisObj);
+        }
         argc++;
     }
 
@@ -99,6 +113,7 @@ Operand TacGenerator::genCall(CallExpression* n) {
     }
 
     // 4) Llamada. hasResult si el retorno no es void.
+    if (!target.isNone()) return emitCallIndirect(target, argc, callHasResult(n));
     return emitCall(fn->label, argc, callHasResult(n));
 }
 

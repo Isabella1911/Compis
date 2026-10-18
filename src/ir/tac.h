@@ -32,6 +32,7 @@ enum class OperandKind {
     IntConst,  // constante entera; tambien true=1, false=0, null=0
     String,    // etiqueta de un literal de texto (str_0, str_1, ...)
     FramePtr,  // fp: base del registro de activacion actual
+    Label,     // direccion de una etiqueta de datos (p. ej. Perro_vtable)
 };
 
 struct Operand {
@@ -46,6 +47,7 @@ struct Operand {
     static Operand makeInt(int value);
     static Operand makeString(const std::string& label);
     static Operand makeFramePtr();
+    static Operand makeLabel(const std::string& label);
     // El nombre que se imprime sale de Symbol::ir_name (lo fija FrameLayout);
     // si todavia esta vacio, se usa el nombre del codigo fuente.
     static Operand makeVar(semantic::Symbol* symbol);
@@ -65,7 +67,7 @@ enum class OpCode {
     IfFalseGoto,  // ifFalse a goto label  | ifFalse a op b goto label
     Param,        // param a
     Link,         // link a                (enlace de acceso para el proximo call)
-    Call,         // [dst =] call label, argc
+    Call,         // [dst =] call label, argc   |  [dst =] call a, argc (indirecta: a = direccion)
     Return,       // return [a]
     Load,         // dst = a[b]            (palabra en la direccion a + b)
     Store,        // dst[a] = b            (guarda b en la direccion dst + a)
@@ -82,7 +84,7 @@ struct Instruction {
     Operand dst;
     Operand a;
     Operand b;
-    std::string label;  // Label/Goto/IfGoto/IfFalseGoto/Call/TryBegin
+    std::string label;  // Label/Goto/IfGoto/IfFalseGoto/Call/TryBegin (Call indirecta: vacio, usa a)
     int argc = 0;       // solo Call
     std::string text;   // solo Comment
 };
@@ -102,6 +104,13 @@ struct StringLiteral {
     std::string value;  // texto ya sin comillas (las secuencias de escape se dejan tal cual)
 };
 
+// Tabla de metodos de una clase: la palabra 0 de cada objeto apunta a su
+// vtable, y la palabra i es la direccion del metodo del slot i.
+struct VTable {
+    std::string label;                 // <Clase>_vtable
+    std::vector<std::string> methods;  // etiquetas de los metodos, por slot
+};
+
 struct GlobalVar {
     std::string label;  // g_<nombre>
     int size = 4;
@@ -110,6 +119,7 @@ struct GlobalVar {
 struct TacProgram {
     std::vector<GlobalVar> globals;
     std::vector<StringLiteral> strings;
+    std::vector<VTable> vtables;  // una por clase, en orden de declaracion
     std::vector<TacFunction> functions;  // main primero, luego en orden de declaracion
 };
 

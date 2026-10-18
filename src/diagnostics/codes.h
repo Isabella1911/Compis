@@ -17,7 +17,7 @@ namespace codes {
 
 constexpr const char* SYN001 = "SYN001";  // Error sintactico generico (delegado por ANTLR)
 
-// Reservados para la Etapa 3 (analisis semantico). No se emiten todavia.
+// Analisis semantico (todos se emiten).
 constexpr const char* SEM001 = "SEM001";  // Variable no declarada
 constexpr const char* SEM002 = "SEM002";  // Redeclaracion en el mismo ambito
 constexpr const char* SEM003 = "SEM003";  // Tipo incompatible en asignacion
@@ -33,6 +33,7 @@ constexpr const char* SEM012 = "SEM012";  // Codigo muerto (instrucciones tras r
 constexpr const char* SEM013 = "SEM013";  // Nombre de tipo invalido (ni primitivo ni clase declarada)
 constexpr const char* SEM014 = "SEM014";  // Herencia circular entre clases
 constexpr const char* SEM015 = "SEM015";  // 'this' usado fuera de un metodo de clase
+constexpr const char* SEM016 = "SEM016";  // Funcion, metodo o clase usado como valor, o llamada a algo que no es funcion
 
 }  // namespace codes
 }  // namespace diagnostics

@@ -25,7 +25,10 @@
 // reciben sufijo en el TAC (x, x@1, ...).
 //
 // Los atributos de clase (StorageKind::Field) y ClassSymbol::instance_size
-// se calculan en layoutClassFields (parte 2): base primero, luego propios.
+// se calculan en layoutClassFields (parte 2): la palabra 0 de todo objeto es
+// el puntero a la vtable de su clase; despues van los atributos, base
+// primero, luego propios. buildVtable arma la tabla de metodos de cada clase
+// (los de la base en los mismos slots, redefinidos reemplazados).
 
 #include <set>
 #include <string>
@@ -49,6 +52,9 @@ public:
     // Variables globales en orden de declaracion en el codigo fuente.
     const std::vector<semantic::Symbol*>& globals() const { return globals_; }
 
+    // Clases en orden de declaracion (para emitir sus vtables).
+    const std::vector<semantic::ClassSymbol*>& classes() const { return classes_; }
+
 private:
     // Lo que se va acumulando mientras se recorre el cuerpo de UNA funcion
     // (o el nivel superior, con fn == nullptr).
@@ -66,11 +72,15 @@ private:
     // Atributos de instancia: offsets desde el inicio del objeto, con los
     // heredados en las mismas posiciones que en la base.
     void layoutClassFields(semantic::ClassSymbol* cls);
+    // Corre al final, cuando todos los metodos ya tienen etiqueta.
+    void buildVtable(semantic::ClassSymbol* cls);
 
     std::vector<semantic::Symbol*> globals_;
     FrameState top_level_;
     std::set<std::string> used_labels_;
     std::set<semantic::ClassSymbol*> laid_out_classes_;
+    std::vector<semantic::ClassSymbol*> classes_;
+    std::set<semantic::ClassSymbol*> vtables_built_;
 };
 
 }  // namespace codegen

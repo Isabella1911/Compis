@@ -48,6 +48,12 @@ public:
 };
 using TypePtr = std::shared_ptr<Type>;
 
+// Para asignaciones, argumentos y return: como equals(), pero ademas un
+// objeto de una subclase se puede guardar donde se espera su clase base
+// (`let a: Animal = new Perro();`). El metodo que se ejecuta lo decide el
+// objeto en tiempo de ejecucion (vtable, ver docs/08 seccion 11).
+bool isAssignable(const Type& target, const Type& value);
+
 TypePtr makeIntegerType();
 TypePtr makeStringType();
 TypePtr makeBooleanType();
