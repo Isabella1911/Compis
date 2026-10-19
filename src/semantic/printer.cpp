@@ -109,6 +109,51 @@ std::string codegenText(const Symbol& symbol) {
     return "";
 }
 
+// Registro de activacion completo de una funcion, casilla por casilla (el
+// mismo esquema que docs/08 seccion 6), para que la tabla de simbolos muestre
+// no solo donde vive cada parametro/local sino tambien los enlaces, la
+// direccion de retorno y el area de temporales. Vacio si no se genero codigo.
+std::string activationRecordText(const FunctionSymbol& fn, const std::string& indent) {
+    if (fn.label.empty()) return "";
+    constexpr int kWord = 4;
+    const int params = static_cast<int>(fn.params.size()) + (fn.is_method ? 1 : 0);
+    const int locals = fn.frame_size / kWord;
+    const int total = kWord * params + 3 * kWord + fn.frame_size + kWord * fn.max_temps;
+
+    auto range = [](int from, int to) {
+        return from == to ? frameOffset(from) : frameOffset(from) + ".." + frameOffset(to);
+    };
+    auto row = [&indent](const std::string& where, const std::string& what) {
+        std::string padded = where;
+        if (padded.size() < 14) padded.append(14 - padded.size(), ' ');
+        return indent + "      " + padded + what + "\n";
+    };
+
+    std::string out = indent + "    registro de activacion (" + std::to_string(total) + " bytes):\n";
+    if (params > 0) {
+        out += row(range(8, 8 + kWord * (params - 1)),
+                   "parametros (" + std::to_string(params) + ")" +
+                       (fn.is_method ? ", this en fp+8" : ""));
+    }
+    out += row("fp+4", fn.nesting_depth > 0 ? "enlace de acceso (frame de la funcion contenedora)"
+                                             : "enlace de acceso (sin uso: no esta anidada)");
+    out += row("fp+0", "enlace de control (fp del llamador)");
+    out += row("fp-4", "direccion de retorno");
+    if (locals > 0) {
+        out += row(range(-8, -8 - kWord * (locals - 1)),
+                   "locales (" + std::to_string(locals) + ")");
+    }
+    if (fn.max_temps > 0) {
+        int first = -8 - fn.frame_size;
+        out += row(range(first, first - kWord * (fn.max_temps - 1)),
+                   "temporales (" + std::to_string(fn.max_temps) + ")");
+    }
+    out += indent + "      valor de retorno: " +
+           (fn.return_type ? std::string("en registro ($v0)") : std::string("ninguno (void)")) +
+           "\n";
+    return out;
+}
+
 void printRec(const Scope* scope, int depth, std::ostringstream& out) {
     std::string indent(static_cast<size_t>(depth) * 2, ' ');
     out << indent << "Scope(" << scopeKindName(scope->kind()) << ")\n";
@@ -126,6 +171,9 @@ void printRec(const Scope* scope, int depth, std::ostringstream& out) {
         out << indent << "  " << symbolKindName(symbol->kind) << " " << symbol->name << " : "
             << signatureText(*symbol) << "  (linea " << symbol->declared_line << ")"
             << codegenText(*symbol) << "\n";
+        if (auto* fn = dynamic_cast<const FunctionSymbol*>(symbol)) {
+            out << activationRecordText(*fn, indent);
+        }
     }
     for (const auto& child : scope->children()) {
         printRec(child.get(), depth + 1, out);

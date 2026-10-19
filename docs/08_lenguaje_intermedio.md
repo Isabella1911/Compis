@@ -226,7 +226,39 @@ Scope(Global)
 ```
 
 Se nota que en el método `ladrar` el primer parámetro está en `fp+12`,
-porque `this` ocupa `fp+8`.
+porque `this` ocupa `fp+8`. (El extracto omite las líneas del registro de
+activación que se describen a continuación.)
+
+**Registro de activación de cada función.** Debajo de cada función, método
+o constructor, la tabla imprime su registro de activación completo, con el
+mismo esquema de la sección 6:
+- los parámetros, con `this` en los métodos;
+- el enlace de acceso, indicando si se usa;
+- el enlace de control;
+- la dirección de retorno;
+- las locales;
+- el área de temporales, del tamaño del máximo de temporales vivos;
+- dónde viaja el valor de retorno;
+- el tamaño total.
+
+Por ejemplo, para una función anidada que captura una variable de su
+contenedora (`tests/tac/p2_closure.cps` muestra un caso equivalente, que
+captura un parámetro en vez de una local):
+
+```
+    function sumar : (k: integer) -> integer  [captura: cuenta]  (linea 9)  [fn_contador_sumar, frame 0 bytes, anidamiento 1]
+      registro de activacion (24 bytes):
+        fp+8          parametros (1)
+        fp+4          enlace de acceso (frame de la funcion contenedora)
+        fp+0          enlace de control (fp del llamador)
+        fp-4          direccion de retorno
+        fp-8..fp-12   temporales (2)
+        valor de retorno: en registro ($v0)
+```
+
+`[captura: ...]` lista solo **datos** del entorno: variables, constantes y
+parámetros de una función contenedora. Llamar a una función por su nombre,
+por ejemplo una recursión, no es una captura.
 
 **Cómo usa la tabla cada fase:**
 

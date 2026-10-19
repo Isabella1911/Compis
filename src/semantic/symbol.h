@@ -72,6 +72,10 @@ public:
     int frame_size = 0;     // bytes de locales en su registro de activacion
     int nesting_depth = 0;  // 0 = declarada en el nivel superior (o metodo de clase)
     bool is_method = false; // metodo o constructor: 'this' es el parametro 0
+    // Maximo de temporales vivos a la vez en su cuerpo: tamaño del area de
+    // temporales del registro de activacion. Lo fija TacGenerator al cerrar
+    // la funcion (FrameLayout corre antes y todavia no lo sabe).
+    int max_temps = 0;
     // Metodos (no el constructor): posicion en la vtable de su clase, la
     // misma en todas las subclases. -1 si no es metodo.
     int vtable_slot = -1;

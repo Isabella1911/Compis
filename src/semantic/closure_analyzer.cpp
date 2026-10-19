@@ -177,7 +177,14 @@ void ClosureAnalyzer::walkExpression(Expression* expr, Scope* funcScope, Functio
     if (expr == nullptr) return;
 
     if (auto* n = dynamic_cast<IdentifierExpression*>(expr)) {
-        if (n->symbol != nullptr && isCaptured(n->scope, funcScope, n->name)) {
+        // Solo los datos del entorno (variables, constantes, parametros) se
+        // capturan. Un nombre de funcion o de clase no: llamar a `f` desde
+        // dentro de `f` (recursion) o a una funcion hermana no necesita
+        // guardar nada del entorno, y antes salia como `[captura: f]`.
+        bool isData = n->symbol != nullptr && (n->symbol->kind == SymbolKind::Variable ||
+                                                n->symbol->kind == SymbolKind::Constant ||
+                                                n->symbol->kind == SymbolKind::Parameter);
+        if (isData && isCaptured(n->scope, funcScope, n->name)) {
             if (std::find(fn->captured.begin(), fn->captured.end(), n->symbol) ==
                 fn->captured.end()) {
                 fn->captured.push_back(n->symbol);

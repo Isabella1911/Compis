@@ -49,6 +49,7 @@ void TacGenerator::endFunction() {
     FunctionContext ctx = std::move(contexts_.back());
     contexts_.pop_back();
     ctx.fn.max_temps = ctx.temps.maxUsed();
+    if (ctx.fn.symbol != nullptr) ctx.fn.symbol->max_temps = ctx.fn.max_temps;
 
     if (contexts_.empty()) {
         program_.functions[0] = std::move(ctx.fn);  // main, en su lugar reservado

@@ -1,7 +1,7 @@
 {
-  "geometria": "1908x957+-32+-32",
+  "geometria": "1908x957+-286+94",
   "archivos": {
-    "fuente": "/mnt/c/Users/antho/Repositorios/Compis/tests/fixtures/valid/completo.cps"
+    "fuente": "/home/anthony/Repositorios/Compis/tests/tac/p1_aritmetica.cps"
   },
   "editor_tab_activo": "fuente",
   "grupo_resultados": 0
