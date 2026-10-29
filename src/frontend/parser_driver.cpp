@@ -3,6 +3,7 @@
 #include "SQLLexer.h"
 #include "SQLParser.h"
 #include "antlr4-runtime.h"
+#include "ast_builder.h"
 #include "diagnostics/codes.h"
 #include "error_listener.h"
 #include "parse_tree_dot.h"
@@ -75,6 +76,9 @@ ParseOutput parse(const std::string& source, diagnostics::DiagnosticReporter& re
     out.tokens = collectTokens(tokens.getTokens(), lexer.getVocabulary());
     if (options.wantParseTreeDot) {
         out.parseTreeDot = parseTreeToDot(tree, parser);
+    }
+    if (!reporter.hasErrors()) {
+        out.script = AstBuilder().build(tree);
     }
     return out;
 }

@@ -154,12 +154,16 @@ orderItem
 //   > NOT > AND > OR
 // IN (subconsulta) va antes que IN (lista): si no, "(SELECT ...)" se
 // intentaria leer como una lista de expresiones.
+//
+// La comparacion usa nombres de token y no literales: NEQ tiene dos formas
+// ('<>' | '!='), y si aqui se escribiera '<>' ANTLR crearia un token
+// implicito aparte (T__0) que nunca llegaria como NEQ.
 expr
     : primary                                                         # primaryExpr
     | op=('-' | '+') expr                                             # unaryExpr
     | expr op=('*' | '/' | '%') expr                                  # mulExpr
     | expr op=('+' | '-') expr                                        # addExpr
-    | expr op=('=' | '<>' | '!=' | '<' | '<=' | '>' | '>=') expr      # compareExpr
+    | expr op=(EQ | NEQ | LT | LE | GT | GE) expr                     # compareExpr
     | expr IS NOT? NULL                                               # isNullExpr
     | expr NOT? IN '(' selectStmt ')'                                 # inSubqueryExpr
     | expr NOT? IN '(' expr (',' expr)* ')'                           # inListExpr

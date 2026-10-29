@@ -22,11 +22,14 @@ ANTLR_JAR   := $(DEPS)/antlr-4.13.2-complete.jar
 ANTLR4CPP   := $(DEPS)/antlr4cpp
 
 CXX         := g++
+# El runtime de ANTLR se incluye con -isystem: sus warnings no son nuestros
+# y taparian los de src/. generated/ NO: -MMD no registra los headers de
+# sistema como dependencias, y si la gramatica cambia los numeros de token
+# hay que recompilar todo lo que incluye SQLParser.h.
 CXXFLAGS    := -std=c++17 -O0 -g -Wall \
-               -I $(ANTLR4CPP)/include/antlr4-runtime \
+               -isystem $(ANTLR4CPP)/include/antlr4-runtime \
                -I generated \
                -I src
-# Los headers del runtime de ANTLR generan warnings que no son nuestros.
 GEN_CXXFLAGS := $(CXXFLAGS) -w
 LDFLAGS     := $(ANTLR4CPP)/lib/libantlr4-runtime.a
 

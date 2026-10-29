@@ -7,6 +7,8 @@
 //   --json             toda la salida como un unico objeto JSON (lo usa la IDE)
 //   --emit tokens      lista de tokens
 //   --emit parse-tree  arbol sintactico de ANTLR en formato .dot
+//   --emit ast         AST como arbol de texto indentado
+//   --emit ast-dot     AST en formato .dot
 //   --no-exec          solo lexico, sintactico y semantico (no toca disco)
 //
 // Con "-" en lugar de archivo, el script se lee de la entrada estandar.
@@ -17,6 +19,7 @@
 #include <sstream>
 #include <string>
 
+#include "ast/printer.h"
 #include "common/json.h"
 #include "diagnostics/reporter.h"
 #include "frontend/parser_driver.h"
@@ -27,14 +30,14 @@ namespace {
 
 struct Options {
     std::string db = "databases/escuela";
-    std::string emit;  // "", "tokens", "parse-tree"
+    std::string emit;  // "", "tokens", "parse-tree", "ast", "ast-dot"
     bool json = false;
     bool noExec = false;
     std::string file;
 };
 
 const char* kUsage =
-    "Uso: sqlint [--db <dir>] [--json] [--emit tokens|parse-tree] [--no-exec] "
+    "Uso: sqlint [--db <dir>] [--json] [--emit tokens|parse-tree|ast|ast-dot] [--no-exec] "
     "<archivo.sql | ->\n";
 
 bool parseArgs(int argc, char* argv[], Options& opts, std::string& error) {
@@ -64,7 +67,8 @@ bool parseArgs(int argc, char* argv[], Options& opts, std::string& error) {
         error = "Falta el archivo .sql";
         return false;
     }
-    if (!opts.emit.empty() && opts.emit != "tokens" && opts.emit != "parse-tree") {
+    if (!opts.emit.empty() && opts.emit != "tokens" && opts.emit != "parse-tree" &&
+        opts.emit != "ast" && opts.emit != "ast-dot") {
         error = "Modo de --emit desconocido: " + opts.emit;
         return false;
     }
@@ -128,12 +132,21 @@ int main(int argc, char* argv[]) {
     frontend::ParseOutput parsed = frontend::parse(source, reporter, parseOptions);
     std::vector<diagnostics::Diagnostic> diags = reporter.sorted();
 
+    // Sin AST (hubo errores) las vistas del AST quedan vacias.
+    std::string astText;
+    if (parsed.script && opts.emit == "ast") astText = ast::printTree(*parsed.script);
+    if (parsed.script && opts.emit == "ast-dot") astText = ast::toDot(*parsed.script);
+
     if (opts.json) {
         std::cout << "{\n  \"diagnostics\": " << diagnosticsToJson(diags);
         if (opts.emit == "tokens") {
             std::cout << ",\n  \"tokens\": " << frontend::tokensToJson(parsed.tokens);
         } else if (opts.emit == "parse-tree") {
             std::cout << ",\n  \"dot\": " << json::jsonString(parsed.parseTreeDot);
+        } else if (opts.emit == "ast" || opts.emit == "ast-dot") {
+            const char* key = opts.emit == "ast" ? "ast" : "dot";
+            std::cout << ",\n  \"" << key << "\": "
+                      << (parsed.script ? json::jsonString(astText) : "null");
         } else {
             std::cout << ",\n  \"statements\": []";
         }
@@ -146,6 +159,8 @@ int main(int argc, char* argv[]) {
         std::cout << frontend::formatTokens(parsed.tokens);
     } else if (opts.emit == "parse-tree") {
         std::cout << parsed.parseTreeDot;
+    } else if (opts.emit == "ast" || opts.emit == "ast-dot") {
+        std::cout << astText;
     } else if (diags.empty()) {
         // La ejecucion llega con el AST y la Session de la Parte 3.
         std::cout << "Sin errores léxicos ni sintácticos.\n";

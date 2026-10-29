@@ -31,7 +31,7 @@ make
 ## Línea de comandos
 
 ```
-sqlint [--db <dir>] [--json] [--emit tokens|parse-tree] [--no-exec] <archivo.sql | ->
+sqlint [--db <dir>] [--json] [--emit tokens|parse-tree|ast|ast-dot] [--no-exec] <archivo.sql | ->
 ```
 
 | Opción | Qué hace |
@@ -40,6 +40,8 @@ sqlint [--db <dir>] [--json] [--emit tokens|parse-tree] [--no-exec] <archivo.sql
 | `--json` | Toda la salida como un objeto JSON; es lo que usa la IDE. |
 | `--emit tokens` | Lista de tokens: tipo, lexema, línea y columna. |
 | `--emit parse-tree` | Árbol sintáctico de ANTLR en formato Graphviz (`.dot`). |
+| `--emit ast` | AST como árbol de texto, con línea y columna de cada nodo. |
+| `--emit ast-dot` | AST en formato Graphviz (`.dot`). |
 | `--no-exec` | Solo análisis léxico, sintáctico y semántico. |
 
 Con `-` en lugar del archivo, el script se lee de la entrada estándar.
@@ -49,7 +51,7 @@ Con `-` en lugar del archivo, el script se lee de la entrada estándar.
 | Etapa | Estado |
 |---|---|
 | Gramática completa (`grammar/SQL.g4`), tokens, árbol sintáctico, errores léxicos y sintácticos | Hecho |
-| AST | Pendiente |
+| AST (nodos, builder, impresor de texto y `.dot`) | Hecho |
 | Análisis semántico | Pendiente |
 | Almacenamiento, ejecución e índices (Partes 2 y 3) | Pendiente |
 | IDE | Pendiente |

@@ -5,9 +5,11 @@
 // las Partes 2 y 3 incluyen este header sin arrastrar ANTLR. Regla
 // verificable: `grep -rl antlr src/ --exclude-dir=frontend` no encuentra nada.
 
+#include <memory>
 #include <string>
 #include <vector>
 
+#include "ast/nodes.h"
 #include "diagnostics/reporter.h"
 #include "token_dump.h"
 
@@ -25,6 +27,9 @@ struct ParseOutput {
     // Solo si ParseOptions::wantParseTreeDot. Se genera aunque haya errores:
     // el arbol parcial que arma ANTLR al recuperarse tambien sirve.
     std::string parseTreeDot;
+    // AST del script. Es null si hubo cualquier error lexico o sintactico:
+    // en ese caso no se analiza ni se ejecuta nada.
+    std::unique_ptr<ast::Script> script;
 };
 
 // Corre lexer y parser sobre `source`. Los errores lexicos (LEX001, LEX002)
