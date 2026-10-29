@@ -1,9 +1,9 @@
 #!/bin/bash
 # Instala el toolchain de ANTLR (JRE + antlr-complete.jar + cmake portatil +
 # runtime C++ compilado) sin necesitar sudo ni privilegios de administrador.
-# Todo queda dentro de compiscript/.deps/, gitignoreado.
+# Todo queda dentro de .deps/ en la raiz del repo, gitignoreado.
 #
-# Uso: bash tools/setup.sh   (desde la carpeta compiscript/, o desde donde sea:
+# Uso: bash tools/setup.sh   (desde la raiz del repo, o desde donde sea:
 # el script se ubica solo por la ruta de este archivo)
 set -e
 

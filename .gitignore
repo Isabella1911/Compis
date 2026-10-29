@@ -14,6 +14,14 @@ __pycache__/
 # ANTLR y los binarios compilados.
 /.deps/
 /generated/
+/build/
+/sqlint
+
+# Binarios de Compiscript (rama main), por si quedan al cambiar de rama.
 /compiscript
 /symbol_table_test
 /compilador
+
+# Estado local de la IDE (tamano de ventana, ultimo archivo).
+/.ide_state.json
+/.sql_ide_state.json

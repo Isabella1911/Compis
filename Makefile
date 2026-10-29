@@ -1,85 +1,49 @@
-# Compiscript (Proyecto 2) — build del frontend ANTLR + AST + diagnosticos.
+# sqlint: interprete SQL con almacenamiento en archivos (docs/sql).
 #
 # Primera vez en una maquina nueva:
 #   bash tools/setup.sh     # instala JRE, antlr.jar, cmake y compila el runtime C++ de ANTLR
-#                            # todo local a .deps/, sin sudo
+#                           # todo local a .deps/, sin sudo
 #
 # Uso normal:
-#   make              -> genera el parser (si hace falta) y compila compiscript(.exe)
-#   make run FILE=tests/fixtures/valid/hello.cps
-#   make test         -> corre toda la bateria: tabla de simbolos, semantica y TAC
-#   make test-semantic / make test-tac -> solo una parte
-#   make test-tac-update -> regenera los .tac esperados (revisar el diff!)
-#   make test-symbols -> corre la prueba unitaria de Scope/Symbol (no necesita ANTLR)
-#   make clean        -> borra los binarios y el codigo generado por ANTLR
+#   make                    -> genera el parser (si hace falta) y compila sqlint
+#   make run FILE=consulta.sql [DB=databases/escuela]
+#   make test               -> bateria de pruebas (runner de la Parte 2)
+#   make test-update        -> regenera los .expected (revisar el diff!)
+#   make clean              -> borra build/, generated/ y el binario
+#
+# Los fuentes se toman con wildcard (src/*.cpp y src/*/*.cpp): un archivo
+# nuevo de cualquier parte entra solo, nadie tiene que tocar este Makefile.
+# Cada .cpp compila a su propio .o en build/, asi que editar un archivo no
+# recompila el parser generado (que es lo lento).
 
 DEPS        := .deps
 JAVA        := $(DEPS)/jre17/bin/java
 ANTLR_JAR   := $(DEPS)/antlr-4.13.2-complete.jar
 ANTLR4CPP   := $(DEPS)/antlr4cpp
 
-CXX        := g++
-CXXFLAGS   := -std=c++17 -O0 -g -Wall \
-              -I $(ANTLR4CPP)/include/antlr4-runtime \
-              -I generated \
-              -I src
-LDFLAGS    := $(ANTLR4CPP)/lib/libantlr4-runtime.a
+CXX         := g++
+CXXFLAGS    := -std=c++17 -O0 -g -Wall \
+               -I $(ANTLR4CPP)/include/antlr4-runtime \
+               -I generated \
+               -I src
+# Los headers del runtime de ANTLR generan warnings que no son nuestros.
+GEN_CXXFLAGS := $(CXXFLAGS) -w
+LDFLAGS     := $(ANTLR4CPP)/lib/libantlr4-runtime.a
 
-GRAMMAR    := grammar/Compiscript.g4
-GENERATED  := generated/CompiscriptLexer.cpp generated/CompiscriptParser.cpp \
-              generated/CompiscriptBaseVisitor.cpp generated/CompiscriptVisitor.cpp
+GRAMMAR     := grammar/SQL.g4
+GENERATED   := generated/SQLLexer.cpp generated/SQLParser.cpp \
+               generated/SQLBaseVisitor.cpp generated/SQLVisitor.cpp
 
-SEMANTIC_SRC := src/semantic/scope.cpp \
-                src/semantic/type.cpp \
-                src/semantic/declaration_collector.cpp \
-                src/semantic/inheritance_resolver.cpp \
-                src/semantic/name_resolver.cpp \
-                src/semantic/type_checker.cpp \
-                src/semantic/control_flow_checker.cpp \
-                src/semantic/closure_analyzer.cpp \
-                src/semantic/printer.cpp
-# Generacion de codigo intermedio (Proyecto 2). Todos los archivos ya
-# estan listados, incluidos los de cada parte del reparto, para que nadie
-# tenga que tocar el Makefile al implementar su parte.
-CODEGEN_SRC := src/ir/tac.cpp \
-               src/ir/tac_printer.cpp \
-               src/codegen/temp_allocator.cpp \
-               src/codegen/frame_layout.cpp \
-               src/codegen/tac_generator.cpp \
-               src/codegen/gen_expressions.cpp \
-               src/codegen/gen_statements.cpp \
-               src/codegen/gen_functions.cpp \
-               src/codegen/gen_classes.cpp \
-               src/codegen/gen_arrays.cpp
-# Subconjunto que necesita la prueba unitaria de la tabla de simbolos: no
-# arrastra declaration_collector.cpp (depende del AST) ni printer.cpp.
-SYMBOL_TEST_SRC := src/semantic/scope.cpp
+OBJDIR      := build
+SRC         := $(wildcard src/*.cpp src/*/*.cpp)
+OBJ         := $(SRC:%.cpp=$(OBJDIR)/%.o)
+GEN_OBJ     := $(GENERATED:%.cpp=$(OBJDIR)/%.o)
 
-SRC        := src/main.cpp \
-              src/ast/printer.cpp \
-              src/diagnostics/reporter.cpp \
-              src/frontend/error_listener.cpp \
-              src/frontend/ast_builder.cpp \
-              src/frontend/parser_driver.cpp \
-              src/compiler/compiler.cpp \
-              $(SEMANTIC_SRC) \
-              $(CODEGEN_SRC) \
-              $(GENERATED)
+BIN         := sqlint
+DB          ?= databases/escuela
+PYTHON      ?= python3
 
-# Los headers tambien son dependencia: sin esto, cambiar un .h (p. ej.
-# symbol.h o tac.h) no recompilaba nada.
-HEADERS    := $(wildcard src/*/*.h)
-
-UNAME_S := $(shell uname -s 2>/dev/null)
-ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
-BIN             := compiscript.exe
-TEST_SYMBOLS_BIN := symbol_table_test.exe
-else
-BIN             := compiscript
-TEST_SYMBOLS_BIN := symbol_table_test
-endif
-
-.PHONY: all build setup generate run test test-semantic test-tac test-tac-update docs-ejemplos test-symbols clean
+.PHONY: all build setup generate run test test-update clean
 
 all: build
 
@@ -88,55 +52,44 @@ setup:
 
 # El .g4 es la unica dependencia real: si no cambio, no se regenera.
 $(GENERATED) &: $(GRAMMAR)
-	$(JAVA) -jar $(ANTLR_JAR) -Dlanguage=Cpp -visitor -no-listener -package compiscript \
+	$(JAVA) -jar $(ANTLR_JAR) -Dlanguage=Cpp -visitor -no-listener -package sqlint \
 	    -o generated -Xexact-output-dir $(GRAMMAR)
 
 generate: $(GENERATED)
 
 build: $(BIN)
 
-$(BIN): $(SRC) $(HEADERS)
-	$(CXX) $(CXXFLAGS) $(SRC) $(LDFLAGS) -o $(BIN)
+$(BIN): $(OBJ) $(GEN_OBJ)
+	$(CXX) $^ $(LDFLAGS) -o $@
+
+# Codigo propio. Orden: los headers generados tienen que existir antes de
+# compilar frontend/ (por eso el prerequisito "| $(GENERATED)").
+$(OBJDIR)/src/%.o: src/%.cpp | $(GENERATED)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
+
+$(OBJDIR)/generated/%.o: generated/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(GEN_CXXFLAGS) -MMD -MP -c $< -o $@
+
+# Dependencias de headers que escribe -MMD: cambiar un .h recompila solo
+# los .cpp que lo incluyen.
+-include $(OBJ:.o=.d) $(GEN_OBJ:.o=.d)
 
 run: build
-	./$(BIN) $(FILE)
+	./$(BIN) --db $(DB) $(FILE)
 
-# La bateria vive en tests/run_tests.py (Python 3, sin dependencias):
-#   - tests/fixtures/valid y invalid: compila / falla con los codigos exactos
-#     de sus lineas '// expect: SEMxxx'
-#   - tests/tac: la salida de --tac contra los .tac esperados (golden files),
-#     y tests/tac/errores: sin TAC y con los codigos esperados
-PYTHON ?= python3
+# El runner lo escribe la Parte 2 (tests/sql/run_tests.py).
+test: build
+	@if [ -f tests/sql/run_tests.py ]; then \
+	    $(PYTHON) tests/sql/run_tests.py --bin ./$(BIN); \
+	else \
+	    echo "Todavia no hay tests/sql/run_tests.py (Parte 2)."; \
+	fi
 
-test: build $(TEST_SYMBOLS_BIN)
-	@echo "== Prueba unitaria de la tabla de simbolos =="
-	@./$(TEST_SYMBOLS_BIN)
-	@$(PYTHON) tests/run_tests.py --bin ./$(BIN) todo
-
-test-semantic: build
-	@$(PYTHON) tests/run_tests.py --bin ./$(BIN) semantica
-
-test-tac: build
-	@$(PYTHON) tests/run_tests.py --bin ./$(BIN) tac
-
-# Regenera los .tac esperados. Revisar SIEMPRE `git diff tests/tac` antes de
-# commitear: si no, un bug se vuelve "lo esperado".
-test-tac-update: build
-	@$(PYTHON) tests/run_tests.py --bin ./$(BIN) tac --update
-	@echo "Revisa los cambios con: git diff tests/tac"
-
-# Regenera docs/10_ejemplos_de_traduccion.md a partir de tests/tac/.
-docs-ejemplos:
-	$(PYTHON) tools/gen_ejemplos_doc.py
-
-# No depende de $(GENERATED) ni de ANTLR4CPP a proposito: semantic/ no
-# incluye nada de ANTLR, asi que esta prueba compila (mucho) mas rapido.
-$(TEST_SYMBOLS_BIN): tests/symbol_table_test.cpp $(SYMBOL_TEST_SRC)
-	$(CXX) -std=c++17 -O0 -g -Wall -I src tests/symbol_table_test.cpp $(SYMBOL_TEST_SRC) -o $(TEST_SYMBOLS_BIN)
-
-test-symbols: $(TEST_SYMBOLS_BIN)
-	./$(TEST_SYMBOLS_BIN)
+test-update: build
+	@$(PYTHON) tests/sql/run_tests.py --bin ./$(BIN) --update
+	@echo "Revisa los cambios con: git diff tests/sql"
 
 clean:
-	rm -f compiscript compiscript.exe symbol_table_test symbol_table_test.exe
-	rm -rf generated
+	rm -rf $(OBJDIR) generated $(BIN)

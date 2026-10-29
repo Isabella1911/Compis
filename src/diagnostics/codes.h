@@ -1,42 +1,61 @@
-#ifndef COMPISCRIPT_DIAGNOSTICS_CODES_H
-#define COMPISCRIPT_DIAGNOSTICS_CODES_H
+#ifndef SQLINT_DIAGNOSTICS_CODES_H
+#define SQLINT_DIAGNOSTICS_CODES_H
 
-// Registro de codigos de diagnostico. Un codigo por linea, para que los
-// tests comparen codigos ("SEM011") y no mensajes en texto libre (fragiles
-// ante cualquier cambio de redaccion). Prefijos: LEX0xx, SYN0xx, SEM0xx.
+// Registro de codigos de diagnostico (tabla A.8 de docs/sql). Las pruebas
+// comparan codigos, no mensajes: cambiar la redaccion de un mensaje no debe
+// romper ninguna prueba, cambiar un codigo si.
 //
-// Esta etapa (Fundacion) solo produce SYN001, generado por el
-// DiagnosticErrorListener cuando ANTLR reporta un error sintactico. Los
-// codigos SEM0xx los agrega la Etapa 3 (analisis semantico); se listan
-// aqui por adelantado porque ya estan decididos en el README de decisiones
-// de lenguaje y no van a cambiar de numero despues.
+// Dueno: Parte 1. Las Partes 2 y 3 piden sus codigos y se agregan aqui;
+// los rangos RUN1xx (Parte 2) y RUN2xx (Parte 3) ya estan reservados.
 
-namespace compiscript {
+namespace sqlint {
 namespace diagnostics {
 namespace codes {
 
-constexpr const char* SYN001 = "SYN001";  // Error sintactico generico (delegado por ANTLR)
+// Lexico
+constexpr const char* LEX001 = "LEX001";  // Caracter no reconocido
+constexpr const char* LEX002 = "LEX002";  // Cadena sin cerrar
 
-// Analisis semantico (todos se emiten).
-constexpr const char* SEM001 = "SEM001";  // Variable no declarada
-constexpr const char* SEM002 = "SEM002";  // Redeclaracion en el mismo ambito
-constexpr const char* SEM003 = "SEM003";  // Tipo incompatible en asignacion
-constexpr const char* SEM004 = "SEM004";  // Tipo incompatible en operacion aritmetica/logica
-constexpr const char* SEM005 = "SEM005";  // Condicion no booleana (if/while/do-while/for/switch)
-constexpr const char* SEM006 = "SEM006";  // break/continue fuera de un bucle
-constexpr const char* SEM007 = "SEM007";  // return fuera de una funcion
-constexpr const char* SEM008 = "SEM008";  // Numero o tipo de argumentos incorrecto en llamada
-constexpr const char* SEM009 = "SEM009";  // Tipo de retorno incompatible
-constexpr const char* SEM010 = "SEM010";  // Acceso a atributo/metodo inexistente
-constexpr const char* SEM011 = "SEM011";  // Parametro de funcion sin anotacion de tipo (exigido por decision de lenguaje)
-constexpr const char* SEM012 = "SEM012";  // Codigo muerto (instrucciones tras return/break/continue)
-constexpr const char* SEM013 = "SEM013";  // Nombre de tipo invalido (ni primitivo ni clase declarada)
-constexpr const char* SEM014 = "SEM014";  // Herencia circular entre clases
-constexpr const char* SEM015 = "SEM015";  // 'this' usado fuera de un metodo de clase
-constexpr const char* SEM016 = "SEM016";  // Funcion, metodo o clase usado como valor, o llamada a algo que no es funcion
+// Sintactico
+constexpr const char* SYN001 = "SYN001";  // Error de sintaxis (mensaje de ANTLR traducido)
+
+// Semantico
+constexpr const char* SEM001 = "SEM001";  // Tabla inexistente
+constexpr const char* SEM002 = "SEM002";  // Columna inexistente
+constexpr const char* SEM003 = "SEM003";  // Referencia ambigua
+constexpr const char* SEM004 = "SEM004";  // Calificador invalido (x.col con x fuera del FROM)
+constexpr const char* SEM005 = "SEM005";  // Alias o tabla repetida en el FROM
+constexpr const char* SEM006 = "SEM006";  // Tipos incompatibles en comparacion
+constexpr const char* SEM007 = "SEM007";  // Tipos incompatibles en aritmetica o logica
+constexpr const char* SEM008 = "SEM008";  // INSERT: cantidad de valores != columnas
+constexpr const char* SEM009 = "SEM009";  // INSERT/UPDATE: valor incompatible con la columna
+constexpr const char* SEM010 = "SEM010";  // Literal VARCHAR mas largo que n
+constexpr const char* SEM011 = "SEM011";  // Fecha invalida
+constexpr const char* SEM012 = "SEM012";  // NULL en columna NOT NULL
+constexpr const char* SEM013 = "SEM013";  // CREATE TABLE de una tabla existente
+constexpr const char* SEM014 = "SEM014";  // CREATE TABLE mal formado
+constexpr const char* SEM015 = "SEM015";  // Columna repetida en INSERT o SET
+constexpr const char* SEM016 = "SEM016";  // Indice duplicado
+constexpr const char* SEM017 = "SEM017";  // Indice inexistente
+constexpr const char* SEM018 = "SEM018";  // Subconsulta escalar con mas de una columna
+constexpr const char* SEM019 = "SEM019";  // Subconsulta de IN con mas de una columna
+constexpr const char* SEM020 = "SEM020";  // Agregado en WHERE o agregados anidados
+constexpr const char* SEM021 = "SEM021";  // Columna no agrupada con GROUP BY/agregados
+constexpr const char* SEM022 = "SEM022";  // SUM/AVG sobre tipo no numerico
+constexpr const char* SEM023 = "SEM023";  // Construccion aun no soportada en esta entrega
+
+// Ejecucion, Parte 2
+constexpr const char* RUN101 = "RUN101";  // Llave primaria duplicada
+constexpr const char* RUN102 = "RUN102";  // NOT NULL violado en UPDATE
+constexpr const char* RUN103 = "RUN103";  // Archivo de la base faltante o corrupto
+constexpr const char* RUN104 = "RUN104";  // Valor calculado excede VARCHAR(n)
+
+// Ejecucion, Parte 3
+constexpr const char* RUN201 = "RUN201";  // Subconsulta escalar devolvio mas de una fila
+constexpr const char* RUN202 = "RUN202";  // Division entre cero
 
 }  // namespace codes
 }  // namespace diagnostics
-}  // namespace compiscript
+}  // namespace sqlint
 
-#endif  // COMPISCRIPT_DIAGNOSTICS_CODES_H
+#endif  // SQLINT_DIAGNOSTICS_CODES_H
