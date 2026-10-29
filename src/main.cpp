@@ -23,6 +23,8 @@
 #include "common/json.h"
 #include "diagnostics/reporter.h"
 #include "frontend/parser_driver.h"
+#include "semantic/script_checker.h"
+#include "storage/catalog.h"
 
 using namespace sqlint;
 
@@ -132,6 +134,17 @@ int main(int argc, char* argv[]) {
     frontend::ParseOutput parsed = frontend::parse(source, reporter, parseOptions);
     std::vector<diagnostics::Diagnostic> diags = reporter.sorted();
 
+    // Analisis semantico (modo sin --emit). Hasta que exista la Session de
+    // la Parte 3 todo corre como --no-exec: se analiza sentencia por
+    // sentencia sobre una copia del catalogo, sin tocar disco.
+    int statementsOk = 0;
+    if (parsed.script && opts.emit.empty()) {
+        semantic::ScriptCheck check =
+            semantic::checkScript(*parsed.script, storage::Catalog::load(opts.db));
+        diags.insert(diags.end(), check.diagnostics.begin(), check.diagnostics.end());
+        statementsOk = check.statementsOk;
+    }
+
     // Sin AST (hubo errores) las vistas del AST quedan vacias.
     std::string astText;
     if (parsed.script && opts.emit == "ast") astText = ast::printTree(*parsed.script);
@@ -162,8 +175,8 @@ int main(int argc, char* argv[]) {
     } else if (opts.emit == "ast" || opts.emit == "ast-dot") {
         std::cout << astText;
     } else if (diags.empty()) {
-        // La ejecucion llega con el AST y la Session de la Parte 3.
-        std::cout << "Sin errores léxicos ni sintácticos.\n";
+        std::cout << "Sin errores: " << statementsOk
+                  << " sentencia(s) analizadas. La ejecución todavía no está disponible.\n";
     }
     return diags.empty() ? 0 : 1;
 }

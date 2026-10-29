@@ -46,13 +46,28 @@ sqlint [--db <dir>] [--json] [--emit tokens|parse-tree|ast|ast-dot] [--no-exec] 
 
 Con `-` en lugar del archivo, el script se lee de la entrada estándar.
 
+Mientras no estén las Partes 2 y 3, `sqlint` solo analiza: corre el
+semántico sentencia por sentencia sobre un catálogo en memoria (los
+`CREATE TABLE` del propio script) y no escribe nada en disco.
+`src/storage/value.*` y `src/storage/catalog.*` son *stubs* de la Parte 1
+que la Parte 2 reemplaza.
+
+## Pruebas
+
+Casos de la Parte 1 (un caso exitoso y uno fallido por regla, con el código
+y la posición exacta del error) en `tests/sql/casos/`:
+
+```bash
+make test-parte1
+```
+
 ## Estado
 
 | Etapa | Estado |
 |---|---|
 | Gramática completa (`grammar/SQL.g4`), tokens, árbol sintáctico, errores léxicos y sintácticos | Hecho |
 | AST (nodos, builder, impresor de texto y `.dot`) | Hecho |
-| Análisis semántico | Pendiente |
+| Análisis semántico de la entrega 1 (sin JOIN, agregados, subconsultas ni índices) | Hecho |
 | Almacenamiento, ejecución e índices (Partes 2 y 3) | Pendiente |
 | IDE | Pendiente |
 

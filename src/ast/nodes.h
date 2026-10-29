@@ -13,8 +13,9 @@
 // posicion del propio nombre, para que un error como "columna inexistente"
 // senale exactamente el identificador y no el inicio de la sentencia.
 //
-// Las anotaciones que agrega el semantico (tipo de cada expresion, binding
-// de cada columna) se agregan en la etapa del analisis semantico.
+// Anotaciones: los campos marcados "[sem]" arrancan vacios y los llena el
+// analisis semantico (semantic/analyzer). Si analyze() no devolvio errores,
+// todos estan llenos y la ejecucion los usa sin volver a resolver nombres.
 
 #include <cstdint>
 #include <memory>
@@ -22,6 +23,7 @@
 #include <vector>
 
 #include "diagnostics/diagnostic.h"
+#include "storage/value.h"
 
 namespace sqlint {
 namespace ast {
@@ -60,6 +62,8 @@ enum class ExprKind {
 
 struct Expr : Node {
     const ExprKind kind;
+    storage::SqlType type;  // [sem] tipo del resultado; Null para el literal NULL
+
     explicit Expr(ExprKind k) : kind(k) {}
 };
 using ExprPtr = std::unique_ptr<Expr>;
@@ -102,6 +106,12 @@ struct OrderItem {
     SourceLoc loc;
 };
 
+// Una columna del resultado de un SELECT, con "*" y "t.*" ya expandidos.
+struct OutputColumn {
+    std::string name;  // alias, nombre de la columna o texto de la expresion
+    storage::SqlType type;
+};
+
 struct Select : Node {
     std::vector<SelectItem> items;
     TableRef from;
@@ -110,6 +120,9 @@ struct Select : Node {
     std::vector<ExprPtr> groupBy;  // vacio si no hay GROUP BY
     ExprPtr having;                // null si no hay HAVING
     std::vector<OrderItem> orderBy;
+
+    std::vector<OutputColumn> outputColumns;  // [sem] en el orden del resultado
+    bool isCorrelated = false;  // [sem] alguna columna interna es de una consulta externa
 };
 
 enum class LiteralKind { Int, Float, String, Date, Bool, Null };
@@ -126,10 +139,27 @@ struct Literal : Expr {
     Literal() : Expr(ExprKind::Literal) {}
 };
 
+// [sem] A que columna se refiere una ColumnRef.
+//   depth  = 0 si es de la consulta actual, 1 si es de la consulta externa...
+//   source = indice de la tabla en el FROM/JOIN de esa consulta (0 = FROM)
+//   column = indice de la columna en esa tabla
+// En ORDER BY una columna puede nombrar un alias de la lista del SELECT: en
+// ese caso outputColumn es el indice en Select::outputColumns y los otros
+// tres campos quedan en -1.
+struct ColumnBinding {
+    int depth = -1;
+    int source = -1;
+    int column = -1;
+    int outputColumn = -1;
+
+    bool resolved() const { return column >= 0 || outputColumn >= 0; }
+};
+
 // col  o  tabla.col  (tabla puede ser un alias).
 struct ColumnRef : Expr {
     Ident table;   // vacio si la columna no esta calificada
     Ident column;
+    ColumnBinding binding;  // [sem]
 
     ColumnRef() : Expr(ExprKind::ColumnRef) {}
 };
@@ -278,9 +308,11 @@ struct DropIndex : Statement {
 
 struct Insert : Statement {
     Ident table;
-    // Columnas de la lista "(a, b, c)". Si el script no la trae, queda vacia
-    // y explicitColumns = false; el semantico la completa con el orden del
-    // esquema para que la Parte 2 siempre reciba la lista completa.
+    // Columnas de la lista "(a, b, c)". Si el script no la trae,
+    // explicitColumns = false y el semantico [sem] la llena con todas las
+    // columnas en el orden del esquema: la Parte 2 siempre recibe una lista
+    // con la columna de cada valor. Las columnas de la tabla que no esten en
+    // la lista se guardan como NULL.
     std::vector<Ident> columns;
     bool explicitColumns = false;
     std::vector<std::vector<ExprPtr>> rows;  // una entrada por "(...)" de VALUES

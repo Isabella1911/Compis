@@ -8,6 +8,7 @@
 #   make                    -> genera el parser (si hace falta) y compila sqlint
 #   make run FILE=consulta.sql [DB=databases/escuela]
 #   make test               -> bateria de pruebas (runner de la Parte 2)
+#   make test-parte1        -> casos lexicos, sintacticos y semanticos (Parte 1)
 #   make test-update        -> regenera los .expected (revisar el diff!)
 #   make clean              -> borra build/, generated/ y el binario
 #
@@ -46,7 +47,7 @@ BIN         := sqlint
 DB          ?= databases/escuela
 PYTHON      ?= python3
 
-.PHONY: all build setup generate run test test-update clean
+.PHONY: all build setup generate run test test-parte1 test-update clean
 
 all: build
 
@@ -89,6 +90,11 @@ test: build
 	else \
 	    echo "Todavia no hay tests/sql/run_tests.py (Parte 2)."; \
 	fi
+
+# Casos de la Parte 1 (lexico, sintactico, semantico): codigo y posicion de
+# cada error, sin necesitar base de datos ni ejecucion.
+test-parte1: build
+	@$(PYTHON) tests/sql/verificar_parte1.py --bin ./$(BIN)
 
 test-update: build
 	@$(PYTHON) tests/sql/run_tests.py --bin ./$(BIN) --update
