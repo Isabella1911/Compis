@@ -1,0 +1,26 @@
+id,nombre,edad,fecha_ingreso,becado
+1,Ana García,20,2024-01-15,TRUE
+2,"Pérez, Luis",17,2025-07-01,FALSE
+3,María José Ruiz,19,2024-01-15,TRUE
+4,Carlos O'Neil,22,2022-07-04,FALSE
+5,"Sofía ""Sofi"" Méndez",18,2025-01-13,FALSE
+6,Diego Hernández,16,2026-01-12,
+7,Valeria López,21,2023-01-16,TRUE
+8,José Martínez,,2024-07-08,FALSE
+9,Lucía Castillo,17,2025-07-01,FALSE
+10,Andrés Morales,23,2021-07-05,TRUE
+11,Fernanda Rodas,18,,FALSE
+12,Pablo Quiñónez,20,2024-01-15,FALSE
+13,Gabriela Ortiz,19,2024-07-08,TRUE
+14,Ricardo Paz,25,2020-01-13,FALSE
+15,Camila Reyes,17,2026-01-12,FALSE
+16,Mateo Aguilar,18,2025-01-13,
+17,Isabel Fuentes,22,2023-07-03,TRUE
+18,Javier Solís,16,2026-01-12,FALSE
+19,Daniela Cruz,20,2024-02-29,FALSE
+20,Tomás Barrios,21,2023-01-16,FALSE
+21,Elena Vásquez,19,2024-07-08,TRUE
+22,Hugo Estrada,24,2021-01-11,FALSE
+23,Natalia Gómez,18,2025-07-01,FALSE
+24,Sebastián Toledo,,,
+25,Renata Lima,20,2024-01-15,TRUE

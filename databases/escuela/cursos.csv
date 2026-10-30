@@ -1,0 +1,21 @@
+id,nombre,creditos,activo,costo
+1,Bases de Datos,4,TRUE,850
+2,Compiladores,5,TRUE,950.5
+3,Cálculo I,4,TRUE,700
+4,"Física, Mecánica",4,TRUE,725.25
+5,Programación Orientada a Objetos,3,TRUE,800
+6,Estadística,3,TRUE,650
+7,Redes,4,FALSE,900
+8,Ética Profesional,2,TRUE,
+9,Inteligencia Artificial,5,TRUE,1100
+10,Sistemas Operativos,4,TRUE,875
+11,Álgebra Lineal,4,TRUE,700
+12,Historia del Arte,2,FALSE,500
+13,Diseño Web,3,TRUE,780
+14,Seguridad Informática,4,TRUE,990
+15,Inglés Técnico,2,TRUE,450
+16,Ecuaciones Diferenciales,4,TRUE,720
+17,Teoría de la Computación,4,TRUE,860
+18,Gestión de Proyectos,3,FALSE,
+19,Computación Gráfica,4,TRUE,920
+20,Taller de Investigación,2,TRUE,300

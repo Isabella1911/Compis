@@ -10,6 +10,8 @@
 #   make test               -> bateria de pruebas (runner de la Parte 2)
 #   make test-parte1        -> casos lexicos, sintacticos y semanticos (Parte 1)
 #   make test-update        -> regenera los .expected (revisar el diff!)
+#   make test-storage       -> pruebas unitarias de la Parte 2 (sin ANTLR)
+#   make test-mutator       -> Mutator con scripts reales y databases/escuela == crear.sql
 #   make clean              -> borra build/, generated/ y el binario
 #
 # Los fuentes se toman con wildcard (src/*.cpp y src/*/*.cpp): un archivo
@@ -47,7 +49,7 @@ BIN         := sqlint
 DB          ?= databases/escuela
 PYTHON      ?= python3
 
-.PHONY: all build setup generate run test test-parte1 test-update clean
+.PHONY: all build setup generate run test test-parte1 test-update test-storage test-mutator clean
 
 all: build
 
@@ -99,6 +101,27 @@ test-parte1: build
 test-update: build
 	@$(PYTHON) tests/sql/run_tests.py --bin ./$(BIN) --update
 	@echo "Revisa los cambios con: git diff tests/sql"
+
+# Pruebas unitarias de la Parte 2: valores, CSV, catalogo, TableStore e
+# indices. No usan el parser, asi que compilan sin ANTLR (como el
+# test-symbols de Compiscript).
+STORAGE_SRC := src/storage/value.cpp src/storage/csv.cpp src/storage/fs_util.cpp \
+               src/storage/catalog.cpp src/storage/table_store.cpp \
+               src/index/index_file.cpp src/index/index_manager.cpp
+
+test-storage:
+	@mkdir -p $(OBJDIR)
+	$(CXX) -std=c++17 -O0 -g -Wall -I src $(STORAGE_SRC) tests/sql/storage/test_storage.cpp \
+	    -o $(OBJDIR)/test_storage
+	@./$(OBJDIR)/test_storage
+
+# Mutator con scripts parseados y analizados de verdad. Enlaza todo menos
+# main.o. Tambien revisa que databases/escuela sea lo que produce crear.sql.
+$(OBJDIR)/test_mutator: tests/sql/storage/test_mutator.cpp $(filter-out $(OBJDIR)/src/main.o,$(OBJ)) $(GEN_OBJ)
+	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -o $@
+
+test-mutator: $(OBJDIR)/test_mutator
+	@./$(OBJDIR)/test_mutator
 
 clean:
 	rm -rf $(OBJDIR) generated $(BIN)

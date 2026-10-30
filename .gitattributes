@@ -2,6 +2,12 @@
 # Sin esto, core.autocrlf=true en Windows deja CRLF y bash/make fallan en WSL.
 * text=auto eol=lf
 
+# Archivos de la base (docs/sql/parte2 4.2): siempre LF. Los offsets de los
+# indices son bytes del CSV; un checkout con CRLF los desplazaria.
+*.csv text eol=lf
+*.idx text eol=lf
+metadata.txt text eol=lf
+
 # Binarios: nunca convertir.
 *.png binary
 *.jpg binary
