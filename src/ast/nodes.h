@@ -85,6 +85,7 @@ struct TableRef {
 enum class SelectItemKind { AllColumns, TableColumns, Expr };
 
 struct SelectItem {
+    int source = -1;  // [sem] fuente de t.*; evita resolver nombres al ejecutar
     SelectItemKind kind = SelectItemKind::Expr;
     Ident table;   // TableColumns: la t de "t.*"
     ExprPtr expr;  // Expr

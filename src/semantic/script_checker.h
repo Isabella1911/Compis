@@ -9,8 +9,8 @@
 // no da SEM001 aunque nada se haya escrito en disco. Se detiene en la
 // primera sentencia con errores, igual que la ejecucion real (anexo A.5).
 //
-// Mientras no exista la Session de la Parte 3, main.cpp usa esto siempre.
-// Despues la Session lo puede llamar para su modo --no-exec.
+// Session reutiliza simulateSchema para su modo --no-exec. checkScript se
+// mantiene como entrada al analisis semantico sin ejecucion.
 
 #include <vector>
 
@@ -25,6 +25,8 @@ struct ScriptCheck {
     std::vector<diagnostics::Diagnostic> diagnostics;
     int statementsOk = 0;  // sentencias que pasaron antes del primer error
 };
+
+void simulateSchema(const ast::Statement&, storage::Catalog&);
 
 ScriptCheck checkScript(ast::Script& script, storage::Catalog catalog);
 

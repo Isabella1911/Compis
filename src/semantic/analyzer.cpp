@@ -7,6 +7,7 @@
 #include "diagnostics/reporter.h"
 #include "scope.h"
 #include "type_rules.h"
+#include "ast/expression_utils.h"
 
 namespace sqlint {
 namespace semantic {
@@ -67,9 +68,9 @@ public:
                 dropTable(static_cast<ast::DropTable&>(stmt));
                 break;
             case ast::StatementKind::CreateIndex:
+                createIndex(static_cast<ast::CreateIndex&>(stmt)); break;
             case ast::StatementKind::DropIndex:
-                unsupported(stmt.loc, std::string(ast::statementKindName(stmt.kind)));
-                break;
+                dropIndex(static_cast<ast::DropIndex&>(stmt)); break;
             case ast::StatementKind::Insert:
                 insert(static_cast<ast::Insert&>(stmt));
                 break;
@@ -100,9 +101,8 @@ private:
         error(code, id.loc, message, utf8Length(id.name));
     }
 
-    void unsupported(ast::SourceLoc loc, const std::string& what) {
-        error(codes::SEM023, loc, what + " todavía no está soportado (llega en la entrega 2)");
-    }
+    bool allowAggregates_ = false;
+    int aggregateDepth_ = 0;
 
     // Busca la tabla y reporta SEM001 si no existe.
     const storage::TableDef* requireTable(const ast::Ident& name) {
@@ -174,6 +174,22 @@ private:
 
     void dropTable(ast::DropTable& stmt) { requireTable(stmt.table); }
 
+    void createIndex(ast::CreateIndex& stmt) {
+        const auto* table = requireTable(stmt.table);
+        if (!table) return;
+        int column = table->findColumn(stmt.column.name);
+        if (column < 0) error(codes::SEM002, stmt.column,
+            "La columna " + quoted(stmt.column.name) + " no existe en " + quoted(table->name));
+        if (catalog_.findIndex(stmt.index.name) ||
+            (column >= 0 && !catalog_.indexesOn(table->name, stmt.column.name).empty()))
+            error(codes::SEM016, stmt.index, "Ya existe el índice o un índice sobre esa columna");
+    }
+
+    void dropIndex(ast::DropIndex& stmt) {
+        if (!catalog_.findIndex(stmt.index.name))
+            error(codes::SEM017, stmt.index, "El índice " + quoted(stmt.index.name) + " no existe");
+    }
+
     // -----------------------------------------------------------------------
     // DML
     // -----------------------------------------------------------------------
@@ -217,6 +233,7 @@ private:
                 }
             }
         } else {
+            stmt.columns.clear();
             for (size_t c = 0; c < table->columns.size(); ++c) {
                 stmt.columns.push_back(ast::Ident{table->columns[c].name, stmt.table.loc});
                 targets.push_back(static_cast<int>(c));
@@ -320,23 +337,120 @@ private:
     // SELECT
     // -----------------------------------------------------------------------
 
+    bool hasAggregate(const ast::Expr& e) {
+        if (e.kind == ast::ExprKind::Aggregate) return true;
+        bool found = false;
+        ast::forEachChild(e, [&](const ast::Expr& c) { found |= hasAggregate(c); });
+        return found;
+    }
+
+    bool sameExpr(const ast::Expr& a, const ast::Expr& b, int nesting = 0) {
+        if (a.kind != b.kind) return false;
+        switch (a.kind) {
+            case ast::ExprKind::ColumnRef: {
+                const auto& x = static_cast<const ast::ColumnRef&>(a).binding;
+                const auto& y = static_cast<const ast::ColumnRef&>(b).binding;
+                return x.depth - nesting == y.depth && x.source == y.source && x.column == y.column;
+            }
+            case ast::ExprKind::Literal: {
+                const auto& x = static_cast<const ast::Literal&>(a);
+                const auto& y = static_cast<const ast::Literal&>(b);
+                return x.literalKind == y.literalKind && x.intValue == y.intValue &&
+                    x.floatValue == y.floatValue && x.stringValue == y.stringValue && x.boolValue == y.boolValue;
+            }
+            case ast::ExprKind::Unary:
+                if (static_cast<const ast::Unary&>(a).op != static_cast<const ast::Unary&>(b).op) return false;
+                break;
+            case ast::ExprKind::Binary:
+                if (static_cast<const ast::Binary&>(a).op != static_cast<const ast::Binary&>(b).op) return false;
+                break;
+            case ast::ExprKind::IsNull:
+                if (static_cast<const ast::IsNull&>(a).negated != static_cast<const ast::IsNull&>(b).negated) return false;
+                break;
+            case ast::ExprKind::InList:
+                if (static_cast<const ast::InList&>(a).negated != static_cast<const ast::InList&>(b).negated) return false;
+                break;
+            default: return false;
+        }
+        std::vector<const ast::Expr*> left, right;
+        ast::forEachChild(a, [&](const ast::Expr& c) { left.push_back(&c); });
+        ast::forEachChild(b, [&](const ast::Expr& c) { right.push_back(&c); });
+        if (left.size() != right.size()) return false;
+        for (size_t i = 0; i < left.size(); ++i) if (!sameExpr(*left[i], *right[i], nesting)) return false;
+        return true;
+    }
+
+    void checkGrouped(const ast::Expr& e, const ast::Select& q, int nesting = 0) {
+        if (e.kind == ast::ExprKind::Aggregate && nesting == 0) return;
+        for (const auto& key : q.groupBy) if (sameExpr(e, *key, nesting)) return;
+        if (e.kind == ast::ExprKind::ColumnRef) {
+            const auto& ref = static_cast<const ast::ColumnRef&>(e);
+            if (ref.binding.depth == nesting && ref.binding.outputColumn < 0)
+                error(codes::SEM021, ref.column, "La columna " + quoted(ref.column.name) + " no está agrupada");
+        }
+        ast::forEachChild(e, [&](const ast::Expr& c) { checkGrouped(c, q, nesting); });
+        const ast::Select* sub = nullptr;
+        if (e.kind == ast::ExprKind::InSubquery) sub = static_cast<const ast::InSubquery&>(e).subquery.get();
+        if (e.kind == ast::ExprKind::Exists) sub = static_cast<const ast::Exists&>(e).subquery.get();
+        if (e.kind == ast::ExprKind::ScalarSubquery) sub = static_cast<const ast::ScalarSubquery&>(e).subquery.get();
+        if (sub) {
+            for (const auto& i : sub->items) if (i.expr) checkGrouped(*i.expr, q, nesting + 1);
+            for (const auto& j : sub->joins) checkGrouped(*j.on, q, nesting + 1);
+            if (sub->where) checkGrouped(*sub->where, q, nesting + 1);
+            for (const auto& g : sub->groupBy) checkGrouped(*g, q, nesting + 1);
+            if (sub->having) checkGrouped(*sub->having, q, nesting + 1);
+            for (const auto& o : sub->orderBy) checkGrouped(*o.expr, q, nesting + 1);
+        }
+    }
+
     void select(ast::Select& query) {
-        for (const auto& join : query.joins) unsupported(join.loc, "JOIN");
-        if (!query.groupBy.empty()) unsupported(query.groupBy[0]->loc, "GROUP BY");
-        if (query.having) unsupported(query.having->loc, "HAVING");
-
-        const storage::TableDef* table = requireTable(query.from.name);
-        if (table == nullptr) return;
-
-        scopes_.push({Source{table->name, query.from.alias.name, table}});
-        selects_.push_back(&query);
-
-        for (auto& item : query.items) selectItem(query, item);
+        query.outputColumns.clear(); query.isCorrelated = false;
+        const auto* table = requireTable(query.from.name);
+        if (!table) return;
+        bool previousAllowed = allowAggregates_;
+        int previousDepth = aggregateDepth_;
+        allowAggregates_ = false; aggregateDepth_ = 0;
+        std::vector<Source> sources{{table->name, query.from.alias.name, table}};
+        scopes_.push(sources); selects_.push_back(&query);
+        for (auto& join : query.joins) {
+            const auto* joined = requireTable(join.table.name);
+            if (!joined) continue;
+            Source source{joined->name, join.table.alias.name, joined};
+            for (const auto& prev : sources) if (storage::sameName(prev.visibleName(), source.visibleName()))
+                error(codes::SEM005, join.table.alias.empty() ? join.table.name : join.table.alias,
+                    "La fuente " + quoted(source.visibleName()) + " está repetida en el FROM");
+            sources.push_back(source); scopes_.pop(); scopes_.push(sources);
+            condition(*join.on, "ON");
+        }
         if (query.where) condition(*query.where, "WHERE");
+        for (auto& group : query.groupBy) expr(*group);
+        allowAggregates_ = true;
+        for (auto& item : query.items) selectItem(query, item);
+        if (query.having) condition(*query.having, "HAVING");
         for (auto& item : query.orderBy) orderItem(query, item);
-
-        selects_.pop_back();
-        scopes_.pop();
+        bool grouped = !query.groupBy.empty() || bool(query.having);
+        for (const auto& item : query.items) if (item.expr) grouped |= hasAggregate(*item.expr);
+        for (const auto& item : query.orderBy) grouped |= hasAggregate(*item.expr);
+        if (grouped) {
+            for (const auto& item : query.items) {
+                if (item.expr) checkGrouped(*item.expr, query);
+                else {
+                    // Validar cada columna expandida de * y t.*.
+                    for (size_t source = 0; source < sources.size(); ++source) {
+                        if (item.kind == ast::SelectItemKind::TableColumns && int(source) != item.source) continue;
+                        for (size_t c = 0; c < sources[source].def->columns.size(); ++c) {
+                            ast::ColumnRef ref; ref.loc = item.loc;
+                            ref.column = {sources[source].def->columns[c].name, item.loc};
+                            ref.binding = {0, int(source), int(c), -1}; checkGrouped(ref, query);
+                        }
+                    }
+                }
+            }
+            if (query.having) checkGrouped(*query.having, query);
+            for (const auto& item : query.orderBy) checkGrouped(*item.expr, query);
+        }
+        selects_.pop_back(); scopes_.pop();
+        allowAggregates_ = previousAllowed; aggregateDepth_ = previousDepth;
     }
 
     void selectItem(ast::Select& query, ast::SelectItem& item) {
@@ -356,6 +470,7 @@ private:
                               availableSources());
                     return;
                 }
+                item.source = s;
                 for (const auto& col : scopes_.innermost()[s].def->columns) {
                     query.outputColumns.push_back(ast::OutputColumn{col.name, col.type});
                 }
@@ -454,19 +569,54 @@ private:
                 return SqlType{TypeKind::Boolean};
             }
             case ast::ExprKind::InList: return inList(static_cast<ast::InList&>(e));
-            case ast::ExprKind::InSubquery:
-                unsupported(e.loc, "IN con subconsulta");
-                return std::nullopt;
-            case ast::ExprKind::Exists:
-                unsupported(e.loc, "EXISTS");
-                return std::nullopt;
-            case ast::ExprKind::ScalarSubquery:
-                unsupported(e.loc, "La subconsulta escalar");
-                return std::nullopt;
+            case ast::ExprKind::InSubquery: {
+                auto& in = static_cast<ast::InSubquery&>(e);
+                auto operand = expr(*in.operand); select(*in.subquery);
+                if (in.subquery->outputColumns.size() != 1) {
+                    error(codes::SEM019, e.loc, "La subconsulta de IN debe devolver una columna");
+                    return std::nullopt;
+                }
+                auto t = in.subquery->outputColumns.front().type;
+                if (operand && operand->kind == TypeKind::Varchar && t.kind == TypeKind::Date) {
+                    if (!coerceToDate(*in.operand)) return std::nullopt;
+                    operand = in.operand->type;
+                }
+                if (operand && !comparable(*operand, t))
+                    error(codes::SEM006, e.loc, "Tipos incompatibles en IN con subconsulta");
+                return SqlType{TypeKind::Boolean};
+            }
+            case ast::ExprKind::Exists: {
+                select(*static_cast<ast::Exists&>(e).subquery);
+                return SqlType{TypeKind::Boolean};
+            }
+            case ast::ExprKind::ScalarSubquery: {
+                auto& sub = *static_cast<ast::ScalarSubquery&>(e).subquery;
+                select(sub);
+                if (sub.outputColumns.size() != 1) {
+                    error(codes::SEM018, e.loc, "La subconsulta escalar debe devolver una columna");
+                    return std::nullopt;
+                }
+                return sub.outputColumns.front().type;
+            }
             case ast::ExprKind::Aggregate: {
                 auto& agg = static_cast<ast::Aggregate&>(e);
-                unsupported(e.loc, std::string("El agregado ") + ast::aggFuncName(agg.func));
-                return std::nullopt;
+                if (!allowAggregates_ || aggregateDepth_ > 0) {
+                    error(codes::SEM020, e.loc, "Agregado anidado o fuera de SELECT, HAVING y ORDER BY");
+                    return std::nullopt;
+                }
+                ++aggregateDepth_;
+                auto arg = agg.arg ? expr(*agg.arg) : std::optional<SqlType>{SqlType{TypeKind::Int}};
+                --aggregateDepth_;
+                if (!arg) return std::nullopt;
+                if (agg.func == ast::AggFunc::Count) return SqlType{TypeKind::Int};
+                if (agg.func == ast::AggFunc::Sum || agg.func == ast::AggFunc::Avg) {
+                    if (!isNumeric(*arg) && !isNull(*arg)) {
+                        error(codes::SEM022, e.loc, "SUM y AVG necesitan un argumento numérico");
+                        return std::nullopt;
+                    }
+                    if (agg.func == ast::AggFunc::Avg) return SqlType{TypeKind::Float};
+                }
+                return *arg;
             }
         }
         return std::nullopt;
