@@ -31,7 +31,7 @@ make
 ## Línea de comandos
 
 ```
-sqlint [--db <dir>] [--json] [--emit tokens|parse-tree|ast|ast-dot] [--no-exec] <archivo.sql | ->
+sqlint [--db <dir>] [--json] [--emit tokens|parse-tree|ast|ast-dot|catalog] [--no-exec] <archivo.sql | ->
 ```
 
 | Opción | Qué hace |
@@ -42,16 +42,27 @@ sqlint [--db <dir>] [--json] [--emit tokens|parse-tree|ast|ast-dot] [--no-exec] 
 | `--emit parse-tree` | Árbol sintáctico de ANTLR en formato Graphviz (`.dot`). |
 | `--emit ast` | AST como árbol de texto, con línea y columna de cada nodo. |
 | `--emit ast-dot` | AST en formato Graphviz (`.dot`). |
+| `--emit catalog` | Catálogo de tablas, columnas e índices en JSON. No requiere archivo SQL. |
 | `--no-exec` | Solo análisis léxico, sintáctico y semántico. |
 
 Con `-` en lugar del archivo, el script se lee de la entrada estándar.
 
-Mientras no esté la `Session` de la Parte 3, `sqlint` solo analiza: corre el
-semántico sentencia por sentencia sobre el catálogo de la base
-(`metadata.txt`) y no escribe nada en disco. El almacenamiento de la Parte 2
-(`src/storage/`, `src/index/`) ya está y se prueba con `make test-storage` y
-`make test-mutator`; cómo se conecta está en
-[docs/sql/parte2_implementacion.md](docs/sql/parte2_implementacion.md).
+`sqlint` analiza y ejecuta cada sentencia contra el catálogo actualizado. Se
+detiene en el primer error semántico o de ejecución; las sentencias anteriores
+quedan guardadas. Los errores léxicos o sintácticos impiden ejecutar todo el
+script. Con `--no-exec`, el efecto de los DDL se simula en memoria sin escribir.
+
+Ejemplo de consulta (solo lectura):
+
+```bash
+./sqlint --json --db databases/escuela - <<'SQL'
+SELECT e.nombre, COUNT(*) AS cursos
+FROM estudiantes e
+JOIN inscripciones i ON i.estudiante_id = e.id
+GROUP BY e.nombre
+ORDER BY cursos DESC;
+SQL
+```
 
 ## Pruebas
 
@@ -74,7 +85,15 @@ make test-storage
 make test-mutator
 ```
 
-Batería completa (compara la salida `--json` con los `.expected`):
+Ejecución (Parte 3): contextos, caché, lógica de NULL, SELECT, JOIN,
+agregados, subconsultas y planes con índices:
+
+```bash
+make test-exec
+```
+
+Batería completa (incluye las verificaciones anteriores y compara la salida
+`--json` con los `.expected` disponibles):
 
 ```bash
 make test
@@ -86,9 +105,9 @@ make test
 |---|---|
 | Gramática completa (`grammar/SQL.g4`), tokens, árbol sintáctico, errores léxicos y sintácticos | Hecho |
 | AST (nodos, builder, impresor de texto y `.dot`) | Hecho |
-| Análisis semántico de la entrega 1 (sin JOIN, agregados, subconsultas ni índices) | Hecho |
+| Análisis semántico con JOIN, agregados, subconsultas e índices | Hecho |
 | Almacenamiento: valores, CSV, catálogo, `INSERT`/`UPDATE`/`DELETE`, índices, base de ejemplo y runner (Parte 2) | Hecho |
-| Ejecución de consultas y `Session` (Parte 3) | Pendiente |
+| Ejecución de consultas, `Session`, planes y salida JSON/tabular (Parte 3) | Hecho |
 | IDE | Pendiente |
 
 ## Documentación
@@ -98,3 +117,4 @@ El reparto del trabajo y los contratos entre partes están en `docs/sql/`:
 - [Parte 1: gramática, AST, semántica e IDE](docs/sql/parte1_gramatica_semantica_ide.md)
 - [Parte 2: almacenamiento e índices](docs/sql/parte2_almacenamiento_indices.md)
 - [Parte 3: ejecución de consultas](docs/sql/parte3_ejecucion_consultas.md)
+- [Implementación e integración de la Parte 3](docs/sql/parte3_implementacion.md)
