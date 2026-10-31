@@ -1,0 +1,180 @@
+{
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 2,
+      "message": "Tabla 'e' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 1,
+      "kind": "CREATE TABLE",
+      "line": 3,
+      "message": "Tabla 'i' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 3,
+      "columns": [],
+      "index": 2,
+      "kind": "INSERT",
+      "line": 4,
+      "message": "3 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 3,
+      "columns": [],
+      "index": 3,
+      "kind": "INSERT",
+      "line": 5,
+      "message": "3 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 4,
+      "kind": "CREATE INDEX",
+      "line": 6,
+      "message": "Índice 'idx_eid' creado",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "nombre",
+          "type": "VARCHAR(10)"
+        }
+      ],
+      "index": 5,
+      "kind": "SELECT",
+      "line": 7,
+      "message": "1 filas",
+      "plan": "SeqScan en e\n  └ Subconsulta (correlacionada): IndexScan idx_eid (eid = 1) en i\n  └ Subconsulta (correlacionada): IndexScan idx_eid (eid = 2) en i\n  └ Subconsulta (correlacionada): IndexScan idx_eid (eid = 3) en i",
+      "rows": [
+        [
+          "Luis"
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "nombre",
+          "type": "VARCHAR(10)"
+        }
+      ],
+      "index": 6,
+      "kind": "SELECT",
+      "line": 8,
+      "message": "1 filas",
+      "plan": "SeqScan en e\n  └ Subconsulta (correlacionada): IndexScan idx_eid (eid = 1) en i\n  └ Subconsulta (correlacionada): IndexScan idx_eid (eid = 2) en i\n  └ Subconsulta (correlacionada): IndexScan idx_eid (eid = 3) en i",
+      "rows": [
+        [
+          "Ana"
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "nombre",
+          "type": "VARCHAR(10)"
+        }
+      ],
+      "index": 7,
+      "kind": "SELECT",
+      "line": 9,
+      "message": "2 filas",
+      "plan": "SeqScan en e\n  └ Subconsulta (correlacionada): SeqScan en i\n    └ Subconsulta (correlacionada): IndexScan idx_eid (eid = 1) en i\n  └ Subconsulta (correlacionada): SeqScan en i\n    └ Subconsulta (correlacionada): IndexScan idx_eid (eid = 2) en i\n  └ Subconsulta (correlacionada): SeqScan en i\n    └ Subconsulta (correlacionada): IndexScan idx_eid (eid = 3) en i",
+      "rows": [
+        [
+          "Ana"
+        ],
+        [
+          "José"
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "nombre",
+          "type": "VARCHAR(10)"
+        },
+        {
+          "name": "nota",
+          "type": "INT"
+        }
+      ],
+      "index": 8,
+      "kind": "SELECT",
+      "line": 10,
+      "message": "3 filas",
+      "plan": "SeqScan en e\n  NestedLoop INNER JOIN: SeqScan en i\n  └ Subconsulta (correlacionada): SeqScan en e",
+      "rows": [
+        [
+          "Ana",
+          80
+        ],
+        [
+          "Ana",
+          90
+        ],
+        [
+          "José",
+          70
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        }
+      ],
+      "index": 9,
+      "kind": "SELECT",
+      "line": 11,
+      "message": "2 filas",
+      "plan": "SeqScan en e\n  └ Subconsulta (correlacionada): IndexScan idx_eid (eid = 1) en i\n  └ Subconsulta (correlacionada): IndexScan idx_eid (eid = 2) en i\n  └ Subconsulta (correlacionada): IndexScan idx_eid (eid = 3) en i",
+      "rows": [
+        [
+          1
+        ],
+        [
+          3
+        ]
+      ],
+      "status": "ok"
+    }
+  ]
+}

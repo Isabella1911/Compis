@@ -1,0 +1,26 @@
+{
+  "diagnostics": [
+    {
+      "code": "SEM022",
+      "col": 8,
+      "length": 1,
+      "line": 4,
+      "message": "SUM y AVG necesitan un argumento numérico",
+      "phase": "semantico"
+    }
+  ],
+  "exit": 1,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 3,
+      "message": "Tabla 't' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    }
+  ]
+}

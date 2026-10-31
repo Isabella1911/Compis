@@ -1,0 +1,33 @@
+{
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 3,
+      "message": "Tabla 'alumnos' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "nombre",
+          "type": "VARCHAR(10)"
+        }
+      ],
+      "index": 1,
+      "kind": "SELECT",
+      "line": 4,
+      "message": "0 filas",
+      "plan": "SeqScan en alumnos\n  NestedLoop INNER JOIN: SeqScan en alumnos",
+      "rows": [],
+      "status": "ok"
+    }
+  ]
+}

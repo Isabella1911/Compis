@@ -1,0 +1,132 @@
+{
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 2,
+      "message": "Tabla 't' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 3,
+      "columns": [],
+      "index": 1,
+      "kind": "INSERT",
+      "line": 3,
+      "message": "3 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "una",
+          "type": "INT"
+        },
+        {
+          "name": "ninguna",
+          "type": "INT"
+        }
+      ],
+      "index": 2,
+      "kind": "SELECT",
+      "line": 4,
+      "message": "3 filas",
+      "plan": "SeqScan en t\n  └ Subconsulta (no correlacionada): SeqScan en t",
+      "rows": [
+        [
+          1,
+          10,
+          null
+        ],
+        [
+          2,
+          10,
+          null
+        ],
+        [
+          3,
+          10,
+          null
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "maximo",
+          "type": "INT"
+        }
+      ],
+      "index": 3,
+      "kind": "SELECT",
+      "line": 5,
+      "message": "3 filas",
+      "plan": "SeqScan en t\n  └ Subconsulta (correlacionada): SeqScan en t",
+      "rows": [
+        [
+          1,
+          10
+        ],
+        [
+          2,
+          20
+        ],
+        [
+          3,
+          20
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": 1,
+      "columns": [],
+      "index": 4,
+      "kind": "UPDATE",
+      "line": 6,
+      "message": "1 fila actualizada",
+      "plan": "SeqScan en t",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "nuevo",
+          "type": "INT"
+        }
+      ],
+      "index": 5,
+      "kind": "SELECT",
+      "line": 7,
+      "message": "1 filas",
+      "plan": "SeqScan en t\n  └ Subconsulta (no correlacionada): SeqScan en t",
+      "rows": [
+        [
+          11
+        ]
+      ],
+      "status": "ok"
+    }
+  ]
+}

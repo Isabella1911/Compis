@@ -1,0 +1,6 @@
+-- base: vacia
+CREATE TABLE t (id INT);
+INSERT INTO t VALUES (1), (2);
+SELECT (SELECT id FROM t WHERE id=1) AS una FROM t WHERE id=1;
+SELECT (SELECT id FROM t) FROM t;
+DELETE FROM t;

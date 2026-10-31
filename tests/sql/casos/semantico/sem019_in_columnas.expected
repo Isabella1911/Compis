@@ -1,0 +1,26 @@
+{
+  "diagnostics": [
+    {
+      "code": "SEM019",
+      "col": 24,
+      "length": 1,
+      "line": 4,
+      "message": "La subconsulta de IN debe devolver una columna",
+      "phase": "semantico"
+    }
+  ],
+  "exit": 1,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 3,
+      "message": "Tabla 't' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+-- base: vacia
+CREATE TABLE t (id INT);
+CREATE TABLE u (id INT);
+INSERT INTO t VALUES (1), (2), (NULL);
+INSERT INTO u VALUES (1), (NULL);
+SELECT id, id IN (SELECT id FROM u) AS dentro, id NOT IN (SELECT id FROM u) AS fuera FROM t ORDER BY id;
+SELECT id, id IN (SELECT id FROM u WHERE FALSE) AS vacio, id NOT IN (SELECT id FROM u WHERE FALSE) AS no_vacio FROM t ORDER BY id;
+SELECT id FROM t WHERE id NOT IN (SELECT id FROM u);

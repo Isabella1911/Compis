@@ -1,0 +1,146 @@
+{
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 2,
+      "message": "Tabla 't' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 3,
+      "columns": [],
+      "index": 1,
+      "kind": "INSERT",
+      "line": 3,
+      "message": "3 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 2,
+      "kind": "CREATE INDEX",
+      "line": 4,
+      "message": "Índice 'idx_n' creado",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 2,
+      "columns": [],
+      "index": 3,
+      "kind": "UPDATE",
+      "line": 5,
+      "message": "2 filas actualizadas",
+      "plan": "IndexScan idx_n (n >= 20) en t",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "n",
+          "type": "INT"
+        }
+      ],
+      "index": 4,
+      "kind": "SELECT",
+      "line": 6,
+      "message": "2 filas",
+      "plan": "IndexScan idx_n (n >= 21) en t",
+      "rows": [
+        [
+          2,
+          21
+        ],
+        [
+          3,
+          31
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": 1,
+      "columns": [],
+      "index": 5,
+      "kind": "DELETE",
+      "line": 7,
+      "message": "1 fila eliminada",
+      "plan": "IndexScan idx_n (n = 21) en t",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "n",
+          "type": "INT"
+        }
+      ],
+      "index": 6,
+      "kind": "SELECT",
+      "line": 8,
+      "message": "1 filas",
+      "plan": "IndexScan idx_n (n >= 20) en t",
+      "rows": [
+        [
+          3,
+          31
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": 1,
+      "columns": [],
+      "index": 7,
+      "kind": "INSERT",
+      "line": 9,
+      "message": "1 fila insertada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        }
+      ],
+      "index": 8,
+      "kind": "SELECT",
+      "line": 10,
+      "message": "1 filas",
+      "plan": "IndexScan idx_n (n = 40) en t",
+      "rows": [
+        [
+          4
+        ]
+      ],
+      "status": "ok"
+    }
+  ]
+}

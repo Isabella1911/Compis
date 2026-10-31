@@ -1,0 +1,241 @@
+{
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 2,
+      "message": "Tabla 't' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 3,
+      "columns": [],
+      "index": 1,
+      "kind": "INSERT",
+      "line": 3,
+      "message": "3 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "a",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "b",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "conjuncion",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "disyuncion",
+          "type": "BOOLEAN"
+        }
+      ],
+      "index": 2,
+      "kind": "SELECT",
+      "line": 4,
+      "message": "9 filas",
+      "plan": "SeqScan en t\n  NestedLoop INNER JOIN: SeqScan en t",
+      "rows": [
+        [
+          true,
+          true,
+          true,
+          true
+        ],
+        [
+          true,
+          false,
+          false,
+          true
+        ],
+        [
+          true,
+          null,
+          null,
+          true
+        ],
+        [
+          false,
+          true,
+          false,
+          true
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          null,
+          false,
+          null
+        ],
+        [
+          null,
+          true,
+          null,
+          true
+        ],
+        [
+          null,
+          false,
+          false,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "negacion",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "nulo",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "presente",
+          "type": "BOOLEAN"
+        }
+      ],
+      "index": 3,
+      "kind": "SELECT",
+      "line": 5,
+      "message": "3 filas",
+      "plan": "SeqScan en t",
+      "rows": [
+        [
+          false,
+          false,
+          true
+        ],
+        [
+          true,
+          false,
+          true
+        ],
+        [
+          null,
+          true,
+          false
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "dentro",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "fuera",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "suma",
+          "type": "INT"
+        },
+        {
+          "name": "igual",
+          "type": "BOOLEAN"
+        }
+      ],
+      "index": 4,
+      "kind": "SELECT",
+      "line": 6,
+      "message": "3 filas",
+      "plan": "SeqScan en t",
+      "rows": [
+        [
+          1,
+          true,
+          false,
+          null,
+          null
+        ],
+        [
+          2,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          3,
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        }
+      ],
+      "index": 5,
+      "kind": "SELECT",
+      "line": 7,
+      "message": "1 filas",
+      "plan": "SeqScan en t",
+      "rows": [
+        [
+          1
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        }
+      ],
+      "index": 6,
+      "kind": "SELECT",
+      "line": 8,
+      "message": "0 filas",
+      "plan": "SeqScan en t",
+      "rows": [],
+      "status": "ok"
+    }
+  ]
+}
