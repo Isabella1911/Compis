@@ -1,0 +1,40 @@
+{
+  "archivos": {
+    "inscripciones.csv": "estudiante_id,curso_id,nota,fecha\n"
+  },
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 39,
+      "columns": [],
+      "index": 0,
+      "kind": "DELETE",
+      "line": 3,
+      "message": "39 filas eliminadas",
+      "plan": "SeqScan en inscripciones",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "COUNT(*)",
+          "type": "INT"
+        }
+      ],
+      "index": 1,
+      "kind": "SELECT",
+      "line": 4,
+      "message": "1 filas",
+      "plan": "SeqScan en inscripciones",
+      "rows": [
+        [
+          0
+        ]
+      ],
+      "status": "ok"
+    }
+  ]
+}

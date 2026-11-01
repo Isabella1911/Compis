@@ -1,0 +1,263 @@
+{
+  "archivos": {
+    "indices/idx_estudiantes_edad.idx": null
+  },
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 2,
+      "columns": [],
+      "index": 0,
+      "kind": "INSERT",
+      "line": 7,
+      "message": "2 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 5,
+      "columns": [],
+      "index": 1,
+      "kind": "UPDATE",
+      "line": 8,
+      "message": "5 filas actualizadas",
+      "plan": "IndexScan idx_estudiantes_edad (edad < 18) en estudiantes",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 2,
+      "columns": [],
+      "index": 2,
+      "kind": "DELETE",
+      "line": 9,
+      "message": "2 filas eliminadas",
+      "plan": "SeqScan en estudiantes",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "edad",
+          "type": "INT"
+        }
+      ],
+      "index": 3,
+      "kind": "SELECT",
+      "line": 10,
+      "message": "21 filas",
+      "plan": "IndexScan idx_estudiantes_edad (edad >= 18) en estudiantes",
+      "rows": [
+        [
+          2,
+          18
+        ],
+        [
+          3,
+          19
+        ],
+        [
+          4,
+          22
+        ],
+        [
+          5,
+          18
+        ],
+        [
+          7,
+          21
+        ],
+        [
+          9,
+          18
+        ],
+        [
+          10,
+          23
+        ],
+        [
+          11,
+          18
+        ],
+        [
+          12,
+          20
+        ],
+        [
+          13,
+          19
+        ],
+        [
+          14,
+          25
+        ],
+        [
+          15,
+          18
+        ],
+        [
+          16,
+          18
+        ],
+        [
+          17,
+          22
+        ],
+        [
+          19,
+          20
+        ],
+        [
+          20,
+          21
+        ],
+        [
+          21,
+          19
+        ],
+        [
+          22,
+          24
+        ],
+        [
+          23,
+          18
+        ],
+        [
+          25,
+          20
+        ],
+        [
+          100,
+          18
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 4,
+      "kind": "DROP INDEX",
+      "line": 11,
+      "message": "Índice 'idx_estudiantes_edad' eliminado",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "edad",
+          "type": "INT"
+        }
+      ],
+      "index": 5,
+      "kind": "SELECT",
+      "line": 12,
+      "message": "21 filas",
+      "plan": "SeqScan en estudiantes",
+      "rows": [
+        [
+          2,
+          18
+        ],
+        [
+          3,
+          19
+        ],
+        [
+          4,
+          22
+        ],
+        [
+          5,
+          18
+        ],
+        [
+          7,
+          21
+        ],
+        [
+          9,
+          18
+        ],
+        [
+          10,
+          23
+        ],
+        [
+          11,
+          18
+        ],
+        [
+          12,
+          20
+        ],
+        [
+          13,
+          19
+        ],
+        [
+          14,
+          25
+        ],
+        [
+          15,
+          18
+        ],
+        [
+          16,
+          18
+        ],
+        [
+          17,
+          22
+        ],
+        [
+          19,
+          20
+        ],
+        [
+          20,
+          21
+        ],
+        [
+          21,
+          19
+        ],
+        [
+          22,
+          24
+        ],
+        [
+          23,
+          18
+        ],
+        [
+          25,
+          20
+        ],
+        [
+          100,
+          18
+        ]
+      ],
+      "status": "ok"
+    }
+  ]
+}

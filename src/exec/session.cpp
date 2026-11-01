@@ -53,7 +53,11 @@ RunOutput Session::run(const ast::Script& script, bool noExec) {
         } catch (const diagnostics::SqlError& e) {
             result.status = "error"; result.message = e.diag.message;
             out.statements.push_back(std::move(result));
-            out.diagnostics.push_back(e.diag); break;
+            // Los errores de archivo (RUN103) nacen en storage, que no conoce
+            // la posicion en el script: se ubican en la sentencia que fallo.
+            diagnostics::Diagnostic diag = e.diag;
+            if (diag.loc.line <= 0) diag.loc = stmt.loc;
+            out.diagnostics.push_back(diag); break;
         }
     }
     return out;

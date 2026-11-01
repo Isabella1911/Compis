@@ -1,0 +1,26 @@
+{
+  "diagnostics": [
+    {
+      "code": "RUN103",
+      "col": 1,
+      "length": 1,
+      "line": 3,
+      "message": "El archivo '<db>/t.csv' está corrupto en la línea 3: columna 'a': El valor dos no es un INT válido",
+      "phase": "ejecucion"
+    }
+  ],
+  "exit": 1,
+  "statements": [
+    {
+      "affected": null,
+      "columns": [],
+      "index": 0,
+      "kind": "DELETE",
+      "line": 3,
+      "message": "El archivo '<db>/t.csv' está corrupto en la línea 3: columna 'a': El valor dos no es un INT válido",
+      "plan": "",
+      "rows": [],
+      "status": "error"
+    }
+  ]
+}

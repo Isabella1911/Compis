@@ -1,0 +1,42 @@
+{
+  "archivos": {
+    "s.csv": "corto,largo\nabc,abc\nxy,abcdef\n"
+  },
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 4,
+      "message": "Tabla 's' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 2,
+      "columns": [],
+      "index": 1,
+      "kind": "INSERT",
+      "line": 5,
+      "message": "2 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 1,
+      "columns": [],
+      "index": 2,
+      "kind": "UPDATE",
+      "line": 6,
+      "message": "1 fila actualizada",
+      "plan": "SeqScan en s",
+      "rows": [],
+      "status": "ok"
+    }
+  ]
+}

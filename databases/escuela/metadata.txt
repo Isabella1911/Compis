@@ -23,3 +23,5 @@ TABLE inscripciones
   COLUMN nota FLOAT
   COLUMN fecha DATE
 END
+
+INDEX idx_estudiantes_edad ON estudiantes (edad) FILE indices/idx_estudiantes_edad.idx

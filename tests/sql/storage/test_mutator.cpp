@@ -112,7 +112,8 @@ void testEscuela() {
     Outcome o = run(dir, slurp("databases/escuela/crear.sql"));
     CHECK(o.error.empty());
     if (!o.error.empty()) std::printf("        crear.sql: %s en %d:%d\n", o.error.c_str(), o.loc.line, o.loc.col);
-    for (const char* f : {"metadata.txt", "estudiantes.csv", "cursos.csv", "inscripciones.csv"}) {
+    for (const char* f : {"metadata.txt", "estudiantes.csv", "cursos.csv", "inscripciones.csv",
+                          "indices/idx_estudiantes_edad.idx"}) {
         bool same = slurp(joinPath(dir, f)) == slurp(joinPath("databases/escuela", f));
         CHECK(same);
         if (!same) std::printf("        databases/escuela/%s no coincide con crear.sql\n", f);
@@ -283,6 +284,7 @@ int main(int argc, char* argv[]) {
         for (const char* f : {"metadata.txt", "estudiantes.csv", "cursos.csv", "inscripciones.csv"}) {
             removeFile(joinPath(dir, f));
         }
+        fs::remove_all(joinPath(dir, "indices"));
         Outcome o = run(dir, slurp(joinPath(dir, "crear.sql")));
         if (!o.error.empty()) {
             std::printf("crear.sql: %s en %d:%d\n", o.error.c_str(), o.loc.line, o.loc.col);

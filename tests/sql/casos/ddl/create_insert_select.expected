@@ -1,0 +1,101 @@
+{
+  "archivos": {
+    "metadata.txt": "# Generado por sqlint. No editar a mano mientras el intérprete corre.\nVERSION 1\n\nTABLE t\n  COLUMN id INT NOT NULL PRIMARY KEY\n  COLUMN nombre VARCHAR(20) NOT NULL\n  COLUMN edad INT\n  COLUMN promedio FLOAT\n  COLUMN activo BOOLEAN\n  COLUMN ingreso DATE\nEND\n",
+    "t.csv": "id,nombre,edad,promedio,activo,ingreso\n1,Ana,20,8,TRUE,2024-02-29\n2,\"Pérez, Luis\",,7.25,FALSE,\n3,\"\",19,,,2025-01-13\n4,\"dijo \"\"hola\"\"\",17,0.1,TRUE,\n"
+  },
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 5,
+      "message": "Tabla 't' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 4,
+      "columns": [],
+      "index": 1,
+      "kind": "INSERT",
+      "line": 6,
+      "message": "4 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "nombre",
+          "type": "VARCHAR(20)"
+        },
+        {
+          "name": "edad",
+          "type": "INT"
+        },
+        {
+          "name": "promedio",
+          "type": "FLOAT"
+        },
+        {
+          "name": "activo",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "ingreso",
+          "type": "DATE"
+        }
+      ],
+      "index": 2,
+      "kind": "SELECT",
+      "line": 10,
+      "message": "4 filas",
+      "plan": "SeqScan en t",
+      "rows": [
+        [
+          1,
+          "Ana",
+          20,
+          8,
+          true,
+          "2024-02-29"
+        ],
+        [
+          2,
+          "Pérez, Luis",
+          null,
+          7.25,
+          false,
+          null
+        ],
+        [
+          3,
+          "",
+          19,
+          null,
+          null,
+          "2025-01-13"
+        ],
+        [
+          4,
+          "dijo \"hola\"",
+          17,
+          0.1,
+          true,
+          null
+        ]
+      ],
+      "status": "ok"
+    }
+  ]
+}

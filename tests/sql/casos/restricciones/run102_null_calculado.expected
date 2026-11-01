@@ -1,0 +1,51 @@
+{
+  "archivos": {
+    "p.csv": "a,b\n1,\n2,5\n"
+  },
+  "diagnostics": [
+    {
+      "code": "RUN102",
+      "col": 18,
+      "length": 1,
+      "line": 7,
+      "message": "La columna 'a' de 'p' es NOT NULL y el valor calculado es NULL",
+      "phase": "ejecucion"
+    }
+  ],
+  "exit": 1,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 5,
+      "message": "Tabla 'p' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 2,
+      "columns": [],
+      "index": 1,
+      "kind": "INSERT",
+      "line": 6,
+      "message": "2 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [],
+      "index": 2,
+      "kind": "UPDATE",
+      "line": 7,
+      "message": "La columna 'a' de 'p' es NOT NULL y el valor calculado es NULL",
+      "plan": "SeqScan en p",
+      "rows": [],
+      "status": "error"
+    }
+  ]
+}
