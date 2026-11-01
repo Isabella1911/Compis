@@ -99,6 +99,38 @@ Batería completa (incluye las verificaciones anteriores y compara la salida
 make test
 ```
 
+## IDE
+
+Interfaz gráfica en Tkinter. Habla con `sqlint` solo mediante `--json` y
+`--emit`: nunca lee los CSV directamente. Si `sqlint` no está compilado, lo
+compila con `make` la primera vez que se ejecuta algo.
+
+```bash
+python3 ide/sql_ide.py
+```
+
+**Qué incluye:**
+- **Editor** con resaltado de SQL y números de línea.
+- **Ejecución:** `F5` ejecuta todo el script, `Ctrl+Enter` solo la selección
+  y `F6` solo analiza, sin tocar la base.
+- **Pestañas:**
+  - **Resultados**, una sub-pestaña por sentencia, con una grilla para cada `SELECT`.
+  - **Errores**: doble clic lleva a la posición del error y la subraya.
+  - **Plan**: `SeqScan` o `IndexScan`.
+  - **Tokens**.
+  - **Árbol sintáctico** y **AST**, renderizados con Graphviz. Sin
+    Graphviz se muestran como texto.
+- **Panel Catálogo:** tablas, columnas, restricciones e índices.
+- **Menú Ejemplos:** un script por tema, en `ide/ejemplos/`.
+
+**La base no se modifica por defecto.** El IDE ejecuta sobre una **copia** de
+la base elegida, en `output/ide/bases/`, para que probar no modifique
+`databases/escuela`, que está versionada. La copia se reinicia desde el
+original con el botón "Reiniciar copia". Si se desmarca "usar copia", el IDE
+trabaja sobre la base original.
+
+El arrastrar y soltar archivos es opcional; requiere `pip install tkinterdnd2`.
+
 ## Estado
 
 | Etapa | Estado |
@@ -108,7 +140,7 @@ make test
 | Análisis semántico con JOIN, agregados, subconsultas e índices | Hecho |
 | Almacenamiento: valores, CSV, catálogo, `INSERT`/`UPDATE`/`DELETE`, índices, base de ejemplo y runner (Parte 2) | Hecho |
 | Ejecución de consultas, `Session`, planes y salida JSON/tabular (Parte 3) | Hecho |
-| IDE | Pendiente |
+| IDE (`ide/sql_ide.py`) | Hecho |
 
 ## Documentación
 
