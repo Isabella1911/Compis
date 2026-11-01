@@ -1,0 +1,20 @@
+{
+  "archivos": {
+    "t.csv": "a,b\n2,dos\n"
+  },
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 1,
+      "columns": [],
+      "index": 0,
+      "kind": "DELETE",
+      "line": 3,
+      "message": "1 fila eliminada",
+      "plan": "SeqScan en t",
+      "rows": [],
+      "status": "ok"
+    }
+  ]
+}

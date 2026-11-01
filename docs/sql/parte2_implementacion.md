@@ -80,11 +80,12 @@ storage::MutationResult r = mutator.execute(stmt);   // lanza SqlError (RUN1xx) 
 - **`readAt` revisa que el offset sea el inicio de una fila** (el byte anterior
   es `\n`). Un offset que no lo es da `RUN103` ("índice desactualizado") en
   lugar de leer basura.
-- **`databases/escuela` todavía no trae índices**: `CREATE INDEX` es de la
-  entrega 2 y hoy el semántico responde `SEM023`. Cuando se habilite, se
-  agrega `CREATE INDEX idx_estudiantes_edad ON estudiantes (edad);` al final de
-  `crear.sql` y se regenera con
-  `build/test_mutator --generar-escuela databases/escuela`.
+- **`databases/escuela` trae el índice `idx_estudiantes_edad`** sobre
+  `estudiantes(edad)`, al final de `crear.sql`. Así una consulta por edad
+  muestra `IndexScan` sin preparar nada. Para regenerar la base después de
+  cambiar `crear.sql`:
+  `build/test_mutator --generar-escuela databases/escuela`. Además de los CSV,
+  borra y recrea `indices/`, y `make test-mutator` compara también el `.idx`.
 - **`SEM009`/`SEM011` en ejecución**: si un valor *calculado* no se puede
   convertir al tipo de la columna (el semántico solo ve literales), el
   `Mutator` lanza esos códigos con fase `ejecucion`.
@@ -101,10 +102,12 @@ storage::MutationResult r = mutator.execute(stmt);   // lanza SqlError (RUN1xx) 
   `DELETE` buscar por índice da lo mismo que filtrar todo el archivo.
 - `tests/sql/casos/{ddl,dml,indices,restricciones}`: los mismos escenarios
   para el runner, con `-- archivos:` para comparar el estado final del CSV o
-  del `.idx`. **Todavía no tienen `.expected`**: hoy `sqlint` no ejecuta (falta
-  la `Session`), así que el runner los cuenta como "sin .expected". Cuando la
-  Parte 3 conecte el `Mutator`, se generan con `make test-update` y se revisa
-  el diff.
+  del `.idx`. Los `.expected` se generaron con `make test-update` una vez
+  conectada la `Session` de la Parte 3, revisando cada uno. Por ejemplo, en
+  `indices/mantenimiento` el `SELECT` con `IndexScan` y el `SELECT` con
+  `SeqScan` dan exactamente las mismas filas. Los casos de índices usan el
+  índice que trae la base, así que además prueban que un índice cargado desde
+  disco se mantiene igual que uno recién creado.
 
 Cabeceras que entiende el runner:
 

@@ -1,0 +1,75 @@
+{
+  "archivos": {
+    "w.csv": "a,b\n2,1\n3,4\n,5\n"
+  },
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 4,
+      "message": "Tabla 'w' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 3,
+      "columns": [],
+      "index": 1,
+      "kind": "INSERT",
+      "line": 5,
+      "message": "3 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 1,
+      "columns": [],
+      "index": 2,
+      "kind": "UPDATE",
+      "line": 6,
+      "message": "1 fila actualizada",
+      "plan": "SeqScan en w",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "a",
+          "type": "INT"
+        },
+        {
+          "name": "b",
+          "type": "INT"
+        }
+      ],
+      "index": 3,
+      "kind": "SELECT",
+      "line": 7,
+      "message": "3 filas",
+      "plan": "SeqScan en w",
+      "rows": [
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          null,
+          5
+        ]
+      ],
+      "status": "ok"
+    }
+  ]
+}

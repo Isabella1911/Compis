@@ -1,0 +1,101 @@
+{
+  "archivos": {
+    "estudiantes.csv": "id,nombre,edad,fecha_ingreso,becado\n1,Ana García,20,2024-01-15,TRUE\n2,\"Pérez, Luis\",18,2025-07-01,FALSE\n3,María José Ruiz,19,2024-01-15,TRUE\n4,Carlos O'Neil,22,2022-07-04,FALSE\n5,\"Sofía \"\"Sofi\"\" Méndez\",18,2025-01-13,FALSE\n6,Diego Hernández,17,2026-01-12,\n7,Valeria López,21,2023-01-16,TRUE\n9,Lucía Castillo,18,2025-07-01,FALSE\n10,Andrés Morales,23,2021-07-05,TRUE\n11,Fernanda Rodas,18,,FALSE\n12,Pablo Quiñónez,20,2024-01-15,FALSE\n13,Gabriela Ortiz,19,2024-07-08,TRUE\n14,Ricardo Paz,25,2020-01-13,FALSE\n15,Camila Reyes,18,2026-01-12,FALSE\n16,Mateo Aguilar,18,2025-01-13,\n17,Isabel Fuentes,22,2023-07-03,TRUE\n18,Javier Solís,17,2026-01-12,FALSE\n19,Daniela Cruz,20,2024-02-29,FALSE\n20,Tomás Barrios,21,2023-01-16,FALSE\n21,Elena Vásquez,19,2024-07-08,TRUE\n22,Hugo Estrada,24,2021-01-11,FALSE\n23,Natalia Gómez,18,2025-07-01,FALSE\n25,Renata Lima,20,2024-01-15,TRUE\n"
+  },
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 5,
+      "columns": [],
+      "index": 0,
+      "kind": "UPDATE",
+      "line": 3,
+      "message": "5 filas actualizadas",
+      "plan": "IndexScan idx_estudiantes_edad (edad < 18) en estudiantes",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 2,
+      "columns": [],
+      "index": 1,
+      "kind": "DELETE",
+      "line": 4,
+      "message": "2 filas eliminadas",
+      "plan": "SeqScan en estudiantes",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "nombre",
+          "type": "VARCHAR(50)"
+        },
+        {
+          "name": "edad",
+          "type": "INT"
+        }
+      ],
+      "index": 2,
+      "kind": "SELECT",
+      "line": 5,
+      "message": "9 filas",
+      "plan": "IndexScan idx_estudiantes_edad (edad <= 18) en estudiantes",
+      "rows": [
+        [
+          2,
+          "Pérez, Luis",
+          18
+        ],
+        [
+          5,
+          "Sofía \"Sofi\" Méndez",
+          18
+        ],
+        [
+          6,
+          "Diego Hernández",
+          17
+        ],
+        [
+          9,
+          "Lucía Castillo",
+          18
+        ],
+        [
+          11,
+          "Fernanda Rodas",
+          18
+        ],
+        [
+          15,
+          "Camila Reyes",
+          18
+        ],
+        [
+          16,
+          "Mateo Aguilar",
+          18
+        ],
+        [
+          18,
+          "Javier Solís",
+          17
+        ],
+        [
+          23,
+          "Natalia Gómez",
+          18
+        ]
+      ],
+      "status": "ok"
+    }
+  ]
+}
