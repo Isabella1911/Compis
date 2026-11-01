@@ -139,10 +139,14 @@ int main(int argc, char* argv[]) {
     // sentencia sobre una copia del catalogo, sin tocar disco.
     int statementsOk = 0;
     if (parsed.script && opts.emit.empty()) {
-        semantic::ScriptCheck check =
-            semantic::checkScript(*parsed.script, storage::Catalog::load(opts.db));
-        diags.insert(diags.end(), check.diagnostics.begin(), check.diagnostics.end());
-        statementsOk = check.statementsOk;
+        try {
+            semantic::ScriptCheck check =
+                semantic::checkScript(*parsed.script, storage::Catalog::load(opts.db));
+            diags.insert(diags.end(), check.diagnostics.begin(), check.diagnostics.end());
+            statementsOk = check.statementsOk;
+        } catch (const diagnostics::SqlError& e) {
+            diags.push_back(e.diag);  // metadata.txt corrupto: RUN103
+        }
     }
 
     // Sin AST (hubo errores) las vistas del AST quedan vacias.

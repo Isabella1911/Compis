@@ -1,0 +1,25 @@
+# Generado por sqlint. No editar a mano mientras el intérprete corre.
+VERSION 1
+
+TABLE estudiantes
+  COLUMN id INT NOT NULL PRIMARY KEY
+  COLUMN nombre VARCHAR(50) NOT NULL
+  COLUMN edad INT
+  COLUMN fecha_ingreso DATE
+  COLUMN becado BOOLEAN
+END
+
+TABLE cursos
+  COLUMN id INT NOT NULL PRIMARY KEY
+  COLUMN nombre VARCHAR(60) NOT NULL
+  COLUMN creditos INT NOT NULL
+  COLUMN activo BOOLEAN NOT NULL
+  COLUMN costo FLOAT
+END
+
+TABLE inscripciones
+  COLUMN estudiante_id INT NOT NULL
+  COLUMN curso_id INT NOT NULL
+  COLUMN nota FLOAT
+  COLUMN fecha DATE
+END

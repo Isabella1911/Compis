@@ -46,11 +46,12 @@ sqlint [--db <dir>] [--json] [--emit tokens|parse-tree|ast|ast-dot] [--no-exec] 
 
 Con `-` en lugar del archivo, el script se lee de la entrada estándar.
 
-Mientras no estén las Partes 2 y 3, `sqlint` solo analiza: corre el
-semántico sentencia por sentencia sobre un catálogo en memoria (los
-`CREATE TABLE` del propio script) y no escribe nada en disco.
-`src/storage/value.*` y `src/storage/catalog.*` son *stubs* de la Parte 1
-que la Parte 2 reemplaza.
+Mientras no esté la `Session` de la Parte 3, `sqlint` solo analiza: corre el
+semántico sentencia por sentencia sobre el catálogo de la base
+(`metadata.txt`) y no escribe nada en disco. El almacenamiento de la Parte 2
+(`src/storage/`, `src/index/`) ya está y se prueba con `make test-storage` y
+`make test-mutator`; cómo se conecta está en
+[docs/sql/parte2_implementacion.md](docs/sql/parte2_implementacion.md).
 
 ## Pruebas
 
@@ -61,6 +62,24 @@ y la posición exacta del error) en `tests/sql/casos/`:
 make test-parte1
 ```
 
+Almacenamiento (Parte 2): valores, CSV, catálogo e índices sin ANTLR, y el
+`Mutator` con scripts reales (incluye que `databases/escuela` sea exactamente
+lo que produce `databases/escuela/crear.sql`):
+
+```bash
+make test-storage
+```
+
+```bash
+make test-mutator
+```
+
+Batería completa (compara la salida `--json` con los `.expected`):
+
+```bash
+make test
+```
+
 ## Estado
 
 | Etapa | Estado |
@@ -68,7 +87,8 @@ make test-parte1
 | Gramática completa (`grammar/SQL.g4`), tokens, árbol sintáctico, errores léxicos y sintácticos | Hecho |
 | AST (nodos, builder, impresor de texto y `.dot`) | Hecho |
 | Análisis semántico de la entrega 1 (sin JOIN, agregados, subconsultas ni índices) | Hecho |
-| Almacenamiento, ejecución e índices (Partes 2 y 3) | Pendiente |
+| Almacenamiento: valores, CSV, catálogo, `INSERT`/`UPDATE`/`DELETE`, índices, base de ejemplo y runner (Parte 2) | Hecho |
+| Ejecución de consultas y `Session` (Parte 3) | Pendiente |
 | IDE | Pendiente |
 
 ## Documentación

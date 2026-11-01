@@ -33,6 +33,9 @@ CASOS = pathlib.Path(__file__).resolve().parent / "casos"
 ESPERA = re.compile(r"^--\s*espera:\s*(.+)$", re.MULTILINE)
 MODO = re.compile(r"^--\s*modo:\s*(\S+)", re.MULTILINE)
 ITEM = re.compile(r"^([A-Z]{3}\d{3})(?:\s*@\s*(\d+):(\d+))?$")
+# Temas con cabecera "-- espera:". Los demas (ddl, dml, indices,
+# restricciones...) necesitan ejecucion y los compara run_tests.py.
+TEMAS = ("lexico", "sintactico", "semantico")
 
 
 def leer_esperado(texto, ruta):
@@ -86,7 +89,9 @@ def main():
     parser.add_argument("filtro", nargs="?", default="", help="solo casos cuya ruta contenga este texto")
     args = parser.parse_args()
 
-    casos = sorted(p for p in CASOS.rglob("*.sql") if args.filtro in str(p))
+    casos = sorted(
+        p for tema in TEMAS for p in (CASOS / tema).rglob("*.sql") if args.filtro in str(p)
+    )
     fallos = 0
     por_tema = {}
     for ruta in casos:
