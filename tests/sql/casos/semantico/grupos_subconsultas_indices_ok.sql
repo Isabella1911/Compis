@@ -1,0 +1,4 @@
+-- base: vacia
+-- espera: OK
+CREATE TABLE t (id INT, s VARCHAR(10));
+CREATE INDEX idx ON t(id); SELECT id, COUNT(*) FROM t GROUP BY id HAVING COUNT(*)>0 ORDER BY COUNT(*); SELECT (SELECT id FROM t) FROM t; SELECT id FROM t WHERE id IN (SELECT id FROM t); DROP INDEX idx;

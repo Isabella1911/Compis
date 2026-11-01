@@ -49,7 +49,7 @@ BIN         := sqlint
 DB          ?= databases/escuela
 PYTHON      ?= python3
 
-.PHONY: all build setup generate run test test-parte1 test-update test-storage test-mutator clean
+.PHONY: all build setup generate run test test-parte1 test-update test-storage test-mutator test-exec clean
 
 all: build
 
@@ -86,7 +86,7 @@ run: build
 	./$(BIN) --db $(DB) $(FILE)
 
 # El runner lo escribe la Parte 2 (tests/sql/run_tests.py).
-test: build
+test: build test-parte1 test-storage test-mutator test-exec
 	@if [ -f tests/sql/run_tests.py ]; then \
 	    $(PYTHON) tests/sql/run_tests.py --bin ./$(BIN); \
 	else \
@@ -122,6 +122,14 @@ $(OBJDIR)/test_mutator: tests/sql/storage/test_mutator.cpp $(filter-out $(OBJDIR
 
 test-mutator: $(OBJDIR)/test_mutator
 	@./$(OBJDIR)/test_mutator
+
+# Parte 3: contratos de binding/cache y oraculos de ejecucion de punta a punta.
+$(OBJDIR)/test_exec: tests/sql/exec/test_exec.cpp $(filter-out $(OBJDIR)/src/main.o,$(OBJ)) $(GEN_OBJ)
+	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -o $@
+
+test-exec: build $(OBJDIR)/test_exec
+	@./$(OBJDIR)/test_exec
+	@$(PYTHON) tests/sql/verificar_ejecucion.py --bin ./$(BIN)
 
 clean:
 	rm -rf $(OBJDIR) generated $(BIN)

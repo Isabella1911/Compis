@@ -1,0 +1,37 @@
+{
+  "diagnostics": [
+    {
+      "code": "SEM016",
+      "col": 41,
+      "length": 4,
+      "line": 4,
+      "message": "Ya existe el índice o un índice sobre esa columna",
+      "phase": "semantico"
+    }
+  ],
+  "exit": 1,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 3,
+      "message": "Tabla 't' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 1,
+      "kind": "CREATE INDEX",
+      "line": 4,
+      "message": "Índice 'idx' creado",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    }
+  ]
+}

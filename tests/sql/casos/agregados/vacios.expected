@@ -1,0 +1,183 @@
+{
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 2,
+      "message": "Tabla 't' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "COUNT(*)",
+          "type": "INT"
+        },
+        {
+          "name": "COUNT(n)",
+          "type": "INT"
+        },
+        {
+          "name": "SUM(n)",
+          "type": "INT"
+        },
+        {
+          "name": "AVG(n)",
+          "type": "FLOAT"
+        },
+        {
+          "name": "MIN(n)",
+          "type": "INT"
+        },
+        {
+          "name": "MAX(n)",
+          "type": "INT"
+        }
+      ],
+      "index": 1,
+      "kind": "SELECT",
+      "line": 3,
+      "message": "1 filas",
+      "plan": "SeqScan en t",
+      "rows": [
+        [
+          0,
+          0,
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "n",
+          "type": "INT"
+        },
+        {
+          "name": "COUNT(*)",
+          "type": "INT"
+        }
+      ],
+      "index": 2,
+      "kind": "SELECT",
+      "line": 4,
+      "message": "0 filas",
+      "plan": "SeqScan en t",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "COUNT(*)",
+          "type": "INT"
+        }
+      ],
+      "index": 3,
+      "kind": "SELECT",
+      "line": 5,
+      "message": "1 filas",
+      "plan": "SeqScan en t",
+      "rows": [
+        [
+          0
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": 2,
+      "columns": [],
+      "index": 4,
+      "kind": "INSERT",
+      "line": 6,
+      "message": "2 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "COUNT(*)",
+          "type": "INT"
+        },
+        {
+          "name": "COUNT(n)",
+          "type": "INT"
+        },
+        {
+          "name": "SUM(n)",
+          "type": "INT"
+        },
+        {
+          "name": "AVG(n)",
+          "type": "FLOAT"
+        },
+        {
+          "name": "MIN(n)",
+          "type": "INT"
+        },
+        {
+          "name": "MAX(n)",
+          "type": "INT"
+        }
+      ],
+      "index": 5,
+      "kind": "SELECT",
+      "line": 7,
+      "message": "1 filas",
+      "plan": "SeqScan en t",
+      "rows": [
+        [
+          2,
+          0,
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "n",
+          "type": "INT"
+        },
+        {
+          "name": "COUNT(*)",
+          "type": "INT"
+        }
+      ],
+      "index": 6,
+      "kind": "SELECT",
+      "line": 8,
+      "message": "1 filas",
+      "plan": "SeqScan en t",
+      "rows": [
+        [
+          null,
+          2
+        ]
+      ],
+      "status": "ok"
+    }
+  ]
+}

@@ -23,7 +23,8 @@
 #include "common/json.h"
 #include "diagnostics/reporter.h"
 #include "frontend/parser_driver.h"
-#include "semantic/script_checker.h"
+#include "exec/session.h"
+#include "exec/result_json.h"
 #include "storage/catalog.h"
 
 using namespace sqlint;
@@ -39,7 +40,7 @@ struct Options {
 };
 
 const char* kUsage =
-    "Uso: sqlint [--db <dir>] [--json] [--emit tokens|parse-tree|ast|ast-dot] [--no-exec] "
+    "Uso: sqlint [--db <dir>] [--json] [--emit tokens|parse-tree|ast|ast-dot|catalog] [--no-exec] "
     "<archivo.sql | ->\n";
 
 bool parseArgs(int argc, char* argv[], Options& opts, std::string& error) {
@@ -65,12 +66,12 @@ bool parseArgs(int argc, char* argv[], Options& opts, std::string& error) {
             return false;
         }
     }
-    if (opts.file.empty()) {
+    if (opts.file.empty() && opts.emit != "catalog") {
         error = "Falta el archivo .sql";
         return false;
     }
     if (!opts.emit.empty() && opts.emit != "tokens" && opts.emit != "parse-tree" &&
-        opts.emit != "ast" && opts.emit != "ast-dot") {
+        opts.emit != "ast" && opts.emit != "ast-dot" && opts.emit != "catalog") {
         error = "Modo de --emit desconocido: " + opts.emit;
         return false;
     }
@@ -88,21 +89,6 @@ bool readSource(const std::string& path, std::string& out) {
     }
     out = ss.str();
     return true;
-}
-
-std::string diagnosticsToJson(const std::vector<diagnostics::Diagnostic>& diags) {
-    std::ostringstream out;
-    out << "[";
-    for (size_t i = 0; i < diags.size(); ++i) {
-        const auto& d = diags[i];
-        if (i > 0) out << ",";
-        out << "\n    {\"phase\": " << json::jsonString(diagnostics::phaseName(d.phase))
-            << ", \"code\": " << json::jsonString(d.code) << ", \"line\": " << d.loc.line
-            << ", \"col\": " << d.loc.col << ", \"length\": " << d.length
-            << ", \"message\": " << json::jsonString(d.message) << "}";
-    }
-    out << (diags.empty() ? "]" : "\n  ]");
-    return out.str();
 }
 
 void printDiagnosticsText(const std::vector<diagnostics::Diagnostic>& diags) {
@@ -123,7 +109,7 @@ int main(int argc, char* argv[]) {
     }
 
     std::string source;
-    if (!readSource(opts.file, source)) {
+    if (opts.emit != "catalog" && !readSource(opts.file, source)) {
         std::cerr << "No se pudo abrir " << opts.file << "\n";
         return 2;
     }
@@ -134,18 +120,18 @@ int main(int argc, char* argv[]) {
     frontend::ParseOutput parsed = frontend::parse(source, reporter, parseOptions);
     std::vector<diagnostics::Diagnostic> diags = reporter.sorted();
 
-    // Analisis semantico (modo sin --emit). Hasta que exista la Session de
-    // la Parte 3 todo corre como --no-exec: se analiza sentencia por
-    // sentencia sobre una copia del catalogo, sin tocar disco.
-    int statementsOk = 0;
-    if (parsed.script && opts.emit.empty()) {
+    exec::RunOutput execution;
+    std::string catalogJson;
+    if ((parsed.script && opts.emit.empty()) || opts.emit == "catalog") {
         try {
-            semantic::ScriptCheck check =
-                semantic::checkScript(*parsed.script, storage::Catalog::load(opts.db));
-            diags.insert(diags.end(), check.diagnostics.begin(), check.diagnostics.end());
-            statementsOk = check.statementsOk;
+            if (opts.emit == "catalog") catalogJson = storage::Catalog::load(opts.db).toJson();
+            else {
+                exec::Session session(opts.db);
+                execution = session.run(*parsed.script, opts.noExec);
+                diags.insert(diags.end(), execution.diagnostics.begin(), execution.diagnostics.end());
+            }
         } catch (const diagnostics::SqlError& e) {
-            diags.push_back(e.diag);  // metadata.txt corrupto: RUN103
+            diags.push_back(e.diag);
         }
     }
 
@@ -155,7 +141,7 @@ int main(int argc, char* argv[]) {
     if (parsed.script && opts.emit == "ast-dot") astText = ast::toDot(*parsed.script);
 
     if (opts.json) {
-        std::cout << "{\n  \"diagnostics\": " << diagnosticsToJson(diags);
+        std::cout << "{\n  \"diagnostics\": " << exec::diagnosticsToJson(diags);
         if (opts.emit == "tokens") {
             std::cout << ",\n  \"tokens\": " << frontend::tokensToJson(parsed.tokens);
         } else if (opts.emit == "parse-tree") {
@@ -164,8 +150,10 @@ int main(int argc, char* argv[]) {
             const char* key = opts.emit == "ast" ? "ast" : "dot";
             std::cout << ",\n  \"" << key << "\": "
                       << (parsed.script ? json::jsonString(astText) : "null");
+        } else if (opts.emit == "catalog") {
+            std::cout << ",\n  \"catalog\": " << (catalogJson.empty() ? "null" : catalogJson);
         } else {
-            std::cout << ",\n  \"statements\": []";
+            std::cout << ",\n  \"statements\": " << exec::statementsToJson(execution.statements);
         }
         std::cout << "\n}\n";
         return diags.empty() ? 0 : 1;
@@ -178,9 +166,11 @@ int main(int argc, char* argv[]) {
         std::cout << parsed.parseTreeDot;
     } else if (opts.emit == "ast" || opts.emit == "ast-dot") {
         std::cout << astText;
-    } else if (diags.empty()) {
-        std::cout << "Sin errores: " << statementsOk
-                  << " sentencia(s) analizadas. La ejecución todavía no está disponible.\n";
+    } else if (opts.emit == "catalog") {
+        if (!catalogJson.empty()) std::cout << catalogJson << "\n";
+    } else {
+        for (const auto& result : execution.statements) std::cout << exec::formatTable(result);
+        if (opts.noExec && diags.empty()) std::cout << "Sin errores semánticos.\n";
     }
     return diags.empty() ? 0 : 1;
 }

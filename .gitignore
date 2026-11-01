@@ -1,14 +1,34 @@
 .env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
 *.png
 *.dot
 *.exe
 output/
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
 
 *.o
+*.obj
+*.a
+*.so
+*.so.*
+*.dylib
 __pycache__/
 *.pyc
 *.pyo
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Toolchain local (JRE/antlr.jar/cmake/runtime C++), codigo generado por
 # ANTLR y los binarios compilados.

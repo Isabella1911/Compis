@@ -1,0 +1,26 @@
+{
+  "diagnostics": [
+    {
+      "code": "SEM003",
+      "col": 8,
+      "length": 2,
+      "line": 4,
+      "message": "La columna 'id' es ambigua: está en a, b. Califícala, por ejemplo a.id",
+      "phase": "semantico"
+    }
+  ],
+  "exit": 1,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 3,
+      "message": "Tabla 't' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    }
+  ]
+}

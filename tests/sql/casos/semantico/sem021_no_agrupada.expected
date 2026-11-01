@@ -1,0 +1,26 @@
+{
+  "diagnostics": [
+    {
+      "code": "SEM021",
+      "col": 8,
+      "length": 1,
+      "line": 4,
+      "message": "La columna 's' no está agrupada",
+      "phase": "semantico"
+    }
+  ],
+  "exit": 1,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 3,
+      "message": "Tabla 't' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    }
+  ]
+}

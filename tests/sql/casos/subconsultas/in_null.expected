@@ -1,0 +1,146 @@
+{
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 2,
+      "message": "Tabla 't' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 1,
+      "kind": "CREATE TABLE",
+      "line": 3,
+      "message": "Tabla 'u' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 3,
+      "columns": [],
+      "index": 2,
+      "kind": "INSERT",
+      "line": 4,
+      "message": "3 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 2,
+      "columns": [],
+      "index": 3,
+      "kind": "INSERT",
+      "line": 5,
+      "message": "2 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "dentro",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "fuera",
+          "type": "BOOLEAN"
+        }
+      ],
+      "index": 4,
+      "kind": "SELECT",
+      "line": 6,
+      "message": "3 filas",
+      "plan": "SeqScan en t\n  └ Subconsulta (no correlacionada): SeqScan en u",
+      "rows": [
+        [
+          1,
+          true,
+          false
+        ],
+        [
+          2,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "vacio",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "no_vacio",
+          "type": "BOOLEAN"
+        }
+      ],
+      "index": 5,
+      "kind": "SELECT",
+      "line": 7,
+      "message": "3 filas",
+      "plan": "SeqScan en t\n  └ Subconsulta (no correlacionada): SeqScan en u",
+      "rows": [
+        [
+          1,
+          false,
+          true
+        ],
+        [
+          2,
+          false,
+          true
+        ],
+        [
+          null,
+          false,
+          true
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        }
+      ],
+      "index": 6,
+      "kind": "SELECT",
+      "line": 8,
+      "message": "0 filas",
+      "plan": "SeqScan en t\n  └ Subconsulta (no correlacionada): SeqScan en u",
+      "rows": [],
+      "status": "ok"
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 2,
+      "message": "Tabla 'a' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 1,
+      "kind": "CREATE TABLE",
+      "line": 3,
+      "message": "Tabla 'b' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 3,
+      "columns": [],
+      "index": 2,
+      "kind": "INSERT",
+      "line": 4,
+      "message": "3 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 3,
+      "columns": [],
+      "index": 3,
+      "kind": "INSERT",
+      "line": 5,
+      "message": "3 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 4,
+      "kind": "CREATE INDEX",
+      "line": 6,
+      "message": "Índice 'idx_a' creado",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        }
+      ],
+      "index": 5,
+      "kind": "SELECT",
+      "line": 7,
+      "message": "1 filas",
+      "plan": "IndexScan idx_a (id >= 2) en a\n  NestedLoop INNER JOIN: SeqScan en b",
+      "rows": [
+        [
+          2
+        ]
+      ],
+      "status": "ok"
+    }
+  ]
+}

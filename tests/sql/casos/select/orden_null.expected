@@ -1,0 +1,101 @@
+{
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 2,
+      "message": "Tabla 't' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 5,
+      "columns": [],
+      "index": 1,
+      "kind": "INSERT",
+      "line": 3,
+      "message": "5 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "clave",
+          "type": "INT"
+        }
+      ],
+      "index": 2,
+      "kind": "SELECT",
+      "line": 4,
+      "message": "5 filas",
+      "plan": "SeqScan en t",
+      "rows": [
+        [
+          3,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          5,
+          2
+        ],
+        [
+          2,
+          null
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        }
+      ],
+      "index": 3,
+      "kind": "SELECT",
+      "line": 5,
+      "message": "5 filas",
+      "plan": "SeqScan en t",
+      "rows": [
+        [
+          2
+        ],
+        [
+          5
+        ],
+        [
+          1
+        ],
+        [
+          4
+        ],
+        [
+          3
+        ]
+      ],
+      "status": "ok"
+    }
+  ]
+}

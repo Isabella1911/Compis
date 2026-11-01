@@ -1,0 +1,238 @@
+{
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 2,
+      "message": "Tabla 't' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 5,
+      "columns": [],
+      "index": 1,
+      "kind": "INSERT",
+      "line": 3,
+      "message": "5 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "COUNT(*)",
+          "type": "INT"
+        },
+        {
+          "name": "COUNT(n)",
+          "type": "INT"
+        },
+        {
+          "name": "SUM(n)",
+          "type": "INT"
+        },
+        {
+          "name": "AVG(n)",
+          "type": "FLOAT"
+        },
+        {
+          "name": "MIN(n)",
+          "type": "INT"
+        },
+        {
+          "name": "MAX(n)",
+          "type": "INT"
+        },
+        {
+          "name": "SUM(f)",
+          "type": "FLOAT"
+        },
+        {
+          "name": "MIN(s)",
+          "type": "VARCHAR(10)"
+        },
+        {
+          "name": "MAX(s)",
+          "type": "VARCHAR(10)"
+        }
+      ],
+      "index": 2,
+      "kind": "SELECT",
+      "line": 4,
+      "message": "1 filas",
+      "plan": "SeqScan en t",
+      "rows": [
+        [
+          5,
+          3,
+          35,
+          11.666666666666666,
+          5,
+          20,
+          7,
+          "a",
+          "z"
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "g",
+          "type": "INT"
+        },
+        {
+          "name": "COUNT(*)",
+          "type": "INT"
+        },
+        {
+          "name": "COUNT(n)",
+          "type": "INT"
+        },
+        {
+          "name": "SUM(n)",
+          "type": "INT"
+        },
+        {
+          "name": "AVG(n)",
+          "type": "FLOAT"
+        },
+        {
+          "name": "MIN(n)",
+          "type": "INT"
+        },
+        {
+          "name": "MAX(n)",
+          "type": "INT"
+        }
+      ],
+      "index": 3,
+      "kind": "SELECT",
+      "line": 5,
+      "message": "3 filas",
+      "plan": "SeqScan en t",
+      "rows": [
+        [
+          1,
+          2,
+          2,
+          30,
+          15,
+          10,
+          20
+        ],
+        [
+          2,
+          1,
+          0,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          2,
+          1,
+          5,
+          5,
+          5,
+          5
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "g",
+          "type": "INT"
+        },
+        {
+          "name": "promedio",
+          "type": "INT"
+        }
+      ],
+      "index": 4,
+      "kind": "SELECT",
+      "line": 6,
+      "message": "2 filas",
+      "plan": "SeqScan en t",
+      "rows": [
+        [
+          1,
+          15
+        ],
+        [
+          null,
+          5
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "g",
+          "type": "INT"
+        }
+      ],
+      "index": 5,
+      "kind": "SELECT",
+      "line": 7,
+      "message": "1 filas",
+      "plan": "SeqScan en t",
+      "rows": [
+        [
+          1
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "clave",
+          "type": "INT"
+        },
+        {
+          "name": "COUNT(*)",
+          "type": "INT"
+        }
+      ],
+      "index": 6,
+      "kind": "SELECT",
+      "line": 8,
+      "message": "3 filas",
+      "plan": "SeqScan en t",
+      "rows": [
+        [
+          2,
+          2
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          null,
+          2
+        ]
+      ],
+      "status": "ok"
+    }
+  ]
+}

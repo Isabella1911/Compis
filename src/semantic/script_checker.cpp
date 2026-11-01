@@ -23,6 +23,23 @@ storage::TableDef toTableDef(const ast::CreateTable& stmt) {
     return table;
 }
 
+void simulateSchema(const ast::Statement& stmt, storage::Catalog& catalog) {
+    switch (stmt.kind) {
+        case ast::StatementKind::CreateTable:
+            catalog.addTable(toTableDef(static_cast<const ast::CreateTable&>(stmt))); break;
+        case ast::StatementKind::DropTable:
+            catalog.dropTable(static_cast<const ast::DropTable&>(stmt).table.name); break;
+        case ast::StatementKind::CreateIndex: {
+            const auto& s = static_cast<const ast::CreateIndex&>(stmt);
+            catalog.addIndex({s.index.name, s.table.name, s.column.name, "indices/" + s.index.name + ".idx"});
+            break;
+        }
+        case ast::StatementKind::DropIndex:
+            catalog.dropIndex(static_cast<const ast::DropIndex&>(stmt).index.name); break;
+        default: break;
+    }
+}
+
 ScriptCheck checkScript(ast::Script& script, storage::Catalog catalog) {
     ScriptCheck result;
     for (auto& stmt : script.statements) {
@@ -33,12 +50,7 @@ ScriptCheck checkScript(ast::Script& script, storage::Catalog catalog) {
         }
         ++result.statementsOk;
 
-        // Efecto de la sentencia sobre el esquema. Los datos no importan aqui.
-        if (stmt->kind == ast::StatementKind::CreateTable) {
-            catalog.addTable(toTableDef(static_cast<const ast::CreateTable&>(*stmt)));
-        } else if (stmt->kind == ast::StatementKind::DropTable) {
-            catalog.dropTable(static_cast<const ast::DropTable&>(*stmt).table.name);
-        }
+        simulateSchema(*stmt, catalog);
     }
     return result;
 }

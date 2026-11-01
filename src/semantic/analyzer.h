@@ -10,9 +10,8 @@
 // ast/nodes.h) y la sentencia es ejecutable sin mas validaciones de nombres
 // ni de tipos.
 //
-// Entrega 1: CREATE/DROP TABLE, INSERT, UPDATE, DELETE y SELECT sobre una
-// tabla. JOIN, agregados, GROUP BY/HAVING, subconsultas e indices se
-// reportan como SEM023 ("todavia no soportado") hasta la entrega 2.
+// Incluye JOIN, agrupacion, agregados, subconsultas e indices. Anota tambien
+// SelectItem::source para t.*, referencias a alias de ORDER BY y correlacion.
 
 #include <vector>
 

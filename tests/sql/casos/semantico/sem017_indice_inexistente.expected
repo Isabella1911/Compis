@@ -1,0 +1,26 @@
+{
+  "diagnostics": [
+    {
+      "code": "SEM017",
+      "col": 12,
+      "length": 7,
+      "line": 4,
+      "message": "El índice 'ausente' no existe",
+      "phase": "semantico"
+    }
+  ],
+  "exit": 1,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 3,
+      "message": "Tabla 't' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    }
+  ]
+}

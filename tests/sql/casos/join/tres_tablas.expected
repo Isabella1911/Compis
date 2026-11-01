@@ -1,0 +1,167 @@
+{
+  "diagnostics": [],
+  "exit": 0,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 2,
+      "message": "Tabla 'a' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 1,
+      "kind": "CREATE TABLE",
+      "line": 3,
+      "message": "Tabla 'b' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 2,
+      "kind": "CREATE TABLE",
+      "line": 4,
+      "message": "Tabla 'c' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 2,
+      "columns": [],
+      "index": 3,
+      "kind": "INSERT",
+      "line": 5,
+      "message": "2 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 3,
+      "columns": [],
+      "index": 4,
+      "kind": "INSERT",
+      "line": 6,
+      "message": "3 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 2,
+      "columns": [],
+      "index": 5,
+      "kind": "INSERT",
+      "line": 7,
+      "message": "2 filas insertadas",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "nombre",
+          "type": "VARCHAR(10)"
+        },
+        {
+          "name": "valor",
+          "type": "INT"
+        }
+      ],
+      "index": 6,
+      "kind": "SELECT",
+      "line": 8,
+      "message": "3 filas",
+      "plan": "SeqScan en a\n  NestedLoop INNER JOIN: SeqScan en b\n  NestedLoop INNER JOIN: SeqScan en c",
+      "rows": [
+        [
+          1,
+          "Ana",
+          80
+        ],
+        [
+          1,
+          "Ana",
+          90
+        ],
+        [
+          2,
+          "Luis",
+          80
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "nombre",
+          "type": "VARCHAR(10)"
+        },
+        {
+          "name": "aid",
+          "type": "INT"
+        },
+        {
+          "name": "cid",
+          "type": "INT"
+        }
+      ],
+      "index": 7,
+      "kind": "SELECT",
+      "line": 9,
+      "message": "1 filas",
+      "plan": "SeqScan en a\n  NestedLoop INNER JOIN: SeqScan en b",
+      "rows": [
+        [
+          2,
+          "Luis",
+          2,
+          20
+        ]
+      ],
+      "status": "ok"
+    },
+    {
+      "affected": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "nombre",
+          "type": "VARCHAR(10)"
+        }
+      ],
+      "index": 8,
+      "kind": "SELECT",
+      "line": 10,
+      "message": "0 filas",
+      "plan": "SeqScan en a\n  NestedLoop INNER JOIN: SeqScan en b",
+      "rows": [],
+      "status": "ok"
+    }
+  ]
+}
