@@ -10,9 +10,9 @@
 -- make test-mutator verifica que este script produce exactamente los
 -- archivos de databases/escuela.
 --
--- Sin indices: CREATE INDEX es de la entrega 2 (hoy el semantico responde
--- SEM023). Cuando se habilite, agregar al final:
---   CREATE INDEX idx_estudiantes_edad ON estudiantes (edad);
+-- Trae un indice sobre estudiantes.edad (al final del script), para que una
+-- consulta como `WHERE edad >= 18` muestre IndexScan en el plan sin tener
+-- que crear nada antes.
 
 CREATE TABLE estudiantes (
     id INT PRIMARY KEY,
@@ -126,3 +126,5 @@ INSERT INTO inscripciones (estudiante_id, curso_id, nota, fecha) VALUES
     (23, 5, 76.0, DATE '2025-07-05'),
     (25, 1, 83.0, DATE '2024-01-20'),
     (25, 20, 100.0, DATE '2024-01-20');
+
+CREATE INDEX idx_estudiantes_edad ON estudiantes (edad);

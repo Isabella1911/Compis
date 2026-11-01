@@ -1,8 +1,7 @@
--- Índices: se crean, se usan en el WHERE (ver la pestaña Plan: IndexScan)
--- y se mantienen al modificar la tabla. Al final se eliminan para que el
--- ejemplo se pueda repetir.
-CREATE INDEX idx_edad ON estudiantes (edad);
-
+-- Índices. La base de ejemplo ya trae idx_estudiantes_edad sobre
+-- estudiantes(edad): las consultas por edad lo usan (pestaña Plan:
+-- IndexScan) y el índice se mantiene al modificar la tabla. Al final se
+-- crea y se elimina otro índice, así el ejemplo se puede repetir.
 SELECT nombre, edad FROM estudiantes WHERE edad >= 21 ORDER BY edad;
 SELECT nombre FROM estudiantes WHERE edad = 20;
 
@@ -15,4 +14,9 @@ UPDATE estudiantes SET edad = edad + 100 WHERE edad = 17;
 SELECT nombre, edad FROM estudiantes WHERE edad >= 100;
 UPDATE estudiantes SET edad = edad - 100 WHERE edad >= 100;
 
-DROP INDEX idx_edad;
+-- CREATE INDEX sobre otra columna: la misma consulta pasa de SeqScan a
+-- IndexScan.
+SELECT nombre FROM cursos WHERE costo > 900;
+CREATE INDEX idx_cursos_costo ON cursos (costo);
+SELECT nombre FROM cursos WHERE costo > 900;
+DROP INDEX idx_cursos_costo;
