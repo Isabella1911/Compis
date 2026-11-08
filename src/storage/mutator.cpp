@@ -52,6 +52,10 @@ std::vector<StoredRow> zipRows(const std::vector<uint64_t>& offsets, std::vector
     return out;
 }
 
+bool valueInSet(const Value& v, const std::set<Value, ValueLess>& keys) {
+    return !v.isNull() && keys.count(v) > 0;
+}
+
 }  // namespace
 
 Value coerceToColumn(const Value& value, const ColumnDef& column, SourceLoc loc) {
@@ -104,6 +108,96 @@ MutationResult Mutator::execute(const ast::Statement& stmt) {
 }
 
 // ---------------------------------------------------------------------------
+// Llaves foraneas
+// ---------------------------------------------------------------------------
+
+void Mutator::checkForeignKeys(const TableDef& table, const Row& row, SourceLoc loc) {
+    for (const ForeignKeyDef* fk : catalog_.foreignKeysOfTable(table.name)) {
+        int c = table.findColumn(fk->column);
+        if (c < 0 || row[c].isNull()) continue;
+        const TableDef* parent = catalog_.findTable(fk->refTable);
+        if (parent == nullptr) continue;
+        int ref = parent->findColumn(fk->refColumn);
+        if (ref < 0) continue;
+        bool found = false;
+        for (const auto& parentRow : store_.scan(*parent)) {
+            if (!parentRow.values[ref].isNull() &&
+                compareValues(parentRow.values[ref], row[c]) == 0) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            fail(codes::RUN105, loc,
+                 "La columna " + quoted(fk->column) + " = " + displayValue(row[c]) +
+                     " no existe en " + quoted(fk->refTable) + "." + fk->refColumn +
+                     " (llave foránea)");
+        }
+    }
+}
+
+void Mutator::rewriteTable(const TableDef& table, std::vector<Row> rows) {
+    std::vector<uint64_t> offsets = store_.rewrite(table, rows);
+    indexes_.rebuild(table, zipRows(offsets, std::move(rows)));
+}
+
+// Borra en cascada las filas hijas que apuntan a `deletedKeys` en la columna
+// referenciada de `parentTable`. Recursivo. Reescribe los CSV e indices hijos.
+void Mutator::cascadeDeleteChildren(const std::string& parentTable,
+                                    const std::string& refColumn,
+                                    const std::set<Value, ValueLess>& deletedKeys,
+                                    SourceLoc loc, bool forceCascade) {
+    if (deletedKeys.empty()) return;
+
+    // Copia: cascade puede mutar el catalogo solo al hacer DROP, no aqui.
+    std::vector<ForeignKeyDef> incoming;
+    for (const ForeignKeyDef* fk : catalog_.foreignKeysTo(parentTable)) {
+        if (sameName(fk->refColumn, refColumn)) incoming.push_back(*fk);
+    }
+
+    for (const ForeignKeyDef& fk : incoming) {
+        const TableDef* childPtr = catalog_.findTable(fk.table);
+        if (childPtr == nullptr) continue;
+        TableDef child = *childPtr;
+        int childCol = child.findColumn(fk.column);
+        if (childCol < 0) continue;
+
+        std::vector<StoredRow> all = store_.scan(child);
+        std::vector<Row> kept;
+        std::vector<Row> removed;
+        kept.reserve(all.size());
+        for (auto& stored : all) {
+            if (valueInSet(stored.values[childCol], deletedKeys)) {
+                removed.push_back(std::move(stored.values));
+            } else {
+                kept.push_back(std::move(stored.values));
+            }
+        }
+        if (removed.empty()) continue;
+
+        if (!forceCascade && !fk.onDeleteCascade) {
+            fail(codes::RUN106, loc,
+                 "No se puede borrar de " + quoted(parentTable) + ": hay filas en " +
+                     quoted(fk.table) + " que la referencian por " + quoted(fk.column) +
+                     ". Declará ON DELETE CASCADE o borrá las filas hijas antes");
+        }
+
+        // Primero cascada desde la hija (si ella es padre de otras), luego
+        // reescribir su CSV.
+        int childPk = child.primaryKeyColumn();
+        if (childPk >= 0) {
+            std::set<Value, ValueLess> childKeys;
+            for (const auto& row : removed) {
+                if (!row[childPk].isNull()) childKeys.insert(row[childPk]);
+            }
+            cascadeDeleteChildren(child.name, child.columns[childPk].name, childKeys, loc,
+                                  forceCascade);
+        }
+        rewriteTable(child, std::move(kept));
+    }
+}
+
+// ---------------------------------------------------------------------------
 // DDL
 // ---------------------------------------------------------------------------
 
@@ -113,18 +207,52 @@ MutationResult Mutator::createTable(const ast::CreateTable& stmt) {
     // huerfano, que el siguiente CREATE con el mismo nombre sobrescribe.
     store_.create(def);
     catalog_.addTable(def);
+    for (const auto& fk : stmt.foreignKeys) {
+        catalog_.addForeignKey({def.name, fk.column.name, fk.refTable.name, fk.refColumn.name,
+                                fk.onDeleteCascade});
+    }
     catalog_.save();
     return {0, "Tabla " + quoted(def.name) + " creada"};
 }
 
 MutationResult Mutator::dropTable(const ast::DropTable& stmt) {
     TableDef def = *catalog_.findTable(stmt.table.name);
+    auto incoming = catalog_.foreignKeysTo(def.name);
+    if (!stmt.cascade && !incoming.empty()) {
+        fail(codes::SEM024, stmt.loc,
+             "No se puede hacer DROP TABLE de " + quoted(def.name) +
+                 " porque otras tablas la referencian. Usá CASCADE");
+    }
+
+    // CASCADE: borrar primero las filas hijas (reescribe sus CSV) y luego
+    // la tabla padre. forceCascade=true: DROP CASCADE limpia datos hijos
+    // aunque la FK no declare ON DELETE CASCADE.
+    if (stmt.cascade && !incoming.empty()) {
+        std::set<std::string> done;
+        for (const ForeignKeyDef* fk : incoming) {
+            std::string key = fk->refColumn;
+            bool already = false;
+            for (const auto& d : done) {
+                if (sameName(d, key)) already = true;
+            }
+            if (already) continue;
+            done.insert(fk->refColumn);
+            int refCol = def.findColumn(fk->refColumn);
+            if (refCol < 0) continue;
+            std::set<Value, ValueLess> keys;
+            for (const auto& row : store_.scan(def)) {
+                if (!row.values[refCol].isNull()) keys.insert(row.values[refCol]);
+            }
+            cascadeDeleteChildren(def.name, fk->refColumn, keys, stmt.loc, true);
+        }
+    }
+
     std::vector<IndexDef> idxs;
     for (const IndexDef* i : catalog_.indexesOfTable(def.name)) idxs.push_back(*i);
 
     // Catalogo primero: si el borrado de archivos falla, la tabla ya no
     // existe para el interprete y solo quedan archivos huerfanos.
-    catalog_.dropTable(def.name);
+    catalog_.dropTable(def.name);  // tambien saca FKs que la involucran
     catalog_.save();
     store_.drop(def);
     indexes_.removeFiles(idxs);
@@ -151,8 +279,6 @@ MutationResult Mutator::insert(const ast::Insert& stmt) {
     std::vector<int> targets;
     for (const auto& name : stmt.columns) targets.push_back(table.findColumn(name.name));
 
-    // Llaves que ya estan en la tabla; las filas nuevas se van agregando
-    // para detectar tambien repetidos dentro del mismo INSERT.
     int pk = table.primaryKeyColumn();
     std::set<Value, ValueLess> keys;
     if (pk >= 0) {
@@ -161,7 +287,6 @@ MutationResult Mutator::insert(const ast::Insert& stmt) {
         }
     }
 
-    // 1. Calcular y validar todas las filas. Nada se escribe todavia.
     std::vector<Row> rows;
     for (size_t r = 0; r < stmt.rows.size(); ++r) {
         SourceLoc rowLoc = r < stmt.rowLocs.size() ? stmt.rowLocs[r] : stmt.loc;
@@ -175,10 +300,10 @@ MutationResult Mutator::insert(const ast::Insert& stmt) {
         }
         checkNotNull(row, table, rowLoc);
         if (pk >= 0 && !keys.insert(row[pk]).second) duplicateKey(table, pk, row[pk], pkLoc);
+        checkForeignKeys(table, row, rowLoc);
         rows.push_back(std::move(row));
     }
 
-    // 2. Escribir y mantener los indices de forma incremental.
     std::vector<StoredRow> added;
     for (auto& row : rows) {
         uint64_t offset = store_.append(table, row);
@@ -197,8 +322,6 @@ MutationResult Mutator::update(const ast::Update& stmt) {
     std::set<uint64_t> hit;
     for (const auto& row : matched) hit.insert(row.offset);
 
-    // 1. Filas finales. Los SET se evaluan con la fila ORIGINAL: con
-    //    "SET a = b, b = a" se intercambian, como en SQL.
     std::vector<Row> rows;
     rows.reserve(all.size());
     for (const auto& stored : all) {
@@ -217,10 +340,10 @@ MutationResult Mutator::update(const ast::Update& stmt) {
                          quoted(table.name) + " es NOT NULL y el valor calculado es NULL");
             }
         }
+        checkForeignKeys(table, row, stmt.loc);
         rows.push_back(std::move(row));
     }
 
-    // 2. La llave primaria tiene que seguir sin repetidos.
     int pk = table.primaryKeyColumn();
     if (pk >= 0 && !hit.empty()) {
         SourceLoc loc = stmt.loc;
@@ -236,9 +359,7 @@ MutationResult Mutator::update(const ast::Update& stmt) {
     int64_t n = static_cast<int64_t>(hit.size());
     if (n == 0) return {0, rowsMessage(0, "actualizada")};
 
-    // 3. Escribir. El rewrite cambia los offsets: los indices se reconstruyen.
-    std::vector<uint64_t> offsets = store_.rewrite(table, rows);
-    indexes_.rebuild(table, zipRows(offsets, std::move(rows)));
+    rewriteTable(table, std::move(rows));
     return {n, rowsMessage(n, "actualizada")};
 }
 
@@ -252,13 +373,35 @@ MutationResult Mutator::deleteRows(const ast::Delete& stmt) {
     int64_t n = static_cast<int64_t>(hit.size());
     if (n == 0) return {0, rowsMessage(0, "eliminada")};
 
-    std::vector<Row> rows;
+    std::vector<Row> kept;
+    std::vector<Row> removed;
     for (auto& stored : all) {
-        if (!hit.count(stored.offset)) rows.push_back(std::move(stored.values));
+        if (hit.count(stored.offset)) {
+            removed.push_back(std::move(stored.values));
+        } else {
+            kept.push_back(std::move(stored.values));
+        }
     }
-    // DELETE sin WHERE deja la tabla vacia pero con su encabezado.
-    std::vector<uint64_t> offsets = store_.rewrite(table, rows);
-    indexes_.rebuild(table, zipRows(offsets, std::move(rows)));
+
+    // Cascada por cada columna del padre referenciada por alguna FK.
+    std::vector<std::string> refColsDone;
+    for (const ForeignKeyDef* fk : catalog_.foreignKeysTo(table.name)) {
+        bool already = false;
+        for (const auto& d : refColsDone) {
+            if (sameName(d, fk->refColumn)) already = true;
+        }
+        if (already) continue;
+        refColsDone.push_back(fk->refColumn);
+        int refCol = table.findColumn(fk->refColumn);
+        if (refCol < 0) continue;
+        std::set<Value, ValueLess> deleted;
+        for (const auto& row : removed) {
+            if (!row[refCol].isNull()) deleted.insert(row[refCol]);
+        }
+        cascadeDeleteChildren(table.name, fk->refColumn, deleted, stmt.loc, false);
+    }
+
+    rewriteTable(table, std::move(kept));
     return {n, rowsMessage(n, "eliminada")};
 }
 

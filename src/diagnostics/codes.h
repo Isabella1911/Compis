@@ -43,12 +43,16 @@ constexpr const char* SEM020 = "SEM020";  // Agregado en WHERE o agregados anida
 constexpr const char* SEM021 = "SEM021";  // Columna no agrupada con GROUP BY/agregados
 constexpr const char* SEM022 = "SEM022";  // SUM/AVG sobre tipo no numerico
 constexpr const char* SEM023 = "SEM023";  // Construccion aun no soportada en esta entrega
+constexpr const char* SEM024 = "SEM024";  // DROP TABLE bloqueado por llaves foraneas (usar CASCADE)
+constexpr const char* SEM025 = "SEM025";  // FOREIGN KEY mal formada
 
 // Ejecucion, Parte 2
 constexpr const char* RUN101 = "RUN101";  // Llave primaria duplicada
 constexpr const char* RUN102 = "RUN102";  // NOT NULL violado en UPDATE
 constexpr const char* RUN103 = "RUN103";  // Archivo de la base faltante o corrupto
 constexpr const char* RUN104 = "RUN104";  // Valor calculado excede VARCHAR(n)
+constexpr const char* RUN105 = "RUN105";  // Violacion de llave foranea (INSERT/UPDATE)
+constexpr const char* RUN106 = "RUN106";  // DELETE/DROP bloqueado por filas hijas (sin CASCADE)
 
 // Ejecucion, Parte 3
 constexpr const char* RUN201 = "RUN201";  // Subconsulta escalar devolvio mas de una fila

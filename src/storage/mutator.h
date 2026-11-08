@@ -19,11 +19,13 @@
 
 #include <cstdint>
 #include <functional>
+#include <set>
 #include <string>
 #include <vector>
 
 #include "ast/nodes.h"
 #include "catalog.h"
+#include "diagnostics/diagnostic.h"
 #include "index/index_manager.h"
 #include "table_store.h"
 
@@ -60,6 +62,15 @@ private:
     MutationResult insert(const ast::Insert& stmt);
     MutationResult update(const ast::Update& stmt);
     MutationResult deleteRows(const ast::Delete& stmt);
+
+    void checkForeignKeys(const TableDef& table, const Row& row, diagnostics::SourceLoc loc);
+    void rewriteTable(const TableDef& table, std::vector<Row> rows);
+    // Si forceCascade es true (DROP TABLE CASCADE), borra filas hijas aunque
+    // la FK no declare ON DELETE CASCADE. En DELETE normal, forceCascade es
+    // false y una FK sin CASCADE con filas hijas da RUN106.
+    void cascadeDeleteChildren(const std::string& parentTable, const std::string& refColumn,
+                               const std::set<Value, ValueLess>& deletedKeys,
+                               diagnostics::SourceLoc loc, bool forceCascade = false);
 
     Catalog& catalog_;
     TableStore& store_;

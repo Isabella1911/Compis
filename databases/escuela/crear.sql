@@ -34,7 +34,9 @@ CREATE TABLE inscripciones (
     estudiante_id INT NOT NULL,
     curso_id INT NOT NULL,
     nota FLOAT,
-    fecha DATE
+    fecha DATE,
+    FOREIGN KEY (estudiante_id) REFERENCES estudiantes (id) ON DELETE CASCADE,
+    FOREIGN KEY (curso_id) REFERENCES cursos (id) ON DELETE CASCADE
 );
 
 INSERT INTO estudiantes (id, nombre, edad, fecha_ingreso, becado) VALUES

@@ -25,8 +25,15 @@ storage::TableDef toTableDef(const ast::CreateTable& stmt) {
 
 void simulateSchema(const ast::Statement& stmt, storage::Catalog& catalog) {
     switch (stmt.kind) {
-        case ast::StatementKind::CreateTable:
-            catalog.addTable(toTableDef(static_cast<const ast::CreateTable&>(stmt))); break;
+        case ast::StatementKind::CreateTable: {
+            const auto& s = static_cast<const ast::CreateTable&>(stmt);
+            catalog.addTable(toTableDef(s));
+            for (const auto& fk : s.foreignKeys) {
+                catalog.addForeignKey({s.table.name, fk.column.name, fk.refTable.name,
+                                      fk.refColumn.name, fk.onDeleteCascade});
+            }
+            break;
+        }
         case ast::StatementKind::DropTable:
             catalog.dropTable(static_cast<const ast::DropTable&>(stmt).table.name); break;
         case ast::StatementKind::CreateIndex: {

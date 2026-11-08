@@ -147,11 +147,18 @@ ViewNode viewOf(const Statement& stmt) {
                 node.children.push_back(
                     leaf("PRIMARY KEY (" + pk.name + ")", ViewCategory::Definition, pk.loc));
             }
+            for (const auto& fk : s.foreignKeys) {
+                std::string label = "FOREIGN KEY (" + fk.column.name + ") REFERENCES " +
+                                   fk.refTable.name + "(" + fk.refColumn.name + ")";
+                if (fk.onDeleteCascade) label += " ON DELETE CASCADE";
+                node.children.push_back(leaf(label, ViewCategory::Definition, fk.loc));
+            }
             return node;
         }
         case StatementKind::DropTable: {
             const auto& s = static_cast<const DropTable&>(stmt);
-            return leaf("DropTable " + s.table.name, ViewCategory::Statement, s.loc);
+            return leaf("DropTable " + s.table.name + (s.cascade ? " CASCADE" : ""),
+                        ViewCategory::Statement, s.loc);
         }
         case StatementKind::CreateIndex: {
             const auto& s = static_cast<const CreateIndex&>(stmt);

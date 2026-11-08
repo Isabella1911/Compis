@@ -1,0 +1,37 @@
+{
+  "diagnostics": [
+    {
+      "code": "SEM024",
+      "col": 12,
+      "length": 6,
+      "line": 9,
+      "message": "No se puede hacer DROP TABLE de 'padres': otras tablas la referencian (hijos). Usá DROP TABLE padres CASCADE",
+      "phase": "semantico"
+    }
+  ],
+  "exit": 1,
+  "statements": [
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 0,
+      "kind": "CREATE TABLE",
+      "line": 3,
+      "message": "Tabla 'padres' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 1,
+      "kind": "CREATE TABLE",
+      "line": 4,
+      "message": "Tabla 'hijos' creada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    }
+  ]
+}

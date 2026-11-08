@@ -55,7 +55,6 @@ ColumnDef parseColumn(const std::vector<std::string>& w, const std::string& path
 }
 
 // INDEX <nombre> ON <tabla> (<columna>) FILE <archivo>
-// Se aceptan "(col)" y "( col )" pegados o separados.
 IndexDef parseIndex(const std::string& text, const std::string& path, int line) {
     std::string spaced;
     for (char c : text) {
@@ -75,10 +74,53 @@ IndexDef parseIndex(const std::string& text, const std::string& path, int line) 
     return IndexDef{w[1], w[3], w[5], w[8]};
 }
 
+// FOREIGN KEY (<col>) REFERENCES <tabla> (<col>) [ON DELETE CASCADE]
+ForeignKeyDef parseForeignKey(const std::string& text, const std::string& childTable,
+                              const std::string& path, int line) {
+    std::string spaced;
+    for (char c : text) {
+        if (c == '(' || c == ')') {
+            spaced += ' ';
+            spaced += c;
+            spaced += ' ';
+        } else {
+            spaced += c;
+        }
+    }
+    std::vector<std::string> w = splitWords(spaced);
+    // FOREIGN KEY ( col ) REFERENCES padre ( col ) [ON DELETE CASCADE]
+    if (w.size() < 10 || !isWord(w[0], "FOREIGN") || !isWord(w[1], "KEY") || w[2] != "(" ||
+        w[4] != ")" || !isWord(w[5], "REFERENCES") || w[7] != "(" || w[9] != ")") {
+        corrupt(path, line,
+                "se esperaba 'FOREIGN KEY (<col>) REFERENCES <tabla> (<col>) [ON DELETE CASCADE]'");
+    }
+    ForeignKeyDef fk;
+    fk.table = childTable;
+    fk.column = w[3];
+    fk.refTable = w[6];
+    fk.refColumn = w[8];
+    if (w.size() == 10) {
+        fk.onDeleteCascade = false;
+    } else if (w.size() == 13 && isWord(w[10], "ON") && isWord(w[11], "DELETE") &&
+               isWord(w[12], "CASCADE")) {
+        fk.onDeleteCascade = true;
+    } else {
+        corrupt(path, line, "solo se admite ON DELETE CASCADE como acción de FOREIGN KEY");
+    }
+    return fk;
+}
+
 std::string columnLine(const ColumnDef& col) {
     std::string out = "  COLUMN " + col.name + " " + typeName(col.type);
     if (col.notNull) out += " NOT NULL";
     if (col.primaryKey) out += " PRIMARY KEY";
+    return out;
+}
+
+std::string foreignKeyLine(const ForeignKeyDef& fk) {
+    std::string out = "  FOREIGN KEY (" + fk.column + ") REFERENCES " + fk.refTable + " (" +
+                      fk.refColumn + ")";
+    if (fk.onDeleteCascade) out += " ON DELETE CASCADE";
     return out;
 }
 
@@ -132,13 +174,19 @@ Catalog Catalog::load(const std::string& dbDir) {
                     corrupt(path, lineNo, "columna repetida '" + col.name + "'");
                 }
                 current->columns.push_back(col);
+            } else if (isWord(w[0], "FOREIGN")) {
+                ForeignKeyDef fk = parseForeignKey(raw, current->name, path, lineNo);
+                if (current->findColumn(fk.column) < 0) {
+                    corrupt(path, lineNo, "la FOREIGN KEY usa una columna que no existe");
+                }
+                catalog.foreignKeys_.push_back(fk);
             } else if (isWord(w[0], "END") && w.size() == 1) {
                 if (current->columns.empty()) {
                     corrupt(path, lineNo, "la tabla '" + current->name + "' no tiene columnas");
                 }
                 current = nullptr;
             } else {
-                corrupt(path, lineNo, "se esperaba COLUMN o END");
+                corrupt(path, lineNo, "se esperaba COLUMN, FOREIGN KEY o END");
             }
             continue;
         }
@@ -171,6 +219,18 @@ Catalog Catalog::load(const std::string& dbDir) {
     if (current != nullptr) {
         corrupt(path, tableLine, "a la tabla '" + current->name + "' le falta END");
     }
+    // Validar referencias de FKs ahora que todas las tablas están cargadas.
+    for (const auto& fk : catalog.foreignKeys_) {
+        const TableDef* parent = catalog.findTable(fk.refTable);
+        if (parent == nullptr) {
+            corrupt(path, 0, "FOREIGN KEY de '" + fk.table + "' apunta a tabla inexistente '" +
+                                 fk.refTable + "'");
+        }
+        if (parent->findColumn(fk.refColumn) < 0) {
+            corrupt(path, 0, "FOREIGN KEY de '" + fk.table + "' apunta a columna inexistente '" +
+                                 fk.refTable + "." + fk.refColumn + "'");
+        }
+    }
     return catalog;
 }
 
@@ -181,6 +241,9 @@ void Catalog::save() const {
     for (const auto& t : tables_) {
         out << "\nTABLE " << t.name << "\n";
         for (const auto& c : t.columns) out << columnLine(c) << "\n";
+        for (const auto& fk : foreignKeys_) {
+            if (sameName(fk.table, t.name)) out << foreignKeyLine(fk) << "\n";
+        }
         out << "END\n";
     }
     if (!indexes_.empty()) out << "\n";
@@ -241,6 +304,28 @@ std::vector<const IndexDef*> Catalog::indexes() const {
     return out;
 }
 
+std::vector<const ForeignKeyDef*> Catalog::foreignKeys() const {
+    std::vector<const ForeignKeyDef*> out;
+    for (const auto& fk : foreignKeys_) out.push_back(&fk);
+    return out;
+}
+
+std::vector<const ForeignKeyDef*> Catalog::foreignKeysOfTable(const std::string& table) const {
+    std::vector<const ForeignKeyDef*> out;
+    for (const auto& fk : foreignKeys_) {
+        if (sameName(fk.table, table)) out.push_back(&fk);
+    }
+    return out;
+}
+
+std::vector<const ForeignKeyDef*> Catalog::foreignKeysTo(const std::string& refTable) const {
+    std::vector<const ForeignKeyDef*> out;
+    for (const auto& fk : foreignKeys_) {
+        if (sameName(fk.refTable, refTable)) out.push_back(&fk);
+    }
+    return out;
+}
+
 void Catalog::addTable(TableDef table) { tables_.push_back(std::move(table)); }
 
 void Catalog::dropTable(const std::string& name) {
@@ -250,6 +335,7 @@ void Catalog::dropTable(const std::string& name) {
     indexes_.erase(std::remove_if(indexes_.begin(), indexes_.end(),
                                   [&](const IndexDef& i) { return sameName(i.table, name); }),
                    indexes_.end());
+    dropForeignKeysInvolving(name);
 }
 
 void Catalog::addIndex(IndexDef index) { indexes_.push_back(std::move(index)); }
@@ -258,6 +344,17 @@ void Catalog::dropIndex(const std::string& name) {
     indexes_.erase(std::remove_if(indexes_.begin(), indexes_.end(),
                                   [&](const IndexDef& i) { return sameName(i.name, name); }),
                    indexes_.end());
+}
+
+void Catalog::addForeignKey(ForeignKeyDef fk) { foreignKeys_.push_back(std::move(fk)); }
+
+void Catalog::dropForeignKeysInvolving(const std::string& table) {
+    foreignKeys_.erase(std::remove_if(foreignKeys_.begin(), foreignKeys_.end(),
+                                      [&](const ForeignKeyDef& fk) {
+                                          return sameName(fk.table, table) ||
+                                                 sameName(fk.refTable, table);
+                                      }),
+                       foreignKeys_.end());
 }
 
 std::string Catalog::toJson() const {
@@ -284,6 +381,16 @@ std::string Catalog::toJson() const {
             first = false;
             out << "{\"name\": " << jsonString(i.name) << ", \"column\": " << jsonString(i.column)
                 << "}";
+        }
+        out << "], \"foreignKeys\": [";
+        first = true;
+        for (const auto& fk : foreignKeys_) {
+            if (!sameName(fk.table, table.name)) continue;
+            if (!first) out << ", ";
+            first = false;
+            out << "{\"column\": " << jsonString(fk.column)
+                << ", \"references\": " << jsonString(fk.refTable + "." + fk.refColumn)
+                << ", \"onDeleteCascade\": " << (fk.onDeleteCascade ? "true" : "false") << "}";
         }
         out << "]}";
     }

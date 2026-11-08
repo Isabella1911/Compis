@@ -276,6 +276,15 @@ struct ColumnDef {
     SourceLoc loc;
 };
 
+// FOREIGN KEY (col) REFERENCES padre(col) [ON DELETE CASCADE]
+struct ForeignKeyClause {
+    Ident column;
+    Ident refTable;
+    Ident refColumn;
+    bool onDeleteCascade = false;
+    SourceLoc loc;
+};
+
 struct CreateTable : Statement {
     Ident table;
     std::vector<ColumnDef> columns;
@@ -283,12 +292,14 @@ struct CreateTable : Statement {
     // marcar la columna) para que el semantico pueda reportar una columna
     // inexistente o una llave declarada dos veces con su posicion.
     std::vector<Ident> primaryKeyClauses;
+    std::vector<ForeignKeyClause> foreignKeys;
 
     CreateTable() : Statement(StatementKind::CreateTable) {}
 };
 
 struct DropTable : Statement {
     Ident table;
+    bool cascade = false;  // DROP TABLE ... CASCADE: borra filas hijas y FKs
 
     DropTable() : Statement(StatementKind::DropTable) {}
 };

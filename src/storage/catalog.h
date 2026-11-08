@@ -1,14 +1,17 @@
 #ifndef SQLINT_STORAGE_CATALOG_H
 #define SQLINT_STORAGE_CATALOG_H
 
-// Catalogo de la base: esquemas de tablas e indices (contrato A.6 de
-// docs/sql; dueno: Parte 2). Vive en <dbDir>/metadata.txt, en el formato
-// de docs/sql/parte2 seccion 4.1:
+// Catalogo de la base: esquemas de tablas, indices y llaves foraneas
+// (contrato A.6 de docs/sql; dueno: Parte 2). Vive en <dbDir>/metadata.txt:
 //
 //   VERSION 1
 //   TABLE estudiantes
 //     COLUMN id INT NOT NULL PRIMARY KEY
 //     COLUMN nombre VARCHAR(50) NOT NULL
+//   END
+//   TABLE inscripciones
+//     COLUMN estudiante_id INT NOT NULL
+//     FOREIGN KEY (estudiante_id) REFERENCES estudiantes (id) ON DELETE CASCADE
 //   END
 //   INDEX idx_estudiantes_edad ON estudiantes (edad) FILE indices/idx_estudiantes_edad.idx
 //
@@ -47,6 +50,14 @@ struct IndexDef {
     std::string file;  // relativo al directorio de la base: indices/<nombre>.idx
 };
 
+struct ForeignKeyDef {
+    std::string table;      // tabla hija
+    std::string column;     // columna en la hija
+    std::string refTable;   // tabla padre
+    std::string refColumn;  // columna referenciada (suele ser PRIMARY KEY)
+    bool onDeleteCascade = false;
+};
+
 class Catalog {
 public:
     // Lee <dbDir>/metadata.txt. Lanza SqlError RUN103 (con la linea) si el
@@ -68,22 +79,28 @@ public:
     std::vector<const IndexDef*> indexesOfTable(const std::string& table) const;
     std::vector<const TableDef*> tables() const;
     std::vector<const IndexDef*> indexes() const;
+    std::vector<const ForeignKeyDef*> foreignKeys() const;
+    std::vector<const ForeignKeyDef*> foreignKeysOfTable(const std::string& table) const;
+    std::vector<const ForeignKeyDef*> foreignKeysTo(const std::string& refTable) const;
 
     // Mutadores en memoria (no guardan: quien los llama decide cuando hacer
     // save()). La Parte 2 los usa al ejecutar; el semantico los usa en
     // --no-exec para simular el efecto de CREATE/DROP sobre una copia.
     void addTable(TableDef table);
-    void dropTable(const std::string& name);  // borra tambien sus indices
+    void dropTable(const std::string& name);  // borra tambien sus indices y FKs
     void addIndex(IndexDef index);
     void dropIndex(const std::string& name);
+    void addForeignKey(ForeignKeyDef fk);
+    void dropForeignKeysInvolving(const std::string& table);
 
-    // Tablas, columnas, tipos e indices en JSON, para la IDE (--emit catalog).
+    // Tablas, columnas, tipos, indices y FKs en JSON, para la IDE (--emit catalog).
     std::string toJson() const;
 
 private:
     std::string dbDir_;
     std::vector<TableDef> tables_;
     std::vector<IndexDef> indexes_;
+    std::vector<ForeignKeyDef> foreignKeys_;
 };
 
 // Comparacion de nombres sin distinguir mayusculas (solo ASCII).

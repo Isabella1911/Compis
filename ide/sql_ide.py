@@ -1105,6 +1105,11 @@ class SqlIDE:
             for idx in tab.get("indexes", []):
                 t.insert(nodo, "end", text=idx["name"], tags=("indice",),
                          values=("ÍNDICE", f"sobre {idx['column']}"))
+            for fk in tab.get("foreignKeys", []):
+                dest = fk.get("references", "")
+                extra = "ON DELETE CASCADE" if fk.get("onDeleteCascade") else ""
+                t.insert(nodo, "end", text=fk.get("column", "fk"), tags=("indice",),
+                         values=("FK", f"→ {dest} {extra}".strip()))
 
     # ── Ejecucion ─────────────────────────────────────────────────────
 

@@ -22,6 +22,8 @@ TABLE inscripciones
   COLUMN curso_id INT NOT NULL
   COLUMN nota FLOAT
   COLUMN fecha DATE
+  FOREIGN KEY (estudiante_id) REFERENCES estudiantes (id) ON DELETE CASCADE
+  FOREIGN KEY (curso_id) REFERENCES cursos (id) ON DELETE CASCADE
 END
 
 INDEX idx_estudiantes_edad ON estudiantes (edad) FILE indices/idx_estudiantes_edad.idx

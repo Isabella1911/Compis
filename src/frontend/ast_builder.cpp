@@ -85,6 +85,16 @@ ast::StatementPtr AstBuilder::createTable(SQLParser::CreateTableStmtContext* ctx
             stmt->primaryKeyClauses.push_back(ident(pk->identifier()));
             continue;
         }
+        if (auto* fk = dynamic_cast<SQLParser::ForeignKeyElementContext*>(element)) {
+            ast::ForeignKeyClause clause;
+            clause.loc = locOf(fk);
+            clause.column = ident(fk->identifier(0));
+            clause.refTable = ident(fk->identifier(1));
+            clause.refColumn = ident(fk->identifier(2));
+            clause.onDeleteCascade = fk->CASCADE() != nullptr;
+            stmt->foreignKeys.push_back(std::move(clause));
+            continue;
+        }
         auto* col = static_cast<SQLParser::ColumnElementContext*>(element);
         ast::ColumnDef def;
         def.loc = locOf(col);
@@ -128,6 +138,7 @@ ast::DataTypeSpec AstBuilder::dataType(SQLParser::DataTypeContext* ctx) {
 ast::StatementPtr AstBuilder::dropTable(SQLParser::DropTableStmtContext* ctx) {
     auto stmt = make<ast::DropTable>(locOf(ctx));
     stmt->table = ident(ctx->identifier());
+    stmt->cascade = ctx->CASCADE() != nullptr;
     return stmt;
 }
 

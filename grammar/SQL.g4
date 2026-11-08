@@ -45,6 +45,8 @@ createTableStmt
 tableElement
     : identifier dataType columnConstraint*        # columnElement
     | PRIMARY KEY '(' identifier ')'               # primaryKeyElement
+    | FOREIGN KEY '(' identifier ')' REFERENCES identifier '(' identifier ')'
+      (ON DELETE CASCADE)?                         # foreignKeyElement
     ;
 
 columnConstraint
@@ -61,7 +63,7 @@ dataType
     ;
 
 dropTableStmt
-    : DROP TABLE identifier
+    : DROP TABLE identifier CASCADE?
     ;
 
 createIndexStmt
@@ -222,6 +224,9 @@ INDEX    : 'INDEX';
 ON       : 'ON';
 PRIMARY  : 'PRIMARY';
 KEY      : 'KEY';
+FOREIGN  : 'FOREIGN';
+REFERENCES : 'REFERENCES';
+CASCADE  : 'CASCADE';
 AND      : 'AND';
 OR       : 'OR';
 NOT      : 'NOT';

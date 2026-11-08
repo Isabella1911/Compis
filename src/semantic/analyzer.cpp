@@ -170,9 +170,61 @@ private:
             }
             notePrimaryKey(pk);
         }
+
+        for (const auto& fk : stmt.foreignKeys) {
+            const ast::ColumnDef* local = nullptr;
+            for (const auto& col : stmt.columns) {
+                if (storage::sameName(col.name.name, fk.column.name)) local = &col;
+            }
+            if (local == nullptr) {
+                error(codes::SEM025, fk.column,
+                      "La FOREIGN KEY nombra la columna " + quoted(fk.column.name) +
+                          ", que no está en la tabla");
+                continue;
+            }
+            const storage::TableDef* parent = catalog_.findTable(fk.refTable.name);
+            if (parent == nullptr) {
+                error(codes::SEM025, fk.refTable,
+                      "La FOREIGN KEY referencia la tabla " + quoted(fk.refTable.name) +
+                          ", que no existe");
+                continue;
+            }
+            int refCol = parent->findColumn(fk.refColumn.name);
+            if (refCol < 0) {
+                error(codes::SEM025, fk.refColumn,
+                      "La FOREIGN KEY referencia " + quoted(fk.refTable.name) + "." +
+                          quoted(fk.refColumn.name) + ", que no existe");
+                continue;
+            }
+            if (!parent->columns[refCol].primaryKey) {
+                error(codes::SEM025, fk.refColumn,
+                      "La FOREIGN KEY debe referenciar una PRIMARY KEY (" +
+                          quoted(fk.refTable.name) + "." + fk.refColumn.name + " no lo es)");
+                continue;
+            }
+            storage::SqlType localType = fromSpec(local->type);
+            const storage::SqlType& parentType = parent->columns[refCol].type;
+            if (!assignable(parentType, localType) || !assignable(localType, parentType)) {
+                error(codes::SEM025, fk.loc,
+                      "Los tipos de " + quoted(fk.column.name) + " y " +
+                          quoted(fk.refTable.name) + "." + fk.refColumn.name +
+                          " no son compatibles para la FOREIGN KEY");
+            }
+        }
     }
 
-    void dropTable(ast::DropTable& stmt) { requireTable(stmt.table); }
+    void dropTable(ast::DropTable& stmt) {
+        if (!requireTable(stmt.table)) return;
+        if (stmt.cascade) return;
+        auto incoming = catalog_.foreignKeysTo(stmt.table.name);
+        if (incoming.empty()) return;
+        std::vector<std::string> children;
+        for (const auto* fk : incoming) children.push_back(fk->table);
+        error(codes::SEM024, stmt.table,
+              "No se puede hacer DROP TABLE de " + quoted(stmt.table.name) +
+                  ": otras tablas la referencian (" + joinNames(children) +
+                  "). Usá DROP TABLE " + stmt.table.name + " CASCADE");
+    }
 
     void createIndex(ast::CreateIndex& stmt) {
         const auto* table = requireTable(stmt.table);
