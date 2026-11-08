@@ -35,6 +35,12 @@ constexpr const char* SEM014 = "SEM014";  // Herencia circular entre clases
 constexpr const char* SEM015 = "SEM015";  // 'this' usado fuera de un metodo de clase
 constexpr const char* SEM016 = "SEM016";  // Funcion, metodo o clase usado como valor, o llamada a algo que no es funcion
 
+// Backend MIPS (Fase 3). No se emite .asm si hay alguno de estos.
+constexpr const char* CG001 = "CG001";  // Opcode TAC no soportado por el backend
+constexpr const char* CG002 = "CG002";  // TAC invalido (operando/estructura)
+constexpr const char* CG003 = "CG003";  // Etiqueta indefinida o duplicada
+constexpr const char* CG004 = "CG004";  // Caracteristica aun no implementada en MIPS
+
 }  // namespace codes
 }  // namespace diagnostics
 }  // namespace compiscript

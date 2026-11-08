@@ -11,6 +11,7 @@
 #   make test-semantic / make test-tac -> solo una parte
 #   make test-tac-update -> regenera los .tac esperados (revisar el diff!)
 #   make test-symbols -> corre la prueba unitaria de Scope/Symbol (no necesita ANTLR)
+#   make test-mips    -> backend MIPS (generacion .asm; ejecucion MARS si MARS_JAR)
 #   make clean        -> borra los binarios y el codigo generado por ANTLR
 
 DEPS        := .deps
@@ -50,7 +51,9 @@ CODEGEN_SRC := src/ir/tac.cpp \
                src/codegen/gen_statements.cpp \
                src/codegen/gen_functions.cpp \
                src/codegen/gen_classes.cpp \
-               src/codegen/gen_arrays.cpp
+               src/codegen/gen_arrays.cpp \
+               src/codegen/mips/mips_emitter.cpp \
+               src/codegen/mips/mips_generator.cpp
 # Subconjunto que necesita la prueba unitaria de la tabla de simbolos: no
 # arrastra declaration_collector.cpp (depende del AST) ni printer.cpp.
 SYMBOL_TEST_SRC := src/semantic/scope.cpp
@@ -68,7 +71,7 @@ SRC        := src/main.cpp \
 
 # Los headers tambien son dependencia: sin esto, cambiar un .h (p. ej.
 # symbol.h o tac.h) no recompilaba nada.
-HEADERS    := $(wildcard src/*/*.h)
+HEADERS    := $(wildcard src/*/*.h src/*/*/*.h)
 
 UNAME_S := $(shell uname -s 2>/dev/null)
 ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
@@ -79,7 +82,7 @@ BIN             := compiscript
 TEST_SYMBOLS_BIN := symbol_table_test
 endif
 
-.PHONY: all build setup generate run test test-semantic test-tac test-tac-update docs-ejemplos test-symbols clean
+.PHONY: all build setup generate run test test-semantic test-tac test-tac-update docs-ejemplos test-symbols test-mips clean
 
 all: build
 
@@ -112,6 +115,7 @@ test: build $(TEST_SYMBOLS_BIN)
 	@echo "== Prueba unitaria de la tabla de simbolos =="
 	@./$(TEST_SYMBOLS_BIN)
 	@$(PYTHON) tests/run_tests.py --bin ./$(BIN) todo
+	@$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN)
 
 test-semantic: build
 	@$(PYTHON) tests/run_tests.py --bin ./$(BIN) semantica
@@ -136,6 +140,9 @@ $(TEST_SYMBOLS_BIN): tests/symbol_table_test.cpp $(SYMBOL_TEST_SRC)
 
 test-symbols: $(TEST_SYMBOLS_BIN)
 	./$(TEST_SYMBOLS_BIN)
+
+test-mips: build
+	@$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN)
 
 clean:
 	rm -f compiscript compiscript.exe symbol_table_test symbol_table_test.exe

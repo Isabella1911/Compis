@@ -1,0 +1,15 @@
+SKIP    MARS no disponible (definí MARS_JAR o tests/mips/mars.path). Se valida generación .asm; la ejecución se omite.
+OK      tests/mips/valid/aritmetica.cps → asm
+SKIP    tests/mips/valid/aritmetica.cps: ejecucion MARS omitida
+OK      tests/mips/valid/if_else.cps → asm
+SKIP    tests/mips/valid/if_else.cps: ejecucion MARS omitida
+OK      tests/mips/valid/strings.cps → asm
+SKIP    tests/mips/valid/strings.cps: ejecucion MARS omitida
+OK      tests/mips/valid/while_and.cps → asm
+SKIP    tests/mips/valid/while_and.cps: ejecucion MARS omitida
+OK      tests/mips/invalid/sem001.cps  ['SEM001']
+OK      tests/mips/invalid/sem003.cps  ['SEM003']
+OK      tests/mips/invalid/syn001.cps  ['SYN001']
+OK      tests/mips/invalid_backend/try_catch.cps  ['CG004']
+----
+8 ok, 0 fallos, 4 skip

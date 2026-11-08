@@ -1,0 +1,11 @@
+Baseline (sin cambios de backend) — 2026-11-08
+make: exit 0
+make test: 77 ok, 0 fallos (exit 0)
+make test-semantic: 52 ok, 0 fallos
+make test-tac: 25 ok, 0 fallos
+make test-symbols: 24 checks, 0 fallos
+MARS_JAR: no configurado / no encontrado en el sistema
+
+Tras backend MIPS:
+make test (sem+tac+symbols): 77 ok (previo)
+make test-mips: ver mips_tests.txt (generacion asm OK; MARS SKIP sin MARS_JAR)

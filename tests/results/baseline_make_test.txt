@@ -1,0 +1,91 @@
+g++ -std=c++17 -O0 -g -Wall -I src tests/symbol_table_test.cpp src/semantic/scope.cpp -o symbol_table_test
+== Prueba unitaria de la tabla de simbolos ==
+24 checks, 0 fallos
+
+== Semantica: casos validos (tests/fixtures/valid) ==
+OK      tests/fixtures/valid/clases_y_objetos.cps
+OK      tests/fixtures/valid/completo.cps
+OK      tests/fixtures/valid/control_flow_y_closures.cps
+OK      tests/fixtures/valid/hello.cps
+OK      tests/fixtures/valid/herencia.cps
+OK      tests/fixtures/valid/sem001_variable_declarada.cps
+OK      tests/fixtures/valid/sem002_mismo_nombre_otro_ambito.cps
+OK      tests/fixtures/valid/sem003_asignacion_compatible.cps
+OK      tests/fixtures/valid/sem003_subclase_en_base.cps
+OK      tests/fixtures/valid/sem004_operaciones_bien_tipadas.cps
+OK      tests/fixtures/valid/sem005_condiciones_booleanas.cps
+OK      tests/fixtures/valid/sem006_break_continue_en_bucle.cps
+OK      tests/fixtures/valid/sem007_return_en_funcion.cps
+OK      tests/fixtures/valid/sem008_argumentos_correctos.cps
+OK      tests/fixtures/valid/sem009_retorno_compatible.cps
+OK      tests/fixtures/valid/sem010_miembro_existente.cps
+OK      tests/fixtures/valid/sem011_parametros_con_tipo.cps
+OK      tests/fixtures/valid/sem012_sin_codigo_muerto.cps
+OK      tests/fixtures/valid/sem013_tipos_validos.cps
+OK      tests/fixtures/valid/sem014_herencia_lineal.cps
+OK      tests/fixtures/valid/sem015_this_en_metodo.cps
+OK      tests/fixtures/valid/sem016_funciones_solo_llamadas.cps
+OK      tests/fixtures/valid/syn001_sintaxis_valida.cps
+OK      tests/fixtures/valid/tipos.cps
+
+== Semantica: casos fallidos (tests/fixtures/invalid) ==
+OK      tests/fixtures/invalid/falta_llave.cps  [SYN001]
+OK      tests/fixtures/invalid/no_declarada.cps  [SEM001]
+OK      tests/fixtures/invalid/redeclaracion.cps  [SEM002]
+OK      tests/fixtures/invalid/sem003_base_a_subclase.cps  [SEM003]
+OK      tests/fixtures/invalid/sem003_tipo_asignacion.cps  [SEM003]
+OK      tests/fixtures/invalid/sem004_operacion_logica.cps  [SEM004]
+OK      tests/fixtures/invalid/sem004_tipo_aritmetica.cps  [SEM004]
+OK      tests/fixtures/invalid/sem005_condicion_no_booleana.cps  [SEM005]
+OK      tests/fixtures/invalid/sem006_break_fuera_de_bucle.cps  [SEM006]
+OK      tests/fixtures/invalid/sem006_continue_fuera_de_bucle.cps  [SEM006]
+OK      tests/fixtures/invalid/sem007_return_fuera_de_funcion.cps  [SEM007]
+OK      tests/fixtures/invalid/sem008_argumentos_constructor.cps  [SEM008]
+OK      tests/fixtures/invalid/sem008_argumentos_metodo.cps  [SEM008]
+OK      tests/fixtures/invalid/sem009_tipo_retorno.cps  [SEM009]
+OK      tests/fixtures/invalid/sem010_miembro_inexistente.cps  [SEM010]
+OK      tests/fixtures/invalid/sem011_metodo_sin_tipo.cps  [SEM011]
+OK      tests/fixtures/invalid/sem011_parametro_sin_tipo.cps  [SEM011]
+OK      tests/fixtures/invalid/sem012_codigo_muerto.cps  [SEM012]
+OK      tests/fixtures/invalid/sem013_herencia_base_inexistente.cps  [SEM013]
+OK      tests/fixtures/invalid/sem013_tipo_invalido.cps  [SEM013]
+OK      tests/fixtures/invalid/sem014_herencia_circular.cps  [SEM014, SEM014]
+OK      tests/fixtures/invalid/sem015_this_fuera_de_clase.cps  [SEM015]
+OK      tests/fixtures/invalid/sem016_clase_como_valor.cps  [SEM016]
+OK      tests/fixtures/invalid/sem016_funcion_como_valor.cps  [SEM016]
+OK      tests/fixtures/invalid/sem016_llamar_no_funcion.cps  [SEM016]
+OK      tests/fixtures/invalid/sem016_metodo_como_valor.cps  [SEM016]
+OK      tests/fixtures/invalid/syn001_expresion_incompleta.cps  [SYN001]
+OK      tests/fixtures/invalid/varios_errores.cps  [SEM001, SEM003, SEM005]
+
+== TAC: casos exitosos (tests/tac/*.cps vs .tac) ==
+OK      tests/tac/p1_aritmetica.cps
+OK      tests/tac/p1_bucles.cps
+OK      tests/tac/p1_declaraciones.cps
+OK      tests/tac/p1_if_else.cps
+OK      tests/tac/p1_logicos.cps
+OK      tests/tac/p1_strings.cps
+OK      tests/tac/p1_switch.cps
+OK      tests/tac/p1_temporales.cps
+OK      tests/tac/p1_ternario.cps
+OK      tests/tac/p1_try_catch.cps
+OK      tests/tac/p2_clase.cps
+OK      tests/tac/p2_closure.cps
+OK      tests/tac/p2_foreach.cps
+OK      tests/tac/p2_herencia.cps
+OK      tests/tac/p2_lista.cps
+OK      tests/tac/p2_polimorfismo.cps
+OK      tests/tac/p2_recursion.cps
+OK      tests/tac/p2_return_try.cps
+OK      tests/tac/p3_programa_completo.cps
+
+== TAC: casos fallidos (tests/tac/errores) ==
+OK      tests/tac/errores/e_break_fuera_de_bucle.cps  [SEM006] sin TAC
+OK      tests/tac/errores/e_funcion_como_valor.cps  [SEM016] sin TAC
+OK      tests/tac/errores/e_no_declarada_en_metodo.cps  [SEM001] sin TAC
+OK      tests/tac/errores/e_retorno_y_argumentos.cps  [SEM009, SEM008] sin TAC
+OK      tests/tac/errores/e_sintaxis.cps  [SYN001] sin TAC
+OK      tests/tac/errores/e_tipo_en_funcion.cps  [SEM003] sin TAC
+
+----
+77 ok, 0 fallos

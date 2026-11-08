@@ -1,0 +1,32 @@
+
+== TAC: casos exitosos (tests/tac/*.cps vs .tac) ==
+OK      tests/tac/p1_aritmetica.cps
+OK      tests/tac/p1_bucles.cps
+OK      tests/tac/p1_declaraciones.cps
+OK      tests/tac/p1_if_else.cps
+OK      tests/tac/p1_logicos.cps
+OK      tests/tac/p1_strings.cps
+OK      tests/tac/p1_switch.cps
+OK      tests/tac/p1_temporales.cps
+OK      tests/tac/p1_ternario.cps
+OK      tests/tac/p1_try_catch.cps
+OK      tests/tac/p2_clase.cps
+OK      tests/tac/p2_closure.cps
+OK      tests/tac/p2_foreach.cps
+OK      tests/tac/p2_herencia.cps
+OK      tests/tac/p2_lista.cps
+OK      tests/tac/p2_polimorfismo.cps
+OK      tests/tac/p2_recursion.cps
+OK      tests/tac/p2_return_try.cps
+OK      tests/tac/p3_programa_completo.cps
+
+== TAC: casos fallidos (tests/tac/errores) ==
+OK      tests/tac/errores/e_break_fuera_de_bucle.cps  [SEM006] sin TAC
+OK      tests/tac/errores/e_funcion_como_valor.cps  [SEM016] sin TAC
+OK      tests/tac/errores/e_no_declarada_en_metodo.cps  [SEM001] sin TAC
+OK      tests/tac/errores/e_retorno_y_argumentos.cps  [SEM009, SEM008] sin TAC
+OK      tests/tac/errores/e_sintaxis.cps  [SYN001] sin TAC
+OK      tests/tac/errores/e_tipo_en_funcion.cps  [SEM003] sin TAC
+
+----
+25 ok, 0 fallos
