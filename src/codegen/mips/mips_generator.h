@@ -14,7 +14,11 @@
 //   - param se emiten RTL en el TAC; el llamador los apila (push) en ese orden
 //   - link (static link) se apila antes del call si aplica
 //   - retorno en $v0; $ra/$fp preservados por el llamado
-//   - Builtins del runtime: __concat, __str_eq, __runtime_error
+//   - Builtins del runtime: __concat, __str_eq, __raise y los errores
+//     __div_zero, __null_ref, __runtime_error (todos terminan en __fail)
+//
+// Heap: alloc usa syscall 9 (sbrk) con tamano alineado a 4. Load/Store
+// revisan que la base no sea null (salvo fp, en closures).
 //
 // Opcodes no implementados en esta fase producen CG001/CG004 y no hay .asm.
 

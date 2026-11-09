@@ -23,3 +23,7 @@ __pycache__/
 /build/
 /sqlint
 /.sql_ide_state.json
+
+# Ruta local al Mars4_5.jar (cada computadora tiene la suya; ver
+# tests/mips/run_mips_tests.py).
+/tests/mips/mars.path

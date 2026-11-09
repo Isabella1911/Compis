@@ -2,7 +2,7 @@
 // 13
 // 2
 // 8
-// 1
+// 0
 // -4
 let a: integer = 7;
 let b: integer = 3;

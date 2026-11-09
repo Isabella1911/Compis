@@ -21,9 +21,15 @@ Generado y mantenido junto al backend. Estados:
 | `Call` indirecta | a, argc | — | pendiente | CG004 |
 | `Return` | [a] | `$v0` + epílogo / exit | ok | (funciones) |
 | `Print` int/str/bool | a | syscall 1/4 + NL | ok | varios `valid/` |
-| `Load` / `Store` | — | — | pendiente | CG004 (objetos/listas) |
-| `Alloc` | — | — | pendiente | CG004 |
+| `Load` `dst = a[b]` | dst, base, offset | `lw` (offset const o en registro); base 0 → `__null_ref` | ok | `valid/listas.cps` |
+| `Store` `dst[a] = b` | base, offset, valor | `sw`; base 0 → `__null_ref` | ok | `valid/listas.cps` |
+| `Alloc` | dst, bytes | `syscall 9` (sbrk), tamaño redondeado a múltiplo de 4 | ok | `valid/lista_vacia_y_objetos_heap.cps` |
 | `TryBegin` / `TryEnd` | — | — | pendiente | `invalid_backend/try_catch.cps` |
 | `Comment` | text | `#` | ok | — |
 
-Runtime emitido: `__concat`, `__str_eq`, `__div_zero`, `__runtime_error`.
+Runtime emitido: `__concat`, `__str_eq`, `__raise`, `__div_zero`, `__null_ref`,
+`__runtime_error` y `__fail`. Todos los errores de runtime terminan en `__fail`:
+imprime `Error en tiempo de ejecucion: <mensaje>` y sale con código 1
+(syscall 17). Ver `valid/indice_fuera_de_rango.cps`.
+
+Desplazamientos que no caben en 16 bits (`lw`/`sw`) se arman en `$t9`.

@@ -59,6 +59,18 @@ struct Gen {
         return -(8 + fn->frame_size + 4 * t);
     }
 
+    // Direccion "off(base)" para lw/sw. Si el desplazamiento no cabe en los
+    // 16 bits con signo de la instruccion, la direccion se arma en $t9 (que
+    // no se usa para nada mas) y se devuelve "0($t9)".
+    std::string memRef(int offset, const std::string& base) {
+        if (offset >= -32768 && offset <= 32767) {
+            return std::to_string(offset) + "(" + base + ")";
+        }
+        em.insn("li $t9, " + std::to_string(offset));
+        em.insn("addu $t9, $t9, " + base);
+        return "0($t9)";
+    }
+
     void loadOperand(const Operand& op, const char* reg) {
         switch (op.kind) {
             case OperandKind::None:
@@ -69,8 +81,7 @@ struct Gen {
                 em.insn(std::string("li ") + reg + ", " + std::to_string(op.value));
                 break;
             case OperandKind::Temp:
-                em.insn(std::string("lw ") + reg + ", " + std::to_string(tempOffset(op.temp)) +
-                        "($fp)");
+                em.insn(std::string("lw ") + reg + ", " + memRef(tempOffset(op.temp), "$fp"));
                 break;
             case OperandKind::Var:
                 if (op.symbol == nullptr) {
@@ -82,8 +93,7 @@ struct Gen {
                     em.insn(std::string("lw ") + reg + ", " + op.name);
                 } else if (op.symbol->storage == StorageKind::Local ||
                            op.symbol->storage == StorageKind::Param) {
-                    em.insn(std::string("lw ") + reg + ", " +
-                            std::to_string(op.symbol->offset) + "($fp)");
+                    em.insn(std::string("lw ") + reg + ", " + memRef(op.symbol->offset, "$fp"));
                 } else {
                     error(codes::CG004,
                           "Acceso a campo/objeto aún no soportado en MIPS: " + op.name);
@@ -106,8 +116,7 @@ struct Gen {
     void storeOperand(const Operand& dst, const char* reg) {
         switch (dst.kind) {
             case OperandKind::Temp:
-                em.insn(std::string("sw ") + reg + ", " + std::to_string(tempOffset(dst.temp)) +
-                        "($fp)");
+                em.insn(std::string("sw ") + reg + ", " + memRef(tempOffset(dst.temp), "$fp"));
                 break;
             case OperandKind::Var:
                 if (dst.symbol == nullptr) {
@@ -118,8 +127,7 @@ struct Gen {
                     em.insn(std::string("sw ") + reg + ", " + dst.name);
                 } else if (dst.symbol->storage == StorageKind::Local ||
                            dst.symbol->storage == StorageKind::Param) {
-                    em.insn(std::string("sw ") + reg + ", " +
-                            std::to_string(dst.symbol->offset) + "($fp)");
+                    em.insn(std::string("sw ") + reg + ", " + memRef(dst.symbol->offset, "$fp"));
                 } else {
                     error(codes::CG004,
                           "Asignación a campo/objeto aún no soportada en MIPS: " + dst.name);
@@ -234,6 +242,36 @@ struct Gen {
         if (!in.dst.isNone()) storeOperand(in.dst, "$v0");
     }
 
+    // Deja en $t0 la direccion base de un acceso a memoria del TAC
+    // (dst = a[b] o dst[a] = b) y devuelve el "off(reg)" listo para lw/sw.
+    // La base puede ser un objeto, una lista o fp (closures: fp[4] es el
+    // enlace de acceso). Si la base no es fp y vale 0 es una referencia nula:
+    // se salta al runtime (__null_ref) en lugar de leer la direccion 0.
+    std::string heapAddress(const Operand& base, const Operand& offset) {
+        loadOperand(base, "$t0");
+        if (base.kind != OperandKind::FramePtr) {
+            usedLabels.insert("__null_ref");
+            em.insn("beq $t0, $zero, __null_ref");
+        }
+        if (offset.kind == OperandKind::IntConst) return memRef(offset.value, "$t0");
+        loadOperand(offset, "$t1");
+        em.insn("addu $t0, $t0, $t1");
+        return "0($t0)";
+    }
+
+    // dst = alloc n: syscall 9 (sbrk). El tamano se redondea a multiplo de 4
+    // para que el siguiente bloque del heap tambien quede alineado a palabra
+    // (las cadenas de __concat piden tamanos que no son multiplo de 4).
+    void emitAlloc(const Operand& dst, const Operand& size) {
+        loadOperand(size, "$a0");
+        em.insn("addiu $a0, $a0, 3");
+        em.insn("li $t1, -4");
+        em.insn("and $a0, $a0, $t1");
+        em.insn("li $v0, 9");
+        em.insn("syscall");
+        storeOperand(dst, "$v0");
+    }
+
     void emitPrint(const Instruction& in, int& boolLabel) {
         loadOperand(in.a, "$a0");
         if (in.op == "int") {
@@ -339,11 +377,21 @@ struct Gen {
             case OpCode::Print:
                 emitPrint(in, boolLabel);
                 break;
-            case OpCode::Load:
-            case OpCode::Store:
-            case OpCode::Alloc:
-                error(codes::CG004,
-                      "Load/Store/Alloc (objetos/listas/heap) aún no soportados en esta fase MIPS");
+            case OpCode::Load: {  // dst = a[b]
+                std::string addr = heapAddress(in.a, in.b);
+                em.insn("lw $t1, " + addr);
+                storeOperand(in.dst, "$t1");
+                break;
+            }
+            case OpCode::Store: {  // dst[a] = b
+                // El valor va primero a $t2: heapAddress usa $t0, $t1 y $t9.
+                loadOperand(in.b, "$t2");
+                std::string addr = heapAddress(in.dst, in.a);
+                em.insn("sw $t2, " + addr);
+                break;
+            }
+            case OpCode::Alloc:  // dst = alloc a
+                emitAlloc(in.dst, in.a);
                 break;
             case OpCode::TryBegin:
             case OpCode::TryEnd:
@@ -380,10 +428,14 @@ struct Gen {
         em.directive("    .asciiz \"true\"");
         em.label("__false_str");
         em.directive("    .asciiz \"false\"");
+        em.label("__error_prefix");
+        em.directive("    .asciiz \"Error en tiempo de ejecucion: \"");
         em.label("__divzero_msg");
-        em.directive("    .asciiz \"Error en tiempo de ejecucion: division entre cero\\n\"");
+        em.directive("    .asciiz \"division entre cero\"");
+        em.label("__null_msg");
+        em.directive("    .asciiz \"referencia nula\"");
         em.label("__runtime_msg");
-        em.directive("    .asciiz \"Error en tiempo de ejecucion\\n\"");
+        em.directive("    .asciiz \"error interno\"");
         em.blank();
     }
 
@@ -411,7 +463,9 @@ struct Gen {
         em.label("__concat_len1_done");
         em.insn("subu $t3, $t0, $a1");
         em.insn("addu $a0, $t2, $t3");
-        em.insn("addiu $a0, $a0, 1");
+        em.insn("addiu $a0, $a0, 4");  // +1 del terminador, redondeado a multiplo de 4
+        em.insn("li $t1, -4");
+        em.insn("and $a0, $a0, $t1");
         em.insn("li $v0, 9");
         em.insn("syscall");
         em.insn("move $t4, $v0");
@@ -457,18 +511,48 @@ struct Gen {
         em.label("__str_eq_end");
         emitEpilogue();
 
+        // Errores de runtime. Todos terminan en __fail con el mensaje en $a0:
+        //   __raise          lo llama el TAC (param msg; call __raise, 1), p. ej.
+        //                    con "indice fuera de rango"
+        //   __div_zero       division o modulo entre cero
+        //   __null_ref       acceso a un campo o elemento de una referencia nula
+        //   __runtime_error  error interno
+        em.label("__raise");
+        emitPrologueForBuiltin();
+        em.insn("lw $a0, 8($fp)");
+        em.insn("j __fail");
+        em.insn("nop");
+
         em.label("__div_zero");
         em.insn("la $a0, __divzero_msg");
-        em.insn("li $v0, 4");
-        em.insn("syscall");
-        em.insn("li $v0, 10");
-        em.insn("syscall");
+        em.insn("j __fail");
+        em.insn("nop");
+
+        em.label("__null_ref");
+        em.insn("la $a0, __null_msg");
+        em.insn("j __fail");
+        em.insn("nop");
 
         em.label("__runtime_error");
         em.insn("la $a0, __runtime_msg");
+        em.insn("j __fail");
+        em.insn("nop");
+
+        // Imprime "Error en tiempo de ejecucion: <mensaje>" y termina con
+        // codigo de salida 1 (syscall 17), distinto del fin normal (0).
+        em.label("__fail");
+        em.insn("move $t0, $a0");
+        em.insn("la $a0, __error_prefix");
         em.insn("li $v0, 4");
         em.insn("syscall");
-        em.insn("li $v0, 10");
+        em.insn("move $a0, $t0");
+        em.insn("li $v0, 4");
+        em.insn("syscall");
+        em.insn("li $a0, 10");
+        em.insn("li $v0, 11");
+        em.insn("syscall");
+        em.insn("li $a0, 1");
+        em.insn("li $v0, 17");
         em.insn("syscall");
     }
 
@@ -532,6 +616,9 @@ struct Gen {
         definedLabels.insert("__str_eq");
         definedLabels.insert("__div_zero");
         definedLabels.insert("__runtime_error");
+        definedLabels.insert("__raise");
+        definedLabels.insert("__null_ref");
+        definedLabels.insert("__fail");
         definedLabels.insert("__true_str");
         definedLabels.insert("__false_str");
 
