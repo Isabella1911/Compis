@@ -11,9 +11,12 @@
 //     temporales a registros de forma persistente (evita spills ante calls).
 //
 // Convención de llamada (derivada de docs/08):
-//   - param se emiten RTL en el TAC; el llamador los apila (push) en ese orden
-//   - link (static link) se apila antes del call si aplica
-//   - retorno en $v0; $ra/$fp preservados por el llamado
+//   - param se emiten RTL en el TAC; cada uno se apila al aparecer
+//   - link (static link) se apila justo antes del call; 0 si no hay
+//   - call directa con jal, indirecta (vtable) con jalr
+//   - retorno en $v0; $ra/$fp preservados por el llamado; el llamador
+//     limpia argumentos y enlace. main verifica al final que $sp quedo
+//     balanceado (ver tests/mips/opcode_support.md)
 //   - Builtins del runtime: __concat, __str_eq, __raise y los errores
 //     __div_zero, __null_ref, __runtime_error (todos terminan en __fail)
 //

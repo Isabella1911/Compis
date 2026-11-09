@@ -39,8 +39,9 @@ struct Gen {
     bool failed = false;
 
     const TacFunction* fn = nullptr;
-    std::vector<Operand> pendingParams;
-    Operand pendingLink = Operand::none();
+    // Argumentos y enlace de la llamada en curso, ya apilados. Se cuentan
+    // para validar contra el argc del call y para limpiar la pila despues.
+    int pushedParams = 0;
     bool hasLink = false;
 
     std::unordered_set<std::string> definedLabels;
@@ -198,48 +199,83 @@ struct Gen {
         }
     }
 
+    // Deja $sp exactamente como estaba al entrar (apuntando al enlace): con
+    // $sp = $fp, debajo queda $ra (ya leido) y en 0($fp) el fp viejo, asi
+    // que solo hay que descartar UNA palabra. El enlace y los argumentos los
+    // limpia el llamador (ver emitCall).
     void emitEpilogue() {
         em.insn("move $sp, $fp");
         em.insn("lw $ra, -4($fp)");
         em.insn("lw $fp, 0($fp)");
-        em.insn("addiu $sp, $sp, 8");  // descarta ra + old_fp; link+params los limpia el caller
+        em.insn("addiu $sp, $sp, 4");
         em.insn("jr $ra");
         em.insn("nop");
     }
 
-    void emitCall(const Instruction& in) {
-        if (in.label.empty()) {
-            error(codes::CG004, "Llamada indirecta (vtable) aún no soportada en MIPS");
-            pendingParams.clear();
-            hasLink = false;
-            return;
-        }
-        usedLabels.insert(in.label);
-
-        // Params en orden del stream TAC (RTL): primero el de la derecha.
-        for (const auto& p : pendingParams) {
-            loadOperand(p, "$t0");
-            em.insn("addiu $sp, $sp, -4");
-            em.insn("sw $t0, 0($sp)");
-        }
-        // Siempre hay palabra de static link en fp+4 del callee.
-        if (hasLink) {
-            loadOperand(pendingLink, "$t0");
-        } else {
-            em.insn("li $t0, 0");
-        }
+    void push(const char* reg) {
         em.insn("addiu $sp, $sp, -4");
-        em.insn("sw $t0, 0($sp)");
+        em.insn(std::string("sw ") + reg + ", 0($sp)");
+    }
 
-        em.insn("jal " + in.label);
+    // param x: el valor se apila EN ESTE MOMENTO, no al llegar al call. El
+    // TAC reutiliza temporales entre el param y el call: en una llamada por
+    // vtable hace "param t1" (this) y despues "t1 = t1[0]" para buscar el
+    // metodo, asi que leer t1 recien en el call pasaria la direccion del
+    // metodo en lugar del objeto.
+    void emitParam(const Operand& a) {
+        loadOperand(a, "$t0");
+        push("$t0");
+        ++pushedParams;
+    }
+
+    // link x: el TAC lo emite justo antes del call, despues de los param,
+    // asi que queda en fp+4 del llamado.
+    void emitLink(const Operand& a) {
+        loadOperand(a, "$t0");
+        push("$t0");
+        hasLink = true;
+    }
+
+    // call f, n (directa: jal) o call t, n (indirecta: jalr, la direccion
+    // sale de la vtable). Pila al entrar al llamado:
+    //   sp+0  static link (0 si no hay)   ->  fp+4 del llamado
+    //   sp+4  primer argumento            ->  fp+8
+    //   ...
+    // El llamador limpia argumentos y enlace al volver.
+    void emitCall(const Instruction& in) {
+        if (pushedParams != in.argc) {
+            error(codes::CG002, "call con " + std::to_string(in.argc) + " argumento(s) pero " +
+                                    std::to_string(pushedParams) + " param antes del call");
+        }
+        if (!hasLink) {
+            push("$zero");
+        }
+        if (in.label.empty()) {
+            loadOperand(in.a, "$t3");
+            em.insn("jalr $t3");
+        } else {
+            usedLabels.insert(in.label);
+            em.insn("jal " + in.label);
+        }
         em.insn("nop");
 
-        int cleanup = static_cast<int>(pendingParams.size()) * 4 + 4;  // + link
+        int cleanup = in.argc * 4 + 4;  // argumentos + enlace
         em.insn("addiu $sp, $sp, " + std::to_string(cleanup));
-        pendingParams.clear();
+        pushedParams = 0;
         hasLink = false;
 
         if (!in.dst.isNone()) storeOperand(in.dst, "$v0");
+    }
+
+    // Fin de main: comprueba que la pila quedo exactamente donde estaba al
+    // terminar el prologo (todas las llamadas limpiaron lo que apilaron) y
+    // termina el programa con codigo 0.
+    void emitMainExit() {
+        usedLabels.insert("__stack_error");
+        em.insn("lw $t0, __sp_main");
+        em.insn("bne $t0, $sp, __stack_error");
+        em.insn("li $v0, 10");
+        em.insn("syscall");
     }
 
     // Deja en $t0 la direccion base de un acceso a memoria del TAC
@@ -356,11 +392,10 @@ struct Gen {
                 }
                 break;
             case OpCode::Param:
-                pendingParams.push_back(in.a);
+                emitParam(in.a);
                 break;
             case OpCode::Link:
-                pendingLink = in.a;
-                hasLink = true;
+                emitLink(in.a);
                 break;
             case OpCode::Call:
                 emitCall(in);
@@ -368,8 +403,7 @@ struct Gen {
             case OpCode::Return:
                 if (!in.a.isNone()) loadOperand(in.a, "$v0");
                 if (fn->label == "main") {
-                    em.insn("li $v0, 10");
-                    em.insn("syscall");
+                    emitMainExit();
                 } else {
                     emitEpilogue();
                 }
@@ -436,6 +470,11 @@ struct Gen {
         em.directive("    .asciiz \"referencia nula\"");
         em.label("__runtime_msg");
         em.directive("    .asciiz \"error interno\"");
+        em.label("__stack_msg");
+        em.directive("    .asciiz \"pila desbalanceada al terminar main\"");
+        em.directive(".align 2");
+        em.label("__sp_main");  // $sp de main despues del prologo
+        em.directive("    .word 0");
         em.blank();
     }
 
@@ -538,6 +577,11 @@ struct Gen {
         em.insn("j __fail");
         em.insn("nop");
 
+        em.label("__stack_error");
+        em.insn("la $a0, __stack_msg");
+        em.insn("j __fail");
+        em.insn("nop");
+
         // Imprime "Error en tiempo de ejecucion: <mensaje>" y termina con
         // codigo de salida 1 (syscall 17), distinto del fin normal (0).
         em.label("__fail");
@@ -567,7 +611,7 @@ struct Gen {
 
     void translateFunction(const TacFunction& f) {
         fn = &f;
-        pendingParams.clear();
+        pushedParams = 0;
         hasLink = false;
         int boolLabel = 0;
 
@@ -588,12 +632,12 @@ struct Gen {
             if (frameBytes > 0) {
                 em.insn("addiu $sp, $sp, -" + std::to_string(frameBytes));
             }
+            em.insn("sw $sp, __sp_main");
             for (const auto& in : f.code) {
                 if (failed) break;
                 translateInsn(in, boolLabel);
             }
-            em.insn("li $v0, 10");
-            em.insn("syscall");
+            emitMainExit();
         } else {
             emitPrologue();
             bool sawReturn = false;
@@ -619,6 +663,8 @@ struct Gen {
         definedLabels.insert("__raise");
         definedLabels.insert("__null_ref");
         definedLabels.insert("__fail");
+        definedLabels.insert("__stack_error");
+        definedLabels.insert("__sp_main");
         definedLabels.insert("__true_str");
         definedLabels.insert("__false_str");
 
