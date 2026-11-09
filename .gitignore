@@ -17,3 +17,9 @@ __pycache__/
 /compiscript
 /symbol_table_test
 /compilador
+
+# Artefactos de la rama `sql` (interprete SQL). Se generan con `make` en esa
+# rama y no pertenecen a main; se agregaron por error en ad07b33.
+/build/
+/sqlint
+/.sql_ide_state.json
