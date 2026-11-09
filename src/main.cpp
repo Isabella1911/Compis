@@ -15,9 +15,18 @@
 namespace fs = std::filesystem;
 
 static std::string readFile(const std::string& path) {
+    std::error_code ec;
+    if (!fs::exists(path, ec)) {
+        throw std::runtime_error("No existe el archivo " + path);
+    }
+    // Un directorio se abre "bien" con ifstream y se lee vacio: sin esta
+    // revision se compilaria como un programa vacio.
+    if (!fs::is_regular_file(path, ec)) {
+        throw std::runtime_error(path + " no es un archivo");
+    }
     std::ifstream file(path);
     if (!file.is_open()) {
-        throw std::runtime_error("No se pudo abrir " + path);
+        throw std::runtime_error("No se pudo abrir " + path + " (permisos?)");
     }
     std::stringstream ss;
     ss << file.rdbuf();
@@ -86,7 +95,13 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (path.empty() || (onlyTac && onlyMips)) {
+    if (onlyTac && onlyMips) {
+        std::cerr << "Error: --tac y --mips no se pueden usar juntos\n";
+        usage(argv[0]);
+        return 2;
+    }
+    if (path.empty()) {
+        std::cerr << "Error: falta el archivo .cps\n";
         usage(argv[0]);
         return 2;
     }
@@ -101,6 +116,11 @@ int main(int argc, char* argv[]) {
         source = readFile(path);
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
+        // Tampoco aqui puede quedar el .asm de un intento anterior.
+        if (!outAsm.empty()) {
+            std::error_code ec;
+            fs::remove(outAsm, ec);
+        }
         return 1;
     }
 

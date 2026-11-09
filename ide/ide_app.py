@@ -197,6 +197,46 @@ COMANDO_PRUEBAS = ["make", "test"]
 MARS_TIMEOUT_S = int(os.environ.get("MARS_TIMEOUT", "10"))
 
 
+_RESUMENES_PRUEBAS = [
+    # (patron, como sumar) para cada formato de resumen de `make test`
+    (re.compile(r"^---- (\w+): (\d+) ejecutados, (\d+) PASS, (\d+) FAIL, (\d+) SKIP"),
+     lambda m: (m.group(1), int(m.group(3)), int(m.group(4)), int(m.group(5)))),
+    (re.compile(r"^(\d+) ok, (\d+) fallos"),
+     lambda m: ("semantica/TAC", int(m.group(1)), int(m.group(2)), 0)),
+    (re.compile(r"^(\d+) checks, (\d+) fallos"),
+     lambda m: ("tabla de simbolos", int(m.group(1)) - int(m.group(2)), int(m.group(2)), 0)),
+    (re.compile(r"^(\d+)/(\d+) verificaciones ok"),
+     lambda m: ("backend (C++)", int(m.group(1)), int(m.group(2)) - int(m.group(1)), 0)),
+]
+
+
+def resumir_pruebas(salida):
+    """Suma los resultados de todas las suites que imprime `make test`.
+
+    Devuelve (pass, fail, skip, detalle) donde detalle es una lista de
+    (suite, pass, fail, skip). Entiende los resumenes de cada runner y el de
+    unittest ("Ran N tests" seguido de OK / FAILED (...), con skipped=)."""
+    detalle = []
+    lineas = salida.splitlines()
+    for i, linea in enumerate(lineas):
+        texto = linea.strip()
+        for patron, convertir in _RESUMENES_PRUEBAS:
+            m = patron.match(texto)
+            if m:
+                detalle.append(convertir(m))
+                break
+        m = re.match(r"^Ran (\d+) tests?", texto)
+        if m:
+            total = int(m.group(1))
+            estado = next((l.strip() for l in lineas[i + 1:] if l.strip()), "")
+            cuenta = {k: int(v) for k, v in re.findall(r"(failures|errors|skipped)=(\d+)", estado)}
+            fallidos = cuenta.get("failures", 0) + cuenta.get("errors", 0)
+            omitidos = cuenta.get("skipped", 0)
+            detalle.append(("unittest", total - fallidos - omitidos, fallidos, omitidos))
+    return (sum(d[1] for d in detalle), sum(d[2] for d in detalle),
+            sum(d[3] for d in detalle), detalle)
+
+
 def resolver_mars(configurado=None):
     """Devuelve (java, jar) para ejecutar MARS, o None si no esta.
 
@@ -2733,23 +2773,28 @@ class IDE:
     def _fin_pruebas(self, codigo, salida):
         self._detener_spinner()
         self.proceso_activo = False
-        self._escribir("pruebas", salida)
+        aprobadas, fallidas, omitidas, detalle = resumir_pruebas(salida)
+        # Resumen arriba (una linea por suite) y la salida completa debajo.
+        cabecera = [f"RESUMEN: {aprobadas} PASS, {fallidas} FAIL, {omitidas} SKIP"]
+        cabecera += [f"  {suite}: {p} PASS, {f} FAIL, {s} SKIP" for suite, p, f, s in detalle]
+        if codigo not in (0, None) and fallidas == 0:
+            cabecera.append(f"  make terminó con código {codigo}: revisá la salida")
+        self._escribir("pruebas", "\n".join(cabecera) + "\n\n" + salida)
         self._colorizar_consola(self.paneles["pruebas"])
-        self.paneles["pruebas"].see("end")
-        m = None
-        for linea in reversed(salida.splitlines()):
-            m = re.match(r"^\s*(\d+) ok, (\d+) fallos", linea)
-            if m:
-                break
-        if codigo == 0:
-            resumen = f"{m.group(1)} ok, 0 fallos" if m else "todas pasaron"
-            self._set_toolbar(f"Pruebas: {resumen}", Tema.OK)
-        elif m:
-            resumen = f"{m.group(1)} ok, {m.group(2)} fallos"
-            self._set_toolbar(f"Pruebas: {resumen}", Tema.ERR)
+        if codigo is None:
+            resumen = "no se pudieron correr"
+            color = Tema.ERR
         else:
-            resumen = "no se pudieron correr" if codigo is None else f"falló make (código {codigo})"
-            self._set_toolbar(f"Pruebas: {resumen}", Tema.ERR)
+            resumen = f"{aprobadas} PASS, {fallidas} FAIL, {omitidas} SKIP"
+            if codigo != 0 or fallidas:
+                color = Tema.ERR
+                if codigo != 0 and fallidas == 0:
+                    resumen += f" (make: código {codigo})"
+            elif omitidas:
+                color = Tema.WARN  # sin fallos, pero algo no se ejecuto
+            else:
+                color = Tema.OK
+        self._set_toolbar(f"Pruebas: {resumen}", color)
         self._pruebas_estado.configure(text=f"Último resultado: {resumen}")
         self._seleccionar_seccion("pruebas")
 

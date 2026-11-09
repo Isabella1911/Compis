@@ -107,12 +107,14 @@ Diagnosticos:
 ## 4. Batería de pruebas
 
 ```bash
-make test             # todo: tabla de símbolos + semántica + TAC + MIPS
+make test             # todo (sin la IDE): símbolos, semántica, TAC, MIPS y CLI; corre todas las suites aunque alguna falle
 make test-mips        # backend MIPS: integración (CLI) + extremo a extremo en MARS
 make test-mips-unit   # unitarias del backend: TAC armado a mano, errores CGxxx y ejecución en MARS
 make test-mips-integration   # solo CLI: .asm generado o rechazado con sus códigos, sin MARS
 make test-mips-e2e    # cada programa válido ejecutado en MARS (SKIP si no hay MARS)
-make test-mips-estricto      # validación de entrega: exige MARS, falla en vez de SKIP
+make test-mips-estricto      # validación de entrega: exige MARS y display, incluye CLI e IDE, falla en vez de SKIP
+make test-cli         # CLI pública: rutas inexistentes, vacío, tildes y espacios, salida inválida, flags, entrada grande
+make test-ide         # IDE con Tkinter real (necesita display; abre la ventana): escenarios A, D y E, F5/F7, MARS
 make test-semantic    # solo los casos semánticos
 make test-tac         # solo el TAC contra los esperados
 make test-tac-update  # regenera los .tac esperados (revisar el diff antes de commitear)
@@ -183,7 +185,7 @@ que haber corrido `bash tools/setup.sh` una vez.
 | Ver el ensamblador MIPS | Grupo *MIPS* → *Ensamblador*. Si hubo errores (también `CGxxx` del backend), avisa que no se generó y no muestra uno viejo. |
 | Guardar el `.asm` | **Guardar ASM…** (grupo *MIPS*, o *Archivo → Guardar ASM (MIPS)…*). |
 | Ejecutar en MARS | **Ejecutar en MARS** (F8, opcional): corre el `.asm` en otro hilo, con límite de tiempo (`MARS_TIMEOUT`, 10 s por defecto), y muestra la salida y el código de salida en *Salida MARS*. **Mars.jar…** elige el `.jar`. |
-| Correr la batería | **Pruebas** (F7): corre `make test` y muestra el resultado en el grupo *Pruebas*. |
+| Correr la batería | **Pruebas** (F7): corre `make test` y muestra arriba un resumen `PASS / FAIL / SKIP` total y por suite (los `SKIP` se cuentan aparte, no como aprobados). |
 
 ---
 

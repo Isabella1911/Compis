@@ -15,6 +15,7 @@
 #                        MARS. Sin MARS, la parte e2e queda en SKIP (desarrollo)
 #   make test-mips-integration / test-mips-e2e -> solo una de las dos
 #   make test-mips-unit -> pruebas unitarias del backend (TAC armado a mano)
+#   make test-cli / test-ide -> CLI publica y la IDE (esta ultima necesita display)
 #   make test-mips-estricto -> validacion de entrega: exige MARS (sin SKIP)
 #   make clean        -> borra los binarios y el codigo generado por ANTLR
 
@@ -63,6 +64,7 @@ CODEGEN_SRC := src/ir/tac.cpp \
 SYMBOL_TEST_SRC := src/semantic/scope.cpp
 # Pruebas unitarias del backend MIPS: solo el IR y el generador, sin ANTLR.
 MIPS_UNIT_SRC := src/ir/tac.cpp src/codegen/mips/mips_emitter.cpp                  src/codegen/mips/mips_generator.cpp
+MIPS_UNIT_BIN := mips_backend_test
 
 SRC        := src/main.cpp \
               src/ast/printer.cpp \
@@ -88,7 +90,7 @@ BIN             := compiscript
 TEST_SYMBOLS_BIN := symbol_table_test
 endif
 
-.PHONY: all build setup generate run test test-semantic test-tac test-tac-update docs-ejemplos test-symbols test-mips test-mips-runner test-mips-unit test-mips-integration test-mips-e2e test-mips-estricto clean
+.PHONY: all build setup generate run test test-cli test-ide test-semantic test-tac test-tac-update docs-ejemplos test-symbols test-mips test-mips-runner test-mips-unit test-mips-integration test-mips-e2e test-mips-estricto clean
 
 all: build
 
@@ -117,11 +119,11 @@ run: build
 #     y tests/tac/errores: sin TAC y con los codigos esperados
 PYTHON ?= python3
 
-test: build $(TEST_SYMBOLS_BIN)
-	@echo "== Prueba unitaria de la tabla de simbolos =="
-	@./$(TEST_SYMBOLS_BIN)
-	@$(PYTHON) tests/run_tests.py --bin ./$(BIN) todo
-	@$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN) --suite todo
+# Corre TODAS las suites aunque alguna falle (asi el resumen de cada una
+# queda completo, tambien en F7 de la IDE) y termina con error si fallo
+# cualquiera. Las suites que necesitan MARS quedan en SKIP si no esta.
+test: build $(TEST_SYMBOLS_BIN) $(MIPS_UNIT_BIN)
+	@st=0; 	echo "== Prueba unitaria de la tabla de simbolos =="; ./$(TEST_SYMBOLS_BIN) || st=1; 	$(PYTHON) tests/run_tests.py --bin ./$(BIN) todo || st=1; 	echo "== Runner de MARS =="; $(PYTHON) tests/mips/test_mars_runner.py || st=1; 	echo "== Unitarias del backend MIPS =="; $(PYTHON) tests/mips/unit/run_unit.py --bin ./$(MIPS_UNIT_BIN) || st=1; 	$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN) --suite todo || st=1; 	echo "== CLI =="; $(PYTHON) tests/cli/test_cli.py --bin ./$(BIN) || st=1; 	exit $$st
 
 test-semantic: build
 	@$(PYTHON) tests/run_tests.py --bin ./$(BIN) semantica
@@ -152,7 +154,6 @@ test-symbols: $(TEST_SYMBOLS_BIN)
 test-mips: build test-mips-runner test-mips-unit
 	@$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN) --suite todo
 
-MIPS_UNIT_BIN := mips_backend_test
 $(MIPS_UNIT_BIN): tests/mips/unit/test_mips_backend.cpp $(MIPS_UNIT_SRC) $(HEADERS)
 	$(CXX) -std=c++17 -O0 -g -Wall -I src tests/mips/unit/test_mips_backend.cpp $(MIPS_UNIT_SRC) -o $(MIPS_UNIT_BIN)
 
@@ -170,9 +171,20 @@ test-mips-integration: build
 test-mips-e2e: build
 	@$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN) --suite e2e
 
+# CLI publica: rutas inexistentes, archivo vacio, tildes y espacios, salida
+# en un directorio que no existe, flags incompatibles, entrada grande.
+test-cli: build
+	@$(PYTHON) tests/cli/test_cli.py --bin ./$(BIN)
+
+# IDE (Tkinter): necesita un display (WSLg o X11); sin el queda en SKIP.
+test-ide: build
+	@$(PYTHON) tests/ide/test_ide.py
+
 test-mips-estricto: build $(MIPS_UNIT_BIN)
 	@COMPISCRIPT_ESTRICTO=1 $(PYTHON) tests/mips/test_mars_runner.py
 	@COMPISCRIPT_ESTRICTO=1 $(PYTHON) tests/mips/unit/run_unit.py --bin ./$(MIPS_UNIT_BIN)
+	@COMPISCRIPT_ESTRICTO=1 $(PYTHON) tests/cli/test_cli.py --bin ./$(BIN)
+	@COMPISCRIPT_ESTRICTO=1 $(PYTHON) tests/ide/test_ide.py
 	@$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN) --suite todo --estricto
 
 clean:
