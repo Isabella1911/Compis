@@ -116,4 +116,6 @@ class DeteccionDelJar(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    import resultados_unittest  # noqa: E402
+    sys.exit(resultados_unittest.correr("mars_runner", sys.modules[__name__]))

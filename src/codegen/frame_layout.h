@@ -25,7 +25,7 @@
 // reciben sufijo en el TAC (x, x@1, ...).
 //
 // Los atributos de clase (StorageKind::Field) y ClassSymbol::instance_size
-// se calculan en layoutClassFields (parte 2): la palabra 0 de todo objeto es
+// se calculan en layoutClassFields: la palabra 0 de todo objeto es
 // el puntero a la vtable de su clase; despues van los atributos, base
 // primero, luego propios. buildVtable arma la tabla de metodos de cada clase
 // (los de la base en los mismos slots, redefinidos reemplazados).

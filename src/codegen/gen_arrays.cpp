@@ -1,5 +1,4 @@
-// Parte 2: listas, acceso por indice y foreach.
-// Ver el documento de reparto de la parte 2, seccion 2.4.
+// Listas: literales, acceso por indice y foreach.
 //
 // Layout de una lista en el heap (todo en palabras de 4 bytes):
 //

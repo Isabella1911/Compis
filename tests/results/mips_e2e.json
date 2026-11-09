@@ -1,0 +1,1909 @@
+{
+  "generado": "2026-11-09T17:08:39+00:00",
+  "compilador": "compiscript",
+  "mars": {
+    "version": "MARS 4.5",
+    "jar": ".deps/Mars4_5.jar",
+    "max_pasos": 5000000,
+    "timeout_s": 30.0
+  },
+  "resumen": {
+    "suite": "e2e",
+    "ejecutados": 42,
+    "pass": 42,
+    "fail": 0,
+    "skip": 0,
+    "fallos_compilador": 0,
+    "fallos_mars": 0
+  },
+  "casos": [
+    {
+      "test_id": "aritmetica",
+      "suite": "e2e",
+      "fuente": "tests/mips/valid/aritmetica.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/aritmetica.cps",
+        "-o",
+        "/tmp/mips-e2e-dlv__jxs/aritmetica.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (5 lineas), exit 0",
+      "duracion_s": 1.856,
+      "stdout_esperado": [
+        "13",
+        "2",
+        "8",
+        "0",
+        "-4"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "aritmetica.asm"
+      ],
+      "stdout_obtenido": [
+        "13",
+        "2",
+        "8",
+        "0",
+        "-4"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "cadenas_bordes",
+      "suite": "e2e",
+      "fuente": "tests/mips/valid/cadenas_bordes.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/cadenas_bordes.cps",
+        "-o",
+        "/tmp/mips-e2e-x7p6qold/cadenas_bordes.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (6 lineas), exit 0",
+      "duracion_s": 1.671,
+      "stdout_esperado": [
+        "[]",
+        "true",
+        "false",
+        "[a\\b]",
+        "it's",
+        "abcabc"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "cadenas_bordes.asm"
+      ],
+      "stdout_obtenido": [
+        "[]",
+        "true",
+        "false",
+        "[a\\b]",
+        "it's",
+        "abcabc"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "clase_minima",
+      "suite": "e2e",
+      "fuente": "tests/mips/valid/clase_minima.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/clase_minima.cps",
+        "-o",
+        "/tmp/mips-e2e-o62_aqet/clase_minima.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (0 lineas), exit 0",
+      "duracion_s": 1.653,
+      "stdout_esperado": [],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "clase_minima.asm"
+      ],
+      "stdout_obtenido": [],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "clases",
+      "suite": "e2e",
+      "fuente": "tests/mips/valid/clases.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/clases.cps",
+        "-o",
+        "/tmp/mips-e2e-dmupy56l/clases.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (9 lineas), exit 0",
+      "duracion_s": 1.892,
+      "stdout_esperado": [
+        "1",
+        "110",
+        "3",
+        "110",
+        "6",
+        "3",
+        "50",
+        "contador",
+        "0"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "clases.asm"
+      ],
+      "stdout_obtenido": [
+        "1",
+        "110",
+        "3",
+        "110",
+        "6",
+        "3",
+        "50",
+        "contador",
+        "0"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "error_sin_handler",
+      "suite": "e2e",
+      "fuente": "tests/mips/valid/error_sin_handler.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/error_sin_handler.cps",
+        "-o",
+        "/tmp/mips-e2e-dt_2p5iu/error_sin_handler.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (2 lineas), exit 1",
+      "duracion_s": 1.769,
+      "stdout_esperado": [
+        "3",
+        "Error en tiempo de ejecucion: division entre cero"
+      ],
+      "exit_esperado": 1,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "error_sin_handler.asm"
+      ],
+      "stdout_obtenido": [
+        "3",
+        "Error en tiempo de ejecucion: division entre cero"
+      ],
+      "exit_obtenido": 1,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "funciones",
+      "suite": "e2e",
+      "fuente": "tests/mips/valid/funciones.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/funciones.cps",
+        "-o",
+        "/tmp/mips-e2e-b62aipqr/funciones.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (23 lineas), exit 0",
+      "duracion_s": 1.975,
+      "stdout_esperado": [
+        "7",
+        "6",
+        "1234",
+        "123456",
+        "17",
+        "1",
+        "2",
+        "3",
+        "4",
+        "1234",
+        "hola",
+        "55",
+        "true",
+        "true",
+        "0",
+        "2",
+        "4",
+        "6",
+        "500500",
+        "5000",
+        "5",
+        "-1",
+        "Ana!"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "funciones.asm"
+      ],
+      "stdout_obtenido": [
+        "7",
+        "6",
+        "1234",
+        "123456",
+        "17",
+        "1",
+        "2",
+        "3",
+        "4",
+        "1234",
+        "hola",
+        "55",
+        "true",
+        "true",
+        "0",
+        "2",
+        "4",
+        "6",
+        "500500",
+        "5000",
+        "5",
+        "-1",
+        "Ana!"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "herencia_polimorfismo",
+      "suite": "e2e",
+      "fuente": "tests/mips/valid/herencia_polimorfismo.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/herencia_polimorfismo.cps",
+        "-o",
+        "/tmp/mips-e2e-zfr7ydy_/herencia_polimorfismo.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (9 lineas), exit 0",
+      "duracion_s": 1.876,
+      "stdout_esperado": [
+        "Toby dice guau",
+        "Michi dice miau",
+        "Bolt dice guau chiquito",
+        "Piolin dice ...",
+        "Algo dice ...",
+        "miau",
+        "2",
+        "4",
+        "guau chiquito"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "herencia_polimorfismo.asm"
+      ],
+      "stdout_obtenido": [
+        "Toby dice guau",
+        "Michi dice miau",
+        "Bolt dice guau chiquito",
+        "Piolin dice ...",
+        "Algo dice ...",
+        "miau",
+        "2",
+        "4",
+        "guau chiquito"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "if_else",
+      "suite": "e2e",
+      "fuente": "tests/mips/valid/if_else.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/if_else.cps",
+        "-o",
+        "/tmp/mips-e2e-qikf_9o0/if_else.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (2 lineas), exit 0",
+      "duracion_s": 1.723,
+      "stdout_esperado": [
+        "aprobado",
+        "C"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "if_else.asm"
+      ],
+      "stdout_obtenido": [
+        "aprobado",
+        "C"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "indice_fuera_de_rango",
+      "suite": "e2e",
+      "fuente": "tests/mips/valid/indice_fuera_de_rango.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/indice_fuera_de_rango.cps",
+        "-o",
+        "/tmp/mips-e2e-v_2uibgf/indice_fuera_de_rango.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (2 lineas), exit 1",
+      "duracion_s": 1.659,
+      "stdout_esperado": [
+        "1",
+        "Error en tiempo de ejecucion: indice fuera de rango"
+      ],
+      "exit_esperado": 1,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "indice_fuera_de_rango.asm"
+      ],
+      "stdout_obtenido": [
+        "1",
+        "Error en tiempo de ejecucion: indice fuera de rango"
+      ],
+      "exit_obtenido": 1,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "lista_vacia_y_objetos_heap",
+      "suite": "e2e",
+      "fuente": "tests/mips/valid/lista_vacia_y_objetos_heap.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/lista_vacia_y_objetos_heap.cps",
+        "-o",
+        "/tmp/mips-e2e-1osw65gc/lista_vacia_y_objetos_heap.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (3 lineas), exit 0",
+      "duracion_s": 1.572,
+      "stdout_esperado": [
+        "abc",
+        "7",
+        "0"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "lista_vacia_y_objetos_heap.asm"
+      ],
+      "stdout_obtenido": [
+        "abc",
+        "7",
+        "0"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "listas",
+      "suite": "e2e",
+      "fuente": "tests/mips/valid/listas.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/listas.cps",
+        "-o",
+        "/tmp/mips-e2e-14hsm6wg/listas.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (8 lineas), exit 0",
+      "duracion_s": 1.934,
+      "stdout_esperado": [
+        "20",
+        "99",
+        "139",
+        "139",
+        "6",
+        "3",
+        "b",
+        "5"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "listas.asm"
+      ],
+      "stdout_obtenido": [
+        "20",
+        "99",
+        "139",
+        "139",
+        "6",
+        "3",
+        "b",
+        "5"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "strings",
+      "suite": "e2e",
+      "fuente": "tests/mips/valid/strings.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/strings.cps",
+        "-o",
+        "/tmp/mips-e2e-q5u872dc/strings.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (2 lineas), exit 0",
+      "duracion_s": 1.672,
+      "stdout_esperado": [
+        "hola Compi",
+        "true"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "strings.asm"
+      ],
+      "stdout_obtenido": [
+        "hola Compi",
+        "true"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "temporales",
+      "suite": "e2e",
+      "fuente": "tests/mips/valid/temporales.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/temporales.cps",
+        "-o",
+        "/tmp/mips-e2e-jbr8t22b/temporales.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (3 lineas), exit 0",
+      "duracion_s": 1.986,
+      "stdout_esperado": [
+        "7260",
+        "1260",
+        "825"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "temporales.asm"
+      ],
+      "stdout_obtenido": [
+        "7260",
+        "1260",
+        "825"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "try_catch",
+      "suite": "e2e",
+      "fuente": "tests/mips/valid/try_catch.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/try_catch.cps",
+        "-o",
+        "/tmp/mips-e2e-2zaw8hql/try_catch.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (13 lineas), exit 0",
+      "duracion_s": 2.055,
+      "stdout_esperado": [
+        "capturado: indice fuera de rango",
+        "sin error",
+        "5",
+        "capturado: division entre cero",
+        "profundo: division entre cero",
+        "interno: indice fuera de rango",
+        "externo: division entre cero",
+        "1",
+        "0",
+        "busca: indice fuera de rango",
+        "0",
+        "capturado: referencia nula",
+        "fin"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "try_catch.asm"
+      ],
+      "stdout_obtenido": [
+        "capturado: indice fuera de rango",
+        "sin error",
+        "5",
+        "capturado: division entre cero",
+        "profundo: division entre cero",
+        "interno: indice fuera de rango",
+        "externo: division entre cero",
+        "1",
+        "0",
+        "busca: indice fuera de rango",
+        "0",
+        "capturado: referencia nula",
+        "fin"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "while_and",
+      "suite": "e2e",
+      "fuente": "tests/mips/valid/while_and.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/while_and.cps",
+        "-o",
+        "/tmp/mips-e2e-jmogvzmx/while_and.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (3 lineas), exit 0",
+      "duracion_s": 1.665,
+      "stdout_esperado": [
+        "0",
+        "1",
+        "2"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "while_and.asm"
+      ],
+      "stdout_obtenido": [
+        "0",
+        "1",
+        "2"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "A_clase_completa",
+      "suite": "e2e",
+      "fuente": "tests/mips/e2e/A_clase_completa.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/e2e/A_clase_completa.cps",
+        "-o",
+        "/tmp/mips-e2e-u2a8gmz5/A_clase_completa.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (0 lineas), exit 0",
+      "duracion_s": 1.502,
+      "stdout_esperado": [],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "A_clase_completa.asm"
+      ],
+      "stdout_obtenido": [],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "B_clase_ejecutada",
+      "suite": "e2e",
+      "fuente": "tests/mips/e2e/B_clase_ejecutada.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/e2e/B_clase_ejecutada.cps",
+        "-o",
+        "/tmp/mips-e2e-kej3t_ez/B_clase_ejecutada.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (7 lineas), exit 0",
+      "duracion_s": 1.891,
+      "stdout_esperado": [
+        "Ana",
+        "120",
+        "1",
+        "Luis",
+        "60",
+        "2",
+        "121"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "B_clase_ejecutada.asm"
+      ],
+      "stdout_obtenido": [
+        "Ana",
+        "120",
+        "1",
+        "Luis",
+        "60",
+        "2",
+        "121"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "C_herencia_polimorfismo",
+      "suite": "e2e",
+      "fuente": "tests/mips/e2e/C_herencia_polimorfismo.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/e2e/C_herencia_polimorfismo.cps",
+        "-o",
+        "/tmp/mips-e2e-d7z1z8hh/C_herencia_polimorfismo.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (6 lineas), exit 0",
+      "duracion_s": 2.061,
+      "stdout_esperado": [
+        "1000",
+        "1500",
+        "500",
+        "18000",
+        "6000",
+        "Gus"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "C_herencia_polimorfismo.asm"
+      ],
+      "stdout_obtenido": [
+        "1000",
+        "1500",
+        "500",
+        "18000",
+        "6000",
+        "Gus"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "E02_comparaciones_booleanos",
+      "suite": "e2e",
+      "fuente": "tests/mips/e2e/E02_comparaciones_booleanos.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/e2e/E02_comparaciones_booleanos.cps",
+        "-o",
+        "/tmp/mips-e2e-7elx0xai/E02_comparaciones_booleanos.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (9 lineas), exit 0",
+      "duracion_s": 1.786,
+      "stdout_esperado": [
+        "true",
+        "false",
+        "true",
+        "true",
+        "false",
+        "true",
+        "true",
+        "false",
+        "true"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "E02_comparaciones_booleanos.asm"
+      ],
+      "stdout_obtenido": [
+        "true",
+        "false",
+        "true",
+        "true",
+        "false",
+        "true",
+        "true",
+        "false",
+        "true"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "E03_control_de_flujo",
+      "suite": "e2e",
+      "fuente": "tests/mips/e2e/E03_control_de_flujo.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/e2e/E03_control_de_flujo.cps",
+        "-o",
+        "/tmp/mips-e2e-nmlgcwvr/E03_control_de_flujo.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (6 lineas), exit 0",
+      "duracion_s": 1.707,
+      "stdout_esperado": [
+        "grande",
+        "15",
+        "10",
+        "3",
+        "martes",
+        "otro"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "E03_control_de_flujo.asm"
+      ],
+      "stdout_obtenido": [
+        "grande",
+        "15",
+        "10",
+        "3",
+        "martes",
+        "otro"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "E04_cortocircuito",
+      "suite": "e2e",
+      "fuente": "tests/mips/e2e/E04_cortocircuito.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/e2e/E04_cortocircuito.cps",
+        "-o",
+        "/tmp/mips-e2e-ks2mu4hy/E04_cortocircuito.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (11 lineas), exit 0",
+      "duracion_s": 1.937,
+      "stdout_esperado": [
+        "a",
+        "b",
+        "fin1",
+        "c",
+        "d",
+        "false",
+        "e",
+        "f",
+        "true",
+        "g",
+        "false"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "E04_cortocircuito.asm"
+      ],
+      "stdout_obtenido": [
+        "a",
+        "b",
+        "fin1",
+        "c",
+        "d",
+        "false",
+        "e",
+        "f",
+        "true",
+        "g",
+        "false"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "E16_closures",
+      "suite": "e2e",
+      "fuente": "tests/mips/e2e/E16_closures.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/e2e/E16_closures.cps",
+        "-o",
+        "/tmp/mips-e2e-z0mlijxo/E16_closures.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (3 lineas), exit 0",
+      "duracion_s": 1.847,
+      "stdout_esperado": [
+        "110",
+        "113",
+        "123"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "E16_closures.asm"
+      ],
+      "stdout_obtenido": [
+        "110",
+        "113",
+        "123"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "variantes_clases",
+      "suite": "e2e",
+      "fuente": "tests/mips/e2e/variantes_clases.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/e2e/variantes_clases.cps",
+        "-o",
+        "/tmp/mips-e2e-probl7fu/variantes_clases.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (4 lineas), exit 0",
+      "duracion_s": 1.825,
+      "stdout_esperado": [
+        "9",
+        "p",
+        "13",
+        "15"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "variantes_clases.asm"
+      ],
+      "stdout_obtenido": [
+        "9",
+        "p",
+        "13",
+        "15"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p1_aritmetica",
+      "suite": "e2e",
+      "fuente": "tests/tac/p1_aritmetica.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_aritmetica.cps",
+        "-o",
+        "/tmp/mips-e2e-aa7uqpmf/p1_aritmetica.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (5 lineas), exit 0",
+      "duracion_s": 1.732,
+      "stdout_esperado": [
+        "13",
+        "2",
+        "8",
+        "0",
+        "-4"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p1_aritmetica.asm"
+      ],
+      "stdout_obtenido": [
+        "13",
+        "2",
+        "8",
+        "0",
+        "-4"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p1_bucles",
+      "suite": "e2e",
+      "fuente": "tests/tac/p1_bucles.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_bucles.cps",
+        "-o",
+        "/tmp/mips-e2e-3r332vfx/p1_bucles.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (1 lineas), exit 0",
+      "duracion_s": 1.65,
+      "stdout_esperado": [
+        "25"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p1_bucles.asm"
+      ],
+      "stdout_obtenido": [
+        "25"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p1_declaraciones",
+      "suite": "e2e",
+      "fuente": "tests/tac/p1_declaraciones.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_declaraciones.cps",
+        "-o",
+        "/tmp/mips-e2e-qqs7vsm6/p1_declaraciones.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (5 lineas), exit 0",
+      "duracion_s": 1.366,
+      "stdout_esperado": [
+        "5",
+        "10",
+        "20",
+        "20",
+        "100"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p1_declaraciones.asm"
+      ],
+      "stdout_obtenido": [
+        "5",
+        "10",
+        "20",
+        "20",
+        "100"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p1_if_else",
+      "suite": "e2e",
+      "fuente": "tests/tac/p1_if_else.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_if_else.cps",
+        "-o",
+        "/tmp/mips-e2e-zhffuoro/p1_if_else.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (2 lineas), exit 0",
+      "duracion_s": 1.784,
+      "stdout_esperado": [
+        "aprobado",
+        "C"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p1_if_else.asm"
+      ],
+      "stdout_obtenido": [
+        "aprobado",
+        "C"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p1_logicos",
+      "suite": "e2e",
+      "fuente": "tests/tac/p1_logicos.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_logicos.cps",
+        "-o",
+        "/tmp/mips-e2e-xncmg87c/p1_logicos.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (4 lineas), exit 0",
+      "duracion_s": 1.336,
+      "stdout_esperado": [
+        "si",
+        "distintos",
+        "true",
+        "true"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p1_logicos.asm"
+      ],
+      "stdout_obtenido": [
+        "si",
+        "distintos",
+        "true",
+        "true"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p1_strings",
+      "suite": "e2e",
+      "fuente": "tests/tac/p1_strings.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_strings.cps",
+        "-o",
+        "/tmp/mips-e2e-ncsr88ef/p1_strings.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (5 lineas), exit 0",
+      "duracion_s": 1.804,
+      "stdout_esperado": [
+        "hola Compi",
+        "true",
+        "false",
+        "hola ",
+        "null"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p1_strings.asm"
+      ],
+      "stdout_obtenido": [
+        "hola Compi",
+        "true",
+        "false",
+        "hola ",
+        "null"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p1_switch",
+      "suite": "e2e",
+      "fuente": "tests/tac/p1_switch.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_switch.cps",
+        "-o",
+        "/tmp/mips-e2e-mvxgpi_z/p1_switch.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (2 lineas), exit 0",
+      "duracion_s": 1.317,
+      "stdout_esperado": [
+        "miercoles",
+        "alto"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p1_switch.asm"
+      ],
+      "stdout_obtenido": [
+        "miercoles",
+        "alto"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p1_temporales",
+      "suite": "e2e",
+      "fuente": "tests/tac/p1_temporales.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_temporales.cps",
+        "-o",
+        "/tmp/mips-e2e-yknia5iu/p1_temporales.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (1 lineas), exit 0",
+      "duracion_s": 1.786,
+      "stdout_esperado": [
+        "215"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p1_temporales.asm"
+      ],
+      "stdout_obtenido": [
+        "215"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p1_ternario",
+      "suite": "e2e",
+      "fuente": "tests/tac/p1_ternario.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_ternario.cps",
+        "-o",
+        "/tmp/mips-e2e-z5avyk06/p1_ternario.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (3 lineas), exit 0",
+      "duracion_s": 1.591,
+      "stdout_esperado": [
+        "9",
+        "b gana",
+        "1"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p1_ternario.asm"
+      ],
+      "stdout_obtenido": [
+        "9",
+        "b gana",
+        "1"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p1_try_catch",
+      "suite": "e2e",
+      "fuente": "tests/tac/p1_try_catch.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_try_catch.cps",
+        "-o",
+        "/tmp/mips-e2e-l4zt6hvu/p1_try_catch.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (1 lineas), exit 0",
+      "duracion_s": 1.847,
+      "stdout_esperado": [
+        "4"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p1_try_catch.asm"
+      ],
+      "stdout_obtenido": [
+        "4"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p2_clase",
+      "suite": "e2e",
+      "fuente": "tests/tac/p2_clase.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p2_clase.cps",
+        "-o",
+        "/tmp/mips-e2e-kj02p6j5/p2_clase.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (2 lineas), exit 0",
+      "duracion_s": 1.75,
+      "stdout_esperado": [
+        "7",
+        "3"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p2_clase.asm"
+      ],
+      "stdout_obtenido": [
+        "7",
+        "3"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p2_closure",
+      "suite": "e2e",
+      "fuente": "tests/tac/p2_closure.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p2_closure.cps",
+        "-o",
+        "/tmp/mips-e2e-83fpuaq0/p2_closure.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (1 lineas), exit 0",
+      "duracion_s": 1.331,
+      "stdout_esperado": [
+        "6"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p2_closure.asm"
+      ],
+      "stdout_obtenido": [
+        "6"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p2_foreach",
+      "suite": "e2e",
+      "fuente": "tests/tac/p2_foreach.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p2_foreach.cps",
+        "-o",
+        "/tmp/mips-e2e-zzt5h6sk/p2_foreach.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (1 lineas), exit 0",
+      "duracion_s": 1.775,
+      "stdout_esperado": [
+        "6"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p2_foreach.asm"
+      ],
+      "stdout_obtenido": [
+        "6"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p2_herencia",
+      "suite": "e2e",
+      "fuente": "tests/tac/p2_herencia.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p2_herencia.cps",
+        "-o",
+        "/tmp/mips-e2e-49_e7530/p2_herencia.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (2 lineas), exit 0",
+      "duracion_s": 1.704,
+      "stdout_esperado": [
+        "Toby",
+        "Toby"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p2_herencia.asm"
+      ],
+      "stdout_obtenido": [
+        "Toby",
+        "Toby"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p2_lista",
+      "suite": "e2e",
+      "fuente": "tests/tac/p2_lista.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p2_lista.cps",
+        "-o",
+        "/tmp/mips-e2e-a2dpv79b/p2_lista.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (2 lineas), exit 0",
+      "duracion_s": 1.883,
+      "stdout_esperado": [
+        "20",
+        "99"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p2_lista.asm"
+      ],
+      "stdout_obtenido": [
+        "20",
+        "99"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p2_polimorfismo",
+      "suite": "e2e",
+      "fuente": "tests/tac/p2_polimorfismo.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p2_polimorfismo.cps",
+        "-o",
+        "/tmp/mips-e2e-kg9087vi/p2_polimorfismo.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (3 lineas), exit 0",
+      "duracion_s": 1.828,
+      "stdout_esperado": [
+        "9",
+        "409",
+        "0"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p2_polimorfismo.asm"
+      ],
+      "stdout_obtenido": [
+        "9",
+        "409",
+        "0"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p2_recursion",
+      "suite": "e2e",
+      "fuente": "tests/tac/p2_recursion.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p2_recursion.cps",
+        "-o",
+        "/tmp/mips-e2e-6gln8cmc/p2_recursion.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (1 lineas), exit 0",
+      "duracion_s": 1.719,
+      "stdout_esperado": [
+        "120"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p2_recursion.asm"
+      ],
+      "stdout_obtenido": [
+        "120"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p2_return_try",
+      "suite": "e2e",
+      "fuente": "tests/tac/p2_return_try.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p2_return_try.cps",
+        "-o",
+        "/tmp/mips-e2e-_3p1orvy/p2_return_try.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (1 lineas), exit 0",
+      "duracion_s": 1.34,
+      "stdout_esperado": [
+        "1"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p2_return_try.asm"
+      ],
+      "stdout_obtenido": [
+        "1"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    },
+    {
+      "test_id": "p3_programa_completo",
+      "suite": "e2e",
+      "fuente": "tests/tac/p3_programa_completo.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p3_programa_completo.cps",
+        "-o",
+        "/tmp/mips-e2e-rqq1fevt/p3_programa_completo.asm"
+      ],
+      "etapa": "ejecucion",
+      "estado": "PASS",
+      "motivo": "salida exacta (12 lineas), exit 0",
+      "duracion_s": 1.979,
+      "stdout_esperado": [
+        "rectangulo calculada",
+        "35",
+        "0",
+        "1",
+        "1",
+        "2",
+        "3",
+        "5",
+        "correcto",
+        "indice fuera de rango: indice fuera de rango",
+        "16",
+        "si"
+      ],
+      "exit_esperado": 0,
+      "comando_mars": [
+        ".deps/jre17/bin/java",
+        "-jar",
+        ".deps/Mars4_5.jar",
+        "nc",
+        "me",
+        "ae98",
+        "se99",
+        "5000000",
+        "v0",
+        "p3_programa_completo.asm"
+      ],
+      "stdout_obtenido": [
+        "rectangulo calculada",
+        "35",
+        "0",
+        "1",
+        "1",
+        "2",
+        "3",
+        "5",
+        "correcto",
+        "indice fuera de rango: indice fuera de rango",
+        "16",
+        "si"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": []
+    }
+  ]
+}

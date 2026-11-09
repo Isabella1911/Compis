@@ -1,0 +1,220 @@
+{
+  "generado": "2026-11-09T17:06:56+00:00",
+  "mars": {
+    "version": "MARS 4.5"
+  },
+  "resumen": {
+    "suite": "unitarias",
+    "ejecutados": 10,
+    "pass": 10,
+    "fail": 0,
+    "skip": 0
+  },
+  "casos": [
+    {
+      "test_id": "verificaciones_cpp",
+      "etapa": "generacion",
+      "estado": "PASS",
+      "motivo": "103/103 verificaciones ok (ejecutables escritos en /tmp/mips-unit-1dykk9ns)"
+    },
+    {
+      "test_id": "aritmetica_y_comparaciones",
+      "etapa": "ejecucion",
+      "stdout_esperado": [
+        "40",
+        "10",
+        "0",
+        "-10",
+        "true",
+        "false",
+        "true",
+        "false",
+        "true",
+        "false",
+        "true",
+        "false"
+      ],
+      "exit_esperado": 0,
+      "stdout_obtenido": [
+        "40",
+        "10",
+        "0",
+        "-10",
+        "true",
+        "false",
+        "true",
+        "false",
+        "true",
+        "false",
+        "true",
+        "false"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": [],
+      "duracion_s": 1.697,
+      "estado": "PASS",
+      "motivo": "salida exacta, exit 0"
+    },
+    {
+      "test_id": "frames_params_recursion",
+      "etapa": "ejecucion",
+      "stdout_esperado": [
+        "123456",
+        "720",
+        "720"
+      ],
+      "exit_esperado": 0,
+      "stdout_obtenido": [
+        "123456",
+        "720",
+        "720"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": [],
+      "duracion_s": 1.829,
+      "estado": "PASS",
+      "motivo": "salida exacta, exit 0"
+    },
+    {
+      "test_id": "literales_y_strings",
+      "etapa": "ejecucion",
+      "stdout_esperado": [
+        "42",
+        "-7",
+        "true",
+        "false",
+        "comillas \"dobles\" y \\ barra"
+      ],
+      "exit_esperado": 0,
+      "stdout_obtenido": [
+        "42",
+        "-7",
+        "true",
+        "false",
+        "comillas \"dobles\" y \\ barra"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": [],
+      "duracion_s": 1.647,
+      "estado": "PASS",
+      "motivo": "salida exacta, exit 0"
+    },
+    {
+      "test_id": "null_sin_handler",
+      "etapa": "ejecucion",
+      "stdout_esperado": [
+        "Error en tiempo de ejecucion: referencia nula"
+      ],
+      "exit_esperado": 1,
+      "stdout_obtenido": [
+        "Error en tiempo de ejecucion: referencia nula"
+      ],
+      "exit_obtenido": 1,
+      "terminacion": "syscall",
+      "errores": [],
+      "duracion_s": 1.768,
+      "estado": "PASS",
+      "motivo": "salida exacta, exit 1"
+    },
+    {
+      "test_id": "objetos_y_vtables",
+      "etapa": "ejecucion",
+      "stdout_esperado": [
+        "14",
+        "5",
+        "9"
+      ],
+      "exit_esperado": 0,
+      "stdout_obtenido": [
+        "14",
+        "5",
+        "9"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": [],
+      "duracion_s": 1.614,
+      "estado": "PASS",
+      "motivo": "salida exacta, exit 0"
+    },
+    {
+      "test_id": "offsets_fuera_de_16_bits",
+      "etapa": "ejecucion",
+      "stdout_esperado": [
+        "78",
+        "5"
+      ],
+      "exit_esperado": 0,
+      "stdout_obtenido": [
+        "78",
+        "5"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": [],
+      "duracion_s": 1.646,
+      "estado": "PASS",
+      "motivo": "salida exacta, exit 0"
+    },
+    {
+      "test_id": "presion_temporales",
+      "etapa": "ejecucion",
+      "stdout_esperado": [
+        "820"
+      ],
+      "exit_esperado": 0,
+      "stdout_obtenido": [
+        "820"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": [],
+      "duracion_s": 1.821,
+      "estado": "PASS",
+      "motivo": "salida exacta, exit 0"
+    },
+    {
+      "test_id": "saltos",
+      "etapa": "ejecucion",
+      "stdout_esperado": [
+        "55",
+        "1",
+        "2"
+      ],
+      "exit_esperado": 0,
+      "stdout_obtenido": [
+        "55",
+        "1",
+        "2"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": [],
+      "duracion_s": 1.726,
+      "estado": "PASS",
+      "motivo": "salida exacta, exit 0"
+    },
+    {
+      "test_id": "try_y_raise",
+      "etapa": "ejecucion",
+      "stdout_esperado": [
+        "boom",
+        "1"
+      ],
+      "exit_esperado": 0,
+      "stdout_obtenido": [
+        "boom",
+        "1"
+      ],
+      "exit_obtenido": 0,
+      "terminacion": "syscall",
+      "errores": [],
+      "duracion_s": 1.855,
+      "estado": "PASS",
+      "motivo": "salida exacta, exit 0"
+    }
+  ]
+}

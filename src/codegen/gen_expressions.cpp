@@ -1,4 +1,4 @@
-// Parte 1: expresiones y condiciones con saltos.
+// Expresiones y condiciones con saltos.
 
 #include <string>
 
@@ -47,7 +47,7 @@ Operand TacGenerator::genLiteral(LiteralExpression* n) {
 Operand TacGenerator::genIdentifier(IdentifierExpression* n) {
     if (dynamic_cast<semantic::FunctionSymbol*>(n->symbol) != nullptr) {
         // Supuesto (seccion 11): las funciones no escapan como valores.
-        return todo("parte 2", "funcion '" + n->name + "' usada como valor (no soportado)");
+        return unsupported("funcion '" + n->name + "' usada como valor (no soportado)");
     }
     return loadVar(n->symbol);
 }
@@ -115,7 +115,7 @@ Operand TacGenerator::genAssignment(AssignmentExpression* n) {
 
     auto* target = dynamic_cast<IdentifierExpression*>(n->target.get());
     if (target == nullptr || target->symbol == nullptr) {
-        return todo("parte 1", "destino de asignacion no soportado");
+        return unsupported("destino de asignacion no soportado");
     }
     storeVar(target->symbol, genExpr(n->value.get()));
     // El valor de `x = v` es x: permite encadenar `y = x = 3`.

@@ -1,4 +1,4 @@
-// Parte 1: declaraciones, print y control de flujo.
+// Declaraciones, print y control de flujo.
 
 #include "semantic/scope.h"
 #include "semantic/type.h"
@@ -191,7 +191,7 @@ void TacGenerator::genTryCatch(TryCatchStatement* n) {
 void TacGenerator::genBreak(BreakStatement* /*n*/) {
     const LoopLabels* loop = currentLoop();
     if (loop == nullptr) {
-        todo("parte 1", "break fuera de bucle");  // el semantico ya lo reporta (SEM006)
+        unsupported("break fuera de bucle");  // el semantico ya lo reporta (SEM006)
         return;
     }
     closeTryHandlers(loop->try_depth);
@@ -201,7 +201,7 @@ void TacGenerator::genBreak(BreakStatement* /*n*/) {
 void TacGenerator::genContinue(ContinueStatement* /*n*/) {
     const LoopLabels* loop = currentLoop();
     if (loop == nullptr) {
-        todo("parte 1", "continue fuera de bucle");
+        unsupported("continue fuera de bucle");
         return;
     }
     closeTryHandlers(loop->try_depth);

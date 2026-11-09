@@ -3,6 +3,7 @@
 #include "codegen/frame_layout.h"
 #include "codegen/mips/mips_generator.h"
 #include "codegen/tac_generator.h"
+#include "diagnostics/codes.h"
 #include "diagnostics/reporter.h"
 #include "frontend/parser_driver.h"
 #include "semantic/closure_analyzer.h"
@@ -50,7 +51,13 @@ CompilationResult Compiler::compile(const std::string& source, const CompileOpti
 
             codegen::TacGenerator generator;
             result.tac = generator.generate(*result.ast, frameLayout);
-            result.has_tac = true;
+            // Algo que el generador no supo traducir: no se publica un TAC
+            // incompleto (y por lo tanto tampoco MIPS).
+            for (const auto& what : generator.unsupportedConstructs()) {
+                reporter.error(diagnostics::codes::CG004,
+                               "El generador de codigo no soporta: " + what, 0, 0);
+            }
+            result.has_tac = generator.unsupportedConstructs().empty();
         }
     }
 

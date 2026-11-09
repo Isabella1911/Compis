@@ -1,0 +1,52 @@
+{
+  "generado": "2026-11-09T17:06:38+00:00",
+  "resumen": {
+    "suite": "mars_runner",
+    "ejecutados": 8,
+    "pass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "casos": [
+    {
+      "test_id": "test_caerse_del_codigo_no_es_exito",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_ciclo_infinito_no_es_exito",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_error_de_ensamblado_trae_el_error",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_excepcion_de_runtime",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_exit_con_codigo",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_exit_normal",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_timeout",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_jar_corrupto_se_rechaza",
+      "estado": "PASS",
+      "motivo": ""
+    }
+  ]
+}

@@ -112,7 +112,8 @@ make test-mips        # backend MIPS: integración (CLI) + extremo a extremo en 
 make test-mips-unit   # unitarias del backend: TAC armado a mano, errores CGxxx y ejecución en MARS
 make test-mips-integration   # solo CLI: .asm generado o rechazado con sus códigos, sin MARS
 make test-mips-e2e    # cada programa válido ejecutado en MARS (SKIP si no hay MARS)
-make test-mips-estricto      # validación de entrega: exige MARS y display, incluye CLI e IDE, falla en vez de SKIP
+make test-mips-estricto      # MIPS, CLI e IDE en modo estricto: exige MARS y display, incluye CLI e IDE, falla en vez de SKIP
+make validar-entrega  # TODO en modo estricto + chequeo de requisitos (tests/validar_rubrica.py)
 make test-cli         # CLI pública: rutas inexistentes, vacío, tildes y espacios, salida inválida, flags, entrada grande
 make test-ide         # IDE con Tkinter real (necesita display; abre la ventana): escenarios A, D y E, F5/F7, MARS
 make test-semantic    # solo los casos semánticos
@@ -141,6 +142,14 @@ runner y la IDE buscan el `.jar` en `MARS_JAR`, en `tests/mips/mars.path`
 ([descarga](https://github.com/dpetersanderson/MARS/releases)). Java: el
 del `PATH` o el de `.deps/jre17`. Antes de usarlo, el runner comprueba que
 el `.jar` sea un MARS válido ejecutando un programa mínimo.
+
+**Validación de entrega:** `make validar-entrega` corre toda la batería en
+modo estricto y después `tests/validar_rubrica.py`, que cruza el plan de
+pruebas (`tests/mips/casos_rubrica.json`: E01–E18, N01–N16 y la prueba
+estrella A–E) con los resultados de esa misma corrida y responde
+`PASS`/`FAIL`/`BLOCKED` por caso y por apartado del enunciado (llamadas,
+registros/pila, MIPS funcional). No asigna puntaje. Los resultados quedan en
+[`tests/results/`](tests/results/README.md).
 
 Cómo se ejecuta y se juzga cada programa está en
 [`tests/mips/mars.py`](tests/mips/mars.py): un caso pasa solo si el

@@ -1,0 +1,1761 @@
+{
+  "generado": "2026-11-09T17:08:39+00:00",
+  "compilador": "compiscript",
+  "mars": {
+    "version": "MARS 4.5",
+    "jar": ".deps/Mars4_5.jar",
+    "max_pasos": 5000000,
+    "timeout_s": 30.0
+  },
+  "resumen": {
+    "suite": "integracion",
+    "ejecutados": 86,
+    "pass": 86,
+    "fail": 0,
+    "skip": 0,
+    "fallos_compilador": 0,
+    "fallos_mars": 0
+  },
+  "casos": [
+    {
+      "test_id": "aritmetica",
+      "suite": "integracion",
+      "fuente": "tests/mips/valid/aritmetica.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/aritmetica.cps",
+        "-o",
+        "/tmp/mips-int-ypuk25_p/aritmetica.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 280 lineas",
+      "duracion_s": 0.044,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "cadenas_bordes",
+      "suite": "integracion",
+      "fuente": "tests/mips/valid/cadenas_bordes.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/cadenas_bordes.cps",
+        "-o",
+        "/tmp/mips-int-dxyos1ca/cadenas_bordes.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 337 lineas",
+      "duracion_s": 0.035,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "clase_minima",
+      "suite": "integracion",
+      "fuente": "tests/mips/valid/clase_minima.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/clase_minima.cps",
+        "-o",
+        "/tmp/mips-int-xcekz33i/clase_minima.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 250 lineas",
+      "duracion_s": 0.036,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "clases",
+      "suite": "integracion",
+      "fuente": "tests/mips/valid/clases.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/clases.cps",
+        "-o",
+        "/tmp/mips-int-_5uxstcj/clases.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 608 lineas",
+      "duracion_s": 0.044,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "error_sin_handler",
+      "suite": "integracion",
+      "fuente": "tests/mips/valid/error_sin_handler.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/error_sin_handler.cps",
+        "-o",
+        "/tmp/mips-int-_4056d8o/error_sin_handler.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 281 lineas",
+      "duracion_s": 0.033,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "funciones",
+      "suite": "integracion",
+      "fuente": "tests/mips/valid/funciones.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/funciones.cps",
+        "-o",
+        "/tmp/mips-int-0enp0_9g/funciones.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 1064 lineas",
+      "duracion_s": 0.045,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "herencia_polimorfismo",
+      "suite": "integracion",
+      "fuente": "tests/mips/valid/herencia_polimorfismo.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/herencia_polimorfismo.cps",
+        "-o",
+        "/tmp/mips-int-znaxk820/herencia_polimorfismo.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 775 lineas",
+      "duracion_s": 0.035,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "if_else",
+      "suite": "integracion",
+      "fuente": "tests/mips/valid/if_else.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/if_else.cps",
+        "-o",
+        "/tmp/mips-int-bdefw2gv/if_else.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 271 lineas",
+      "duracion_s": 0.029,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "indice_fuera_de_rango",
+      "suite": "integracion",
+      "fuente": "tests/mips/valid/indice_fuera_de_rango.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/indice_fuera_de_rango.cps",
+        "-o",
+        "/tmp/mips-int-ww5a3zpz/indice_fuera_de_rango.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 306 lineas",
+      "duracion_s": 0.029,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "lista_vacia_y_objetos_heap",
+      "suite": "integracion",
+      "fuente": "tests/mips/valid/lista_vacia_y_objetos_heap.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/lista_vacia_y_objetos_heap.cps",
+        "-o",
+        "/tmp/mips-int-f_z9mr4s/lista_vacia_y_objetos_heap.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 343 lineas",
+      "duracion_s": 0.028,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "listas",
+      "suite": "integracion",
+      "fuente": "tests/mips/valid/listas.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/listas.cps",
+        "-o",
+        "/tmp/mips-int-eef_8aok/listas.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 910 lineas",
+      "duracion_s": 0.032,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "strings",
+      "suite": "integracion",
+      "fuente": "tests/mips/valid/strings.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/strings.cps",
+        "-o",
+        "/tmp/mips-int-lrit7a6y/strings.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 249 lineas",
+      "duracion_s": 0.028,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "temporales",
+      "suite": "integracion",
+      "fuente": "tests/mips/valid/temporales.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/temporales.cps",
+        "-o",
+        "/tmp/mips-int-yfmeobbu/temporales.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 2093 lineas",
+      "duracion_s": 0.038,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "try_catch",
+      "suite": "integracion",
+      "fuente": "tests/mips/valid/try_catch.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/try_catch.cps",
+        "-o",
+        "/tmp/mips-int-rzbdkcq6/try_catch.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 1028 lineas",
+      "duracion_s": 0.029,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "while_and",
+      "suite": "integracion",
+      "fuente": "tests/mips/valid/while_and.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/valid/while_and.cps",
+        "-o",
+        "/tmp/mips-int-3mmak2ff/while_and.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 216 lineas",
+      "duracion_s": 0.028,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "A_clase_completa",
+      "suite": "integracion",
+      "fuente": "tests/mips/e2e/A_clase_completa.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/e2e/A_clase_completa.cps",
+        "-o",
+        "/tmp/mips-int-by6_sykl/A_clase_completa.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 305 lineas",
+      "duracion_s": 0.031,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "B_clase_ejecutada",
+      "suite": "integracion",
+      "fuente": "tests/mips/e2e/B_clase_ejecutada.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/e2e/B_clase_ejecutada.cps",
+        "-o",
+        "/tmp/mips-int-3r6fnitf/B_clase_ejecutada.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 516 lineas",
+      "duracion_s": 0.033,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "C_herencia_polimorfismo",
+      "suite": "integracion",
+      "fuente": "tests/mips/e2e/C_herencia_polimorfismo.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/e2e/C_herencia_polimorfismo.cps",
+        "-o",
+        "/tmp/mips-int-hhroz1ey/C_herencia_polimorfismo.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 594 lineas",
+      "duracion_s": 0.029,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "E02_comparaciones_booleanos",
+      "suite": "integracion",
+      "fuente": "tests/mips/e2e/E02_comparaciones_booleanos.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/e2e/E02_comparaciones_booleanos.cps",
+        "-o",
+        "/tmp/mips-int-pck13htr/E02_comparaciones_booleanos.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 375 lineas",
+      "duracion_s": 0.025,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "E03_control_de_flujo",
+      "suite": "integracion",
+      "fuente": "tests/mips/e2e/E03_control_de_flujo.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/e2e/E03_control_de_flujo.cps",
+        "-o",
+        "/tmp/mips-int-jyqx3icj/E03_control_de_flujo.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 363 lineas",
+      "duracion_s": 0.028,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "E04_cortocircuito",
+      "suite": "integracion",
+      "fuente": "tests/mips/e2e/E04_cortocircuito.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/e2e/E04_cortocircuito.cps",
+        "-o",
+        "/tmp/mips-int-peob6h6m/E04_cortocircuito.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 467 lineas",
+      "duracion_s": 0.029,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "E16_closures",
+      "suite": "integracion",
+      "fuente": "tests/mips/e2e/E16_closures.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/e2e/E16_closures.cps",
+        "-o",
+        "/tmp/mips-int-jx2mk68t/E16_closures.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 456 lineas",
+      "duracion_s": 0.027,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "variantes_clases",
+      "suite": "integracion",
+      "fuente": "tests/mips/e2e/variantes_clases.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/e2e/variantes_clases.cps",
+        "-o",
+        "/tmp/mips-int-ble3s0v5/variantes_clases.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 641 lineas",
+      "duracion_s": 0.033,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p1_aritmetica",
+      "suite": "integracion",
+      "fuente": "tests/tac/p1_aritmetica.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_aritmetica.cps",
+        "-o",
+        "/tmp/mips-int-egb3u4xu/p1_aritmetica.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 280 lineas",
+      "duracion_s": 0.023,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p1_bucles",
+      "suite": "integracion",
+      "fuente": "tests/tac/p1_bucles.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_bucles.cps",
+        "-o",
+        "/tmp/mips-int-dx_2s0lp/p1_bucles.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 278 lineas",
+      "duracion_s": 0.026,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p1_declaraciones",
+      "suite": "integracion",
+      "fuente": "tests/tac/p1_declaraciones.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_declaraciones.cps",
+        "-o",
+        "/tmp/mips-int-dcdp_d2r/p1_declaraciones.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 259 lineas",
+      "duracion_s": 0.024,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p1_if_else",
+      "suite": "integracion",
+      "fuente": "tests/tac/p1_if_else.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_if_else.cps",
+        "-o",
+        "/tmp/mips-int-8fogg9hf/p1_if_else.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 271 lineas",
+      "duracion_s": 0.023,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p1_logicos",
+      "suite": "integracion",
+      "fuente": "tests/tac/p1_logicos.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_logicos.cps",
+        "-o",
+        "/tmp/mips-int-q8d16jpv/p1_logicos.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 300 lineas",
+      "duracion_s": 0.023,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p1_strings",
+      "suite": "integracion",
+      "fuente": "tests/tac/p1_strings.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_strings.cps",
+        "-o",
+        "/tmp/mips-int-d5_bdt7z/p1_strings.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 294 lineas",
+      "duracion_s": 0.027,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p1_switch",
+      "suite": "integracion",
+      "fuente": "tests/tac/p1_switch.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_switch.cps",
+        "-o",
+        "/tmp/mips-int-lg2_syxr/p1_switch.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 314 lineas",
+      "duracion_s": 0.025,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p1_temporales",
+      "suite": "integracion",
+      "fuente": "tests/tac/p1_temporales.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_temporales.cps",
+        "-o",
+        "/tmp/mips-int-txflgn9_/p1_temporales.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 273 lineas",
+      "duracion_s": 0.025,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p1_ternario",
+      "suite": "integracion",
+      "fuente": "tests/tac/p1_ternario.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_ternario.cps",
+        "-o",
+        "/tmp/mips-int-eknw_re_/p1_ternario.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 269 lineas",
+      "duracion_s": 0.026,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p1_try_catch",
+      "suite": "integracion",
+      "fuente": "tests/tac/p1_try_catch.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p1_try_catch.cps",
+        "-o",
+        "/tmp/mips-int-aridj036/p1_try_catch.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 310 lineas",
+      "duracion_s": 0.032,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p2_clase",
+      "suite": "integracion",
+      "fuente": "tests/tac/p2_clase.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p2_clase.cps",
+        "-o",
+        "/tmp/mips-int-xna7tay3/p2_clase.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 320 lineas",
+      "duracion_s": 0.026,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p2_closure",
+      "suite": "integracion",
+      "fuente": "tests/tac/p2_closure.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p2_closure.cps",
+        "-o",
+        "/tmp/mips-int-afukbi1t/p2_closure.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 258 lineas",
+      "duracion_s": 0.025,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p2_foreach",
+      "suite": "integracion",
+      "fuente": "tests/tac/p2_foreach.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p2_foreach.cps",
+        "-o",
+        "/tmp/mips-int-fchl8bf9/p2_foreach.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 270 lineas",
+      "duracion_s": 0.026,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p2_herencia",
+      "suite": "integracion",
+      "fuente": "tests/tac/p2_herencia.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p2_herencia.cps",
+        "-o",
+        "/tmp/mips-int-_8asgles/p2_herencia.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 327 lineas",
+      "duracion_s": 0.028,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p2_lista",
+      "suite": "integracion",
+      "fuente": "tests/tac/p2_lista.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p2_lista.cps",
+        "-o",
+        "/tmp/mips-int-aa805ezw/p2_lista.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 338 lineas",
+      "duracion_s": 0.027,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p2_polimorfismo",
+      "suite": "integracion",
+      "fuente": "tests/tac/p2_polimorfismo.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p2_polimorfismo.cps",
+        "-o",
+        "/tmp/mips-int-qa4lnyuj/p2_polimorfismo.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 495 lineas",
+      "duracion_s": 0.034,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p2_recursion",
+      "suite": "integracion",
+      "fuente": "tests/tac/p2_recursion.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p2_recursion.cps",
+        "-o",
+        "/tmp/mips-int-z04voui8/p2_recursion.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 253 lineas",
+      "duracion_s": 0.027,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p2_return_try",
+      "suite": "integracion",
+      "fuente": "tests/tac/p2_return_try.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p2_return_try.cps",
+        "-o",
+        "/tmp/mips-int-u88g0mk1/p2_return_try.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 331 lineas",
+      "duracion_s": 0.028,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "p3_programa_completo",
+      "suite": "integracion",
+      "fuente": "tests/tac/p3_programa_completo.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/p3_programa_completo.cps",
+        "-o",
+        "/tmp/mips-int-_2jj1taq/p3_programa_completo.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": ".asm de 849 lineas",
+      "duracion_s": 0.042,
+      "exit_obtenido": 0
+    },
+    {
+      "test_id": "clase_asignacion_campo",
+      "suite": "integracion",
+      "fuente": "tests/mips/invalid/clase_asignacion_campo.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/invalid/clase_asignacion_campo.cps",
+        "-o",
+        "/tmp/mips-neg-0fjuzx8c/clase_asignacion_campo.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM003 y sin .asm",
+      "duracion_s": 0.027,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM003"
+      ],
+      "codigos_obtenidos": [
+        "SEM003"
+      ]
+    },
+    {
+      "test_id": "clase_herencia_circular",
+      "suite": "integracion",
+      "fuente": "tests/mips/invalid/clase_herencia_circular.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/invalid/clase_herencia_circular.cps",
+        "-o",
+        "/tmp/mips-neg-7u8qk5er/clase_herencia_circular.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM014, SEM014 y sin .asm",
+      "duracion_s": 0.026,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM014",
+        "SEM014"
+      ],
+      "codigos_obtenidos": [
+        "SEM014",
+        "SEM014"
+      ]
+    },
+    {
+      "test_id": "clase_miembro_inexistente",
+      "suite": "integracion",
+      "fuente": "tests/mips/invalid/clase_miembro_inexistente.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/invalid/clase_miembro_inexistente.cps",
+        "-o",
+        "/tmp/mips-neg-m61xlb5o/clase_miembro_inexistente.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM010 y sin .asm",
+      "duracion_s": 0.026,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM010"
+      ],
+      "codigos_obtenidos": [
+        "SEM010"
+      ]
+    },
+    {
+      "test_id": "clase_sintaxis",
+      "suite": "integracion",
+      "fuente": "tests/mips/invalid/clase_sintaxis.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/invalid/clase_sintaxis.cps",
+        "-o",
+        "/tmp/mips-neg-avb2la13/clase_sintaxis.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SYN001 y sin .asm",
+      "duracion_s": 0.023,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SYN001"
+      ],
+      "codigos_obtenidos": [
+        "SYN001"
+      ]
+    },
+    {
+      "test_id": "clase_this_fuera",
+      "suite": "integracion",
+      "fuente": "tests/mips/invalid/clase_this_fuera.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/invalid/clase_this_fuera.cps",
+        "-o",
+        "/tmp/mips-neg-2d6_1wyx/clase_this_fuera.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM015 y sin .asm",
+      "duracion_s": 0.026,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM015"
+      ],
+      "codigos_obtenidos": [
+        "SEM015"
+      ]
+    },
+    {
+      "test_id": "clase_tipo_campo",
+      "suite": "integracion",
+      "fuente": "tests/mips/invalid/clase_tipo_campo.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/invalid/clase_tipo_campo.cps",
+        "-o",
+        "/tmp/mips-neg-pdxnf20m/clase_tipo_campo.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM013 y sin .asm",
+      "duracion_s": 0.024,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM013"
+      ],
+      "codigos_obtenidos": [
+        "SEM013"
+      ]
+    },
+    {
+      "test_id": "sem001",
+      "suite": "integracion",
+      "fuente": "tests/mips/invalid/sem001.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/invalid/sem001.cps",
+        "-o",
+        "/tmp/mips-neg-t625lqv7/sem001.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM001 y sin .asm",
+      "duracion_s": 0.024,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM001"
+      ],
+      "codigos_obtenidos": [
+        "SEM001"
+      ]
+    },
+    {
+      "test_id": "sem003",
+      "suite": "integracion",
+      "fuente": "tests/mips/invalid/sem003.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/invalid/sem003.cps",
+        "-o",
+        "/tmp/mips-neg-t115ibrk/sem003.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM003 y sin .asm",
+      "duracion_s": 0.027,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM003"
+      ],
+      "codigos_obtenidos": [
+        "SEM003"
+      ]
+    },
+    {
+      "test_id": "syn001",
+      "suite": "integracion",
+      "fuente": "tests/mips/invalid/syn001.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/invalid/syn001.cps",
+        "-o",
+        "/tmp/mips-neg-5afl1ums/syn001.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SYN001 y sin .asm",
+      "duracion_s": 0.028,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SYN001"
+      ],
+      "codigos_obtenidos": [
+        "SYN001"
+      ]
+    },
+    {
+      "test_id": "D_clase_invalida",
+      "suite": "integracion",
+      "fuente": "tests/mips/e2e/invalid/D_clase_invalida.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/mips/e2e/invalid/D_clase_invalida.cps",
+        "-o",
+        "/tmp/mips-neg-4uqzog6d/D_clase_invalida.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM013, SEM002, SEM010 y sin .asm",
+      "duracion_s": 0.028,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM013",
+        "SEM002",
+        "SEM010"
+      ],
+      "codigos_obtenidos": [
+        "SEM013",
+        "SEM002",
+        "SEM010"
+      ]
+    },
+    {
+      "test_id": "falta_llave",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/falta_llave.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/falta_llave.cps",
+        "-o",
+        "/tmp/mips-neg-iszbo_a0/falta_llave.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SYN001 y sin .asm",
+      "duracion_s": 0.024,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SYN001"
+      ],
+      "codigos_obtenidos": [
+        "SYN001"
+      ]
+    },
+    {
+      "test_id": "no_declarada",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/no_declarada.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/no_declarada.cps",
+        "-o",
+        "/tmp/mips-neg-tjvb93fn/no_declarada.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM001 y sin .asm",
+      "duracion_s": 0.025,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM001"
+      ],
+      "codigos_obtenidos": [
+        "SEM001"
+      ]
+    },
+    {
+      "test_id": "redeclaracion",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/redeclaracion.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/redeclaracion.cps",
+        "-o",
+        "/tmp/mips-neg-jr1e15x6/redeclaracion.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM002 y sin .asm",
+      "duracion_s": 0.026,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM002"
+      ],
+      "codigos_obtenidos": [
+        "SEM002"
+      ]
+    },
+    {
+      "test_id": "sem003_base_a_subclase",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem003_base_a_subclase.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem003_base_a_subclase.cps",
+        "-o",
+        "/tmp/mips-neg-ja4rh1c1/sem003_base_a_subclase.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM003 y sin .asm",
+      "duracion_s": 0.025,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM003"
+      ],
+      "codigos_obtenidos": [
+        "SEM003"
+      ]
+    },
+    {
+      "test_id": "sem003_tipo_asignacion",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem003_tipo_asignacion.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem003_tipo_asignacion.cps",
+        "-o",
+        "/tmp/mips-neg-qoqzm7ua/sem003_tipo_asignacion.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM003 y sin .asm",
+      "duracion_s": 0.025,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM003"
+      ],
+      "codigos_obtenidos": [
+        "SEM003"
+      ]
+    },
+    {
+      "test_id": "sem004_operacion_logica",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem004_operacion_logica.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem004_operacion_logica.cps",
+        "-o",
+        "/tmp/mips-neg-hjqn9vri/sem004_operacion_logica.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM004 y sin .asm",
+      "duracion_s": 0.026,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM004"
+      ],
+      "codigos_obtenidos": [
+        "SEM004"
+      ]
+    },
+    {
+      "test_id": "sem004_tipo_aritmetica",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem004_tipo_aritmetica.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem004_tipo_aritmetica.cps",
+        "-o",
+        "/tmp/mips-neg-ie_jpujz/sem004_tipo_aritmetica.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM004 y sin .asm",
+      "duracion_s": 0.025,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM004"
+      ],
+      "codigos_obtenidos": [
+        "SEM004"
+      ]
+    },
+    {
+      "test_id": "sem005_condicion_no_booleana",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem005_condicion_no_booleana.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem005_condicion_no_booleana.cps",
+        "-o",
+        "/tmp/mips-neg-l_7zl8w7/sem005_condicion_no_booleana.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM005 y sin .asm",
+      "duracion_s": 0.025,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM005"
+      ],
+      "codigos_obtenidos": [
+        "SEM005"
+      ]
+    },
+    {
+      "test_id": "sem006_break_fuera_de_bucle",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem006_break_fuera_de_bucle.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem006_break_fuera_de_bucle.cps",
+        "-o",
+        "/tmp/mips-neg-q_4n0uyu/sem006_break_fuera_de_bucle.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM006 y sin .asm",
+      "duracion_s": 0.024,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM006"
+      ],
+      "codigos_obtenidos": [
+        "SEM006"
+      ]
+    },
+    {
+      "test_id": "sem006_continue_fuera_de_bucle",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem006_continue_fuera_de_bucle.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem006_continue_fuera_de_bucle.cps",
+        "-o",
+        "/tmp/mips-neg-n_u77rrn/sem006_continue_fuera_de_bucle.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM006 y sin .asm",
+      "duracion_s": 0.026,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM006"
+      ],
+      "codigos_obtenidos": [
+        "SEM006"
+      ]
+    },
+    {
+      "test_id": "sem007_return_fuera_de_funcion",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem007_return_fuera_de_funcion.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem007_return_fuera_de_funcion.cps",
+        "-o",
+        "/tmp/mips-neg-pfmezlyg/sem007_return_fuera_de_funcion.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM007 y sin .asm",
+      "duracion_s": 0.029,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM007"
+      ],
+      "codigos_obtenidos": [
+        "SEM007"
+      ]
+    },
+    {
+      "test_id": "sem008_argumentos_constructor",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem008_argumentos_constructor.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem008_argumentos_constructor.cps",
+        "-o",
+        "/tmp/mips-neg-g82mu_8w/sem008_argumentos_constructor.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM008 y sin .asm",
+      "duracion_s": 0.031,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM008"
+      ],
+      "codigos_obtenidos": [
+        "SEM008"
+      ]
+    },
+    {
+      "test_id": "sem008_argumentos_metodo",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem008_argumentos_metodo.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem008_argumentos_metodo.cps",
+        "-o",
+        "/tmp/mips-neg-09qnudog/sem008_argumentos_metodo.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM008 y sin .asm",
+      "duracion_s": 0.034,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM008"
+      ],
+      "codigos_obtenidos": [
+        "SEM008"
+      ]
+    },
+    {
+      "test_id": "sem009_tipo_retorno",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem009_tipo_retorno.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem009_tipo_retorno.cps",
+        "-o",
+        "/tmp/mips-neg-acr30v4h/sem009_tipo_retorno.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM009 y sin .asm",
+      "duracion_s": 0.029,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM009"
+      ],
+      "codigos_obtenidos": [
+        "SEM009"
+      ]
+    },
+    {
+      "test_id": "sem010_miembro_inexistente",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem010_miembro_inexistente.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem010_miembro_inexistente.cps",
+        "-o",
+        "/tmp/mips-neg-k4jwrwwt/sem010_miembro_inexistente.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM010 y sin .asm",
+      "duracion_s": 0.028,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM010"
+      ],
+      "codigos_obtenidos": [
+        "SEM010"
+      ]
+    },
+    {
+      "test_id": "sem011_metodo_sin_tipo",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem011_metodo_sin_tipo.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem011_metodo_sin_tipo.cps",
+        "-o",
+        "/tmp/mips-neg-nbiedlyf/sem011_metodo_sin_tipo.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM011 y sin .asm",
+      "duracion_s": 0.026,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM011"
+      ],
+      "codigos_obtenidos": [
+        "SEM011"
+      ]
+    },
+    {
+      "test_id": "sem011_parametro_sin_tipo",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem011_parametro_sin_tipo.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem011_parametro_sin_tipo.cps",
+        "-o",
+        "/tmp/mips-neg-s08ygkvh/sem011_parametro_sin_tipo.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM011 y sin .asm",
+      "duracion_s": 0.024,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM011"
+      ],
+      "codigos_obtenidos": [
+        "SEM011"
+      ]
+    },
+    {
+      "test_id": "sem012_codigo_muerto",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem012_codigo_muerto.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem012_codigo_muerto.cps",
+        "-o",
+        "/tmp/mips-neg-vwiwaknt/sem012_codigo_muerto.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM012 y sin .asm",
+      "duracion_s": 0.027,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM012"
+      ],
+      "codigos_obtenidos": [
+        "SEM012"
+      ]
+    },
+    {
+      "test_id": "sem013_herencia_base_inexistente",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem013_herencia_base_inexistente.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem013_herencia_base_inexistente.cps",
+        "-o",
+        "/tmp/mips-neg-tpltvk29/sem013_herencia_base_inexistente.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM013 y sin .asm",
+      "duracion_s": 0.027,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM013"
+      ],
+      "codigos_obtenidos": [
+        "SEM013"
+      ]
+    },
+    {
+      "test_id": "sem013_tipo_invalido",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem013_tipo_invalido.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem013_tipo_invalido.cps",
+        "-o",
+        "/tmp/mips-neg-d3swf9so/sem013_tipo_invalido.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM013 y sin .asm",
+      "duracion_s": 0.027,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM013"
+      ],
+      "codigos_obtenidos": [
+        "SEM013"
+      ]
+    },
+    {
+      "test_id": "sem014_herencia_circular",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem014_herencia_circular.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem014_herencia_circular.cps",
+        "-o",
+        "/tmp/mips-neg-jtqfdk9d/sem014_herencia_circular.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM014, SEM014 y sin .asm",
+      "duracion_s": 0.024,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM014",
+        "SEM014"
+      ],
+      "codigos_obtenidos": [
+        "SEM014",
+        "SEM014"
+      ]
+    },
+    {
+      "test_id": "sem015_this_fuera_de_clase",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem015_this_fuera_de_clase.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem015_this_fuera_de_clase.cps",
+        "-o",
+        "/tmp/mips-neg-4pxaia9u/sem015_this_fuera_de_clase.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM015 y sin .asm",
+      "duracion_s": 0.025,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM015"
+      ],
+      "codigos_obtenidos": [
+        "SEM015"
+      ]
+    },
+    {
+      "test_id": "sem016_clase_como_valor",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem016_clase_como_valor.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem016_clase_como_valor.cps",
+        "-o",
+        "/tmp/mips-neg-7qrp34fk/sem016_clase_como_valor.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM016 y sin .asm",
+      "duracion_s": 0.026,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM016"
+      ],
+      "codigos_obtenidos": [
+        "SEM016"
+      ]
+    },
+    {
+      "test_id": "sem016_funcion_como_valor",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem016_funcion_como_valor.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem016_funcion_como_valor.cps",
+        "-o",
+        "/tmp/mips-neg-imb9va9o/sem016_funcion_como_valor.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM016 y sin .asm",
+      "duracion_s": 0.026,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM016"
+      ],
+      "codigos_obtenidos": [
+        "SEM016"
+      ]
+    },
+    {
+      "test_id": "sem016_llamar_no_funcion",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem016_llamar_no_funcion.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem016_llamar_no_funcion.cps",
+        "-o",
+        "/tmp/mips-neg-scry_b7e/sem016_llamar_no_funcion.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM016 y sin .asm",
+      "duracion_s": 0.025,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM016"
+      ],
+      "codigos_obtenidos": [
+        "SEM016"
+      ]
+    },
+    {
+      "test_id": "sem016_metodo_como_valor",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/sem016_metodo_como_valor.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/sem016_metodo_como_valor.cps",
+        "-o",
+        "/tmp/mips-neg-28tgq1qk/sem016_metodo_como_valor.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM016 y sin .asm",
+      "duracion_s": 0.025,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM016"
+      ],
+      "codigos_obtenidos": [
+        "SEM016"
+      ]
+    },
+    {
+      "test_id": "syn001_expresion_incompleta",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/syn001_expresion_incompleta.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/syn001_expresion_incompleta.cps",
+        "-o",
+        "/tmp/mips-neg-_qo7ji4x/syn001_expresion_incompleta.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SYN001 y sin .asm",
+      "duracion_s": 0.024,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SYN001"
+      ],
+      "codigos_obtenidos": [
+        "SYN001"
+      ]
+    },
+    {
+      "test_id": "varios_errores",
+      "suite": "integracion",
+      "fuente": "tests/fixtures/invalid/varios_errores.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/fixtures/invalid/varios_errores.cps",
+        "-o",
+        "/tmp/mips-neg-sgs1zhwf/varios_errores.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM003, SEM005, SEM001 y sin .asm",
+      "duracion_s": 0.026,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM001",
+        "SEM003",
+        "SEM005"
+      ],
+      "codigos_obtenidos": [
+        "SEM003",
+        "SEM005",
+        "SEM001"
+      ]
+    },
+    {
+      "test_id": "e_break_fuera_de_bucle",
+      "suite": "integracion",
+      "fuente": "tests/tac/errores/e_break_fuera_de_bucle.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/errores/e_break_fuera_de_bucle.cps",
+        "-o",
+        "/tmp/mips-neg-vldj066x/e_break_fuera_de_bucle.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM006 y sin .asm",
+      "duracion_s": 0.025,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM006"
+      ],
+      "codigos_obtenidos": [
+        "SEM006"
+      ]
+    },
+    {
+      "test_id": "e_funcion_como_valor",
+      "suite": "integracion",
+      "fuente": "tests/tac/errores/e_funcion_como_valor.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/errores/e_funcion_como_valor.cps",
+        "-o",
+        "/tmp/mips-neg-9mnz90a9/e_funcion_como_valor.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM016 y sin .asm",
+      "duracion_s": 0.024,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM016"
+      ],
+      "codigos_obtenidos": [
+        "SEM016"
+      ]
+    },
+    {
+      "test_id": "e_no_declarada_en_metodo",
+      "suite": "integracion",
+      "fuente": "tests/tac/errores/e_no_declarada_en_metodo.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/errores/e_no_declarada_en_metodo.cps",
+        "-o",
+        "/tmp/mips-neg-2uqc_a8b/e_no_declarada_en_metodo.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM001 y sin .asm",
+      "duracion_s": 0.024,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM001"
+      ],
+      "codigos_obtenidos": [
+        "SEM001"
+      ]
+    },
+    {
+      "test_id": "e_retorno_y_argumentos",
+      "suite": "integracion",
+      "fuente": "tests/tac/errores/e_retorno_y_argumentos.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/errores/e_retorno_y_argumentos.cps",
+        "-o",
+        "/tmp/mips-neg-z44x42l5/e_retorno_y_argumentos.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM009, SEM008 y sin .asm",
+      "duracion_s": 0.026,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM009",
+        "SEM008"
+      ],
+      "codigos_obtenidos": [
+        "SEM009",
+        "SEM008"
+      ]
+    },
+    {
+      "test_id": "e_sintaxis",
+      "suite": "integracion",
+      "fuente": "tests/tac/errores/e_sintaxis.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/errores/e_sintaxis.cps",
+        "-o",
+        "/tmp/mips-neg-g_kx9tt_/e_sintaxis.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SYN001 y sin .asm",
+      "duracion_s": 0.022,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SYN001"
+      ],
+      "codigos_obtenidos": [
+        "SYN001"
+      ]
+    },
+    {
+      "test_id": "e_tipo_en_funcion",
+      "suite": "integracion",
+      "fuente": "tests/tac/errores/e_tipo_en_funcion.cps",
+      "comando": [
+        "compiscript",
+        "--mips",
+        "tests/tac/errores/e_tipo_en_funcion.cps",
+        "-o",
+        "/tmp/mips-neg-0p3kwk_m/e_tipo_en_funcion.asm"
+      ],
+      "etapa": "compilacion",
+      "estado": "PASS",
+      "motivo": "SEM003 y sin .asm",
+      "duracion_s": 0.023,
+      "exit_obtenido": 1,
+      "codigos_esperados": [
+        "SEM003"
+      ],
+      "codigos_obtenidos": [
+        "SEM003"
+      ]
+    }
+  ]
+}

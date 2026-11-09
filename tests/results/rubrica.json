@@ -1,0 +1,541 @@
+{
+  "generado": "2026-11-09T17:10:35+00:00",
+  "nota": "sin puntaje: el validador solo informa evidencia; la nota la asigna el docente",
+  "prueba_estrella": "PASS",
+  "apartados": [
+    {
+      "apartado": "Llamadas y retornos",
+      "puntos_del_enunciado": 20,
+      "estado": "PASS",
+      "requisitos": [
+        {
+          "requisito": "E05",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E06",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E13",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E14",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E16",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "suite:e2e",
+          "estado": "PASS",
+          "motivo": "42 casos"
+        },
+        {
+          "requisito": "suite:unitarias",
+          "estado": "PASS",
+          "motivo": "10 casos"
+        }
+      ]
+    },
+    {
+      "apartado": "Asignacion de registros o pila",
+      "puntos_del_enunciado": 20,
+      "estado": "PASS",
+      "requisitos": [
+        {
+          "requisito": "E07",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "suite:unitarias",
+          "estado": "PASS",
+          "motivo": "10 casos"
+        }
+      ]
+    },
+    {
+      "apartado": "Codigo MIPS funcional y bateria de pruebas",
+      "puntos_del_enunciado": 60,
+      "estado": "PASS",
+      "requisitos": [
+        {
+          "requisito": "E01",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E02",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E03",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E04",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E05",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E06",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E07",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E08",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E09",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E10",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E11",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E12",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E13",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E14",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E15",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E16",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E17",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E18",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "N01",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "N02",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "N03",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "N04",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "N05",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "N06",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "N07",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "N08",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "N09",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "N10",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "N11",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "N12",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "N13",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "N14",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "N15",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "N16",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "A",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "B",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "C",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "D",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "E",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "variantes",
+          "estado": "PASS",
+          "motivo": ""
+        },
+        {
+          "requisito": "suite:integracion",
+          "estado": "PASS",
+          "motivo": "86 casos"
+        },
+        {
+          "requisito": "suite:e2e",
+          "estado": "PASS",
+          "motivo": "42 casos"
+        },
+        {
+          "requisito": "suite:runner",
+          "estado": "PASS",
+          "motivo": "8 casos"
+        },
+        {
+          "requisito": "suite:cli",
+          "estado": "PASS",
+          "motivo": "12 casos"
+        },
+        {
+          "requisito": "suite:ide",
+          "estado": "PASS",
+          "motivo": "28 casos"
+        }
+      ]
+    }
+  ],
+  "casos": {
+    "E01": {
+      "titulo": "Aritmetica y expresiones anidadas",
+      "estado": "PASS",
+      "pruebas": 4,
+      "motivo": ""
+    },
+    "E02": {
+      "titulo": "Comparaciones y booleanos",
+      "estado": "PASS",
+      "pruebas": 2,
+      "motivo": ""
+    },
+    "E03": {
+      "titulo": "if/else, while, for, switch",
+      "estado": "PASS",
+      "pruebas": 8,
+      "motivo": ""
+    },
+    "E04": {
+      "titulo": "&& y || con efectos laterales",
+      "estado": "PASS",
+      "pruebas": 1,
+      "motivo": ""
+    },
+    "E05": {
+      "titulo": "Funcion con 0, 1, 4 y 5+ parametros",
+      "estado": "PASS",
+      "pruebas": 2,
+      "motivo": ""
+    },
+    "E06": {
+      "titulo": "Recursion y llamadas anidadas",
+      "estado": "PASS",
+      "pruebas": 3,
+      "motivo": ""
+    },
+    "E07": {
+      "titulo": "Mas de 10, 30 y 100 temporales",
+      "estado": "PASS",
+      "pruebas": 3,
+      "motivo": ""
+    },
+    "E08": {
+      "titulo": "Strings y salida",
+      "estado": "PASS",
+      "pruebas": 4,
+      "motivo": ""
+    },
+    "E09": {
+      "titulo": "Una clase autonoma valida",
+      "estado": "PASS",
+      "pruebas": 2,
+      "motivo": ""
+    },
+    "E10": {
+      "titulo": "Clase con constructor, campos y metodos",
+      "estado": "PASS",
+      "pruebas": 3,
+      "motivo": ""
+    },
+    "E11": {
+      "titulo": "Dos instancias de la misma clase",
+      "estado": "PASS",
+      "pruebas": 2,
+      "motivo": ""
+    },
+    "E12": {
+      "titulo": "Clase base y derivada con override",
+      "estado": "PASS",
+      "pruebas": 4,
+      "motivo": ""
+    },
+    "E13": {
+      "titulo": "Referencia de clase base a un objeto derivado",
+      "estado": "PASS",
+      "pruebas": 4,
+      "motivo": ""
+    },
+    "E14": {
+      "titulo": "Metodo que llama a otro metodo o funcion",
+      "estado": "PASS",
+      "pruebas": 3,
+      "motivo": ""
+    },
+    "E15": {
+      "titulo": "Listas y foreach",
+      "estado": "PASS",
+      "pruebas": 5,
+      "motivo": ""
+    },
+    "E16": {
+      "titulo": "Closures y capturas",
+      "estado": "PASS",
+      "pruebas": 2,
+      "motivo": ""
+    },
+    "E17": {
+      "titulo": "try/catch y error recuperable de runtime",
+      "estado": "PASS",
+      "pruebas": 6,
+      "motivo": ""
+    },
+    "E18": {
+      "titulo": "Programa integrado p3_programa_completo.cps",
+      "estado": "PASS",
+      "pruebas": 1,
+      "motivo": ""
+    },
+    "N01": {
+      "titulo": "Errores de sintaxis (SYN001, sin ASM)",
+      "estado": "PASS",
+      "pruebas": 5,
+      "motivo": ""
+    },
+    "N02": {
+      "titulo": "Nombre no declarado (SEM001)",
+      "estado": "PASS",
+      "pruebas": 3,
+      "motivo": ""
+    },
+    "N03": {
+      "titulo": "Redeclaracion (SEM002)",
+      "estado": "PASS",
+      "pruebas": 2,
+      "motivo": ""
+    },
+    "N04": {
+      "titulo": "Asignacion u operacion incompatible (SEM003/SEM004)",
+      "estado": "PASS",
+      "pruebas": 5,
+      "motivo": ""
+    },
+    "N05": {
+      "titulo": "Condicion no booleana (SEM005)",
+      "estado": "PASS",
+      "pruebas": 1,
+      "motivo": ""
+    },
+    "N06": {
+      "titulo": "break/continue o return ilegal (SEM006/SEM007)",
+      "estado": "PASS",
+      "pruebas": 3,
+      "motivo": ""
+    },
+    "N07": {
+      "titulo": "Argumentos o retorno incompatibles (SEM008/SEM009)",
+      "estado": "PASS",
+      "pruebas": 3,
+      "motivo": ""
+    },
+    "N08": {
+      "titulo": "Miembro inexistente (SEM010)",
+      "estado": "PASS",
+      "pruebas": 2,
+      "motivo": ""
+    },
+    "N09": {
+      "titulo": "Parametro sin tipo (SEM011)",
+      "estado": "PASS",
+      "pruebas": 1,
+      "motivo": ""
+    },
+    "N10": {
+      "titulo": "Tipo o base invalida, herencia circular (SEM013/SEM014)",
+      "estado": "PASS",
+      "pruebas": 4,
+      "motivo": ""
+    },
+    "N11": {
+      "titulo": "this fuera de metodo (SEM015)",
+      "estado": "PASS",
+      "pruebas": 2,
+      "motivo": ""
+    },
+    "N12": {
+      "titulo": "Funcion, metodo o clase usada como valor (SEM016)",
+      "estado": "PASS",
+      "pruebas": 3,
+      "motivo": ""
+    },
+    "N13": {
+      "titulo": "Opcode TAC inexistente o argumentos malformados (CG, sin ASM)",
+      "estado": "PASS",
+      "pruebas": 1,
+      "motivo": ""
+    },
+    "N14": {
+      "titulo": "Etiqueta TAC indefinida o duplicada, frame invalido (CG, sin ASM)",
+      "estado": "PASS",
+      "pruebas": 1,
+      "motivo": ""
+    },
+    "N15": {
+      "titulo": "Intento fallido sobre la ruta de un .asm anterior: el viejo se borra",
+      "estado": "PASS",
+      "pruebas": 2,
+      "motivo": ""
+    },
+    "N16": {
+      "titulo": "MARS rechaza el .asm: FAIL con el error concreto",
+      "estado": "PASS",
+      "pruebas": 4,
+      "motivo": ""
+    },
+    "A": {
+      "titulo": "Prueba estrella A: clase completa sola compila y ensambla",
+      "estado": "PASS",
+      "pruebas": 1,
+      "motivo": ""
+    },
+    "B": {
+      "titulo": "Prueba estrella B: dos objetos con estado propio en MARS",
+      "estado": "PASS",
+      "pruebas": 1,
+      "motivo": ""
+    },
+    "C": {
+      "titulo": "Prueba estrella C: herencia y despacho por vtable",
+      "estado": "PASS",
+      "pruebas": 1,
+      "motivo": ""
+    },
+    "D": {
+      "titulo": "Prueba estrella D: clase invalida, todos sus errores y sin ASM",
+      "estado": "PASS",
+      "pruebas": 1,
+      "motivo": ""
+    },
+    "E": {
+      "titulo": "Prueba estrella E: copiar/pegar en la IDE, compilar y ejecutar en MARS",
+      "estado": "PASS",
+      "pruebas": 6,
+      "motivo": ""
+    },
+    "variantes": {
+      "titulo": "Variantes de clases (orden, atributos, objetos como campo, objeto local)",
+      "estado": "PASS",
+      "pruebas": 1,
+      "motivo": ""
+    }
+  },
+  "bloqueos": {}
+}

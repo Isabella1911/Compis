@@ -73,7 +73,7 @@ std::string frameOffset(int offset) {
     return offset >= 0 ? "fp+" + std::to_string(offset) : "fp" + std::to_string(offset);
 }
 
-// Lo que agrego codegen/FrameLayout (y el layout de clases de la parte 2):
+// Lo que agrego codegen/FrameLayout (incluido el layout de clases):
 // donde vive cada simbolo en tiempo de ejecucion. Vacio si no se genero
 // codigo (p. ej. porque hubo errores).
 std::string codegenText(const Symbol& symbol) {

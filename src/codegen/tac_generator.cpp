@@ -302,8 +302,9 @@ void TacGenerator::closeTryHandlers(int depth) {
     }
 }
 
-Operand TacGenerator::todo(const std::string& owner, const std::string& what) {
-    emitComment("TODO(" + owner + "): " + what);
+Operand TacGenerator::unsupported(const std::string& what) {
+    unsupported_.push_back(what);
+    emitComment("NO SOPORTADO: " + what);
     return Operand::makeInt(0);
 }
 
@@ -338,7 +339,7 @@ void TacGenerator::genStatement(Statement* stmt) {
     if (auto* n = dynamic_cast<ContinueStatement*>(stmt)) return genContinue(n);
     if (auto* n = dynamic_cast<FunctionDeclaration*>(stmt)) return genFunctionDeclaration(n);
     if (auto* n = dynamic_cast<ClassDeclaration*>(stmt)) return genClassDeclaration(n);
-    todo("parte 1", "sentencia no reconocida");
+    unsupported("sentencia no reconocida");
 }
 
 Operand TacGenerator::genExpr(Expression* expr) {
@@ -357,7 +358,7 @@ Operand TacGenerator::genExpr(Expression* expr) {
     if (auto* n = dynamic_cast<ThisExpression*>(expr)) return genThis(n);
     if (auto* n = dynamic_cast<ArrayLiteral*>(expr)) return genArrayLiteral(n);
     if (auto* n = dynamic_cast<ArrayAccessExpression*>(expr)) return genArrayAccess(n);
-    return todo("parte 1", "expresion no reconocida");
+    return unsupported("expresion no reconocida");
 }
 
 }  // namespace codegen

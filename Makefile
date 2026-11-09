@@ -16,7 +16,8 @@
 #   make test-mips-integration / test-mips-e2e -> solo una de las dos
 #   make test-mips-unit -> pruebas unitarias del backend (TAC armado a mano)
 #   make test-cli / test-ide -> CLI publica y la IDE (esta ultima necesita display)
-#   make test-mips-estricto -> validacion de entrega: exige MARS (sin SKIP)
+#   make test-mips-estricto -> MIPS, CLI e IDE en modo estricto: exige MARS y display (sin SKIP)
+#   make validar-entrega -> TODO en modo estricto + chequeo de requisitos (tests/validar_rubrica.py)
 #   make clean        -> borra los binarios y el codigo generado por ANTLR
 
 DEPS        := .deps
@@ -44,9 +45,7 @@ SEMANTIC_SRC := src/semantic/scope.cpp \
                 src/semantic/control_flow_checker.cpp \
                 src/semantic/closure_analyzer.cpp \
                 src/semantic/printer.cpp
-# Generacion de codigo intermedio (Proyecto 2). Todos los archivos ya
-# estan listados, incluidos los de cada parte del reparto, para que nadie
-# tenga que tocar el Makefile al implementar su parte.
+# Generacion de codigo intermedio (TAC) y backend MIPS.
 CODEGEN_SRC := src/ir/tac.cpp \
                src/ir/tac_printer.cpp \
                src/codegen/temp_allocator.cpp \
@@ -90,7 +89,7 @@ BIN             := compiscript
 TEST_SYMBOLS_BIN := symbol_table_test
 endif
 
-.PHONY: all build setup generate run test test-cli test-ide test-semantic test-tac test-tac-update docs-ejemplos test-symbols test-mips test-mips-runner test-mips-unit test-mips-integration test-mips-e2e test-mips-estricto clean
+.PHONY: all build setup generate run test test-cli test-ide validar-entrega test-semantic test-tac test-tac-update docs-ejemplos test-symbols test-mips test-mips-runner test-mips-unit test-mips-integration test-mips-e2e test-mips-estricto clean
 
 all: build
 
@@ -123,7 +122,14 @@ PYTHON ?= python3
 # queda completo, tambien en F7 de la IDE) y termina con error si fallo
 # cualquiera. Las suites que necesitan MARS quedan en SKIP si no esta.
 test: build $(TEST_SYMBOLS_BIN) $(MIPS_UNIT_BIN)
-	@st=0; 	echo "== Prueba unitaria de la tabla de simbolos =="; ./$(TEST_SYMBOLS_BIN) || st=1; 	$(PYTHON) tests/run_tests.py --bin ./$(BIN) todo || st=1; 	echo "== Runner de MARS =="; $(PYTHON) tests/mips/test_mars_runner.py || st=1; 	echo "== Unitarias del backend MIPS =="; $(PYTHON) tests/mips/unit/run_unit.py --bin ./$(MIPS_UNIT_BIN) || st=1; 	$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN) --suite todo || st=1; 	echo "== CLI =="; $(PYTHON) tests/cli/test_cli.py --bin ./$(BIN) || st=1; 	exit $$st
+	@st=0; \
+	echo "== Prueba unitaria de la tabla de simbolos =="; ./$(TEST_SYMBOLS_BIN) || st=1; \
+	$(PYTHON) tests/run_tests.py --bin ./$(BIN) todo || st=1; \
+	echo "== Runner de MARS =="; $(PYTHON) tests/mips/test_mars_runner.py || st=1; \
+	echo "== Unitarias del backend MIPS =="; $(PYTHON) tests/mips/unit/run_unit.py --bin ./$(MIPS_UNIT_BIN) || st=1; \
+	$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN) --suite todo || st=1; \
+	echo "== CLI =="; $(PYTHON) tests/cli/test_cli.py --bin ./$(BIN) || st=1; \
+	exit $$st
 
 test-semantic: build
 	@$(PYTHON) tests/run_tests.py --bin ./$(BIN) semantica
@@ -181,11 +187,27 @@ test-ide: build
 	@$(PYTHON) tests/ide/test_ide.py
 
 test-mips-estricto: build $(MIPS_UNIT_BIN)
-	@COMPISCRIPT_ESTRICTO=1 $(PYTHON) tests/mips/test_mars_runner.py
-	@COMPISCRIPT_ESTRICTO=1 $(PYTHON) tests/mips/unit/run_unit.py --bin ./$(MIPS_UNIT_BIN)
-	@COMPISCRIPT_ESTRICTO=1 $(PYTHON) tests/cli/test_cli.py --bin ./$(BIN)
-	@COMPISCRIPT_ESTRICTO=1 $(PYTHON) tests/ide/test_ide.py
-	@$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN) --suite todo --estricto
+	@st=0; export COMPISCRIPT_ESTRICTO=1; \
+	$(PYTHON) tests/mips/test_mars_runner.py || st=1; \
+	$(PYTHON) tests/mips/unit/run_unit.py --bin ./$(MIPS_UNIT_BIN) || st=1; \
+	$(PYTHON) tests/cli/test_cli.py --bin ./$(BIN) || st=1; \
+	$(PYTHON) tests/ide/test_ide.py || st=1; \
+	$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN) --suite todo --estricto || st=1; \
+	exit $$st
+
+# Validacion de entrega: toda la bateria anterior (simbolos, semantica, TAC)
+# mas todo lo de MIPS en modo estricto (exige MARS y display, sin SKIP), y
+# al final el chequeo de requisitos de tests/validar_rubrica.py sobre los
+# resultados de ESTA corrida (tests/results/*.json). Corre todo aunque algo
+# falle, para que el informe quede completo, y termina con error si algo
+# no paso.
+validar-entrega: build $(TEST_SYMBOLS_BIN) $(MIPS_UNIT_BIN)
+	@st=0; \
+	echo "== Tabla de simbolos =="; ./$(TEST_SYMBOLS_BIN) || st=1; \
+	$(PYTHON) tests/run_tests.py --bin ./$(BIN) todo || st=1; \
+	$(MAKE) --no-print-directory test-mips-estricto || st=1; \
+	echo "== Requisitos =="; $(PYTHON) tests/validar_rubrica.py || st=1; \
+	exit $$st
 
 clean:
 	rm -f compiscript compiscript.exe symbol_table_test symbol_table_test.exe mips_backend_test

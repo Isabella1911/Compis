@@ -1,0 +1,72 @@
+{
+  "generado": "2026-11-09T17:07:05+00:00",
+  "resumen": {
+    "suite": "cli",
+    "ejecutados": 12,
+    "pass": 12,
+    "fail": 0,
+    "skip": 0
+  },
+  "casos": [
+    {
+      "test_id": "test_archivo_vacio",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_compilar_dos_veces_da_el_mismo_asm",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_directorio_como_fuente",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_directorio_de_salida_inexistente",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_directorio_sin_permiso_de_escritura",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_entrada_grande",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_fallo_tras_un_exito_en_la_misma_ruta",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_flags_incompatibles",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_fuente_inexistente_y_asm_viejo",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_mips_sin_o_escribe_en_stdout",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_rutas_con_espacios_y_tildes",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "test_tac_sigue_igual",
+      "estado": "PASS",
+      "motivo": ""
+    }
+  ]
+}

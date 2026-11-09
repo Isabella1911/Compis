@@ -187,4 +187,6 @@ if __name__ == "__main__":
     ap.add_argument("--bin", default=BIN)
     args, resto = ap.parse_known_args()
     BIN = str(Path(args.bin).resolve())
-    unittest.main(argv=[sys.argv[0], "-v", *resto])
+    sys.path.insert(0, str(RAIZ / "tests"))
+    import resultados_unittest  # noqa: E402
+    sys.exit(resultados_unittest.correr("cli", sys.modules[__name__]))

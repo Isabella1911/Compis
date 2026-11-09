@@ -1,5 +1,4 @@
-// Parte 2: clases, new, atributos, metodos y this.
-// Ver el documento de reparto de la parte 2, seccion 2.3.
+// Clases: new, atributos, metodos y this.
 
 #include <vector>
 
@@ -54,7 +53,7 @@ void TacGenerator::genClassDeclaration(ClassDeclaration* n) {
 
 Operand TacGenerator::genNew(NewExpression* n) {
     auto* cls = dynamic_cast<ClassSymbol*>(n->symbol);
-    if (cls == nullptr) return todo("parte 2", "new " + n->class_name);
+    if (cls == nullptr) return unsupported("new " + n->class_name);
 
     Operand obj = emitAlloc(Operand::makeInt(cls->instance_size));
     // La vtable es la de la clase real del objeto: es lo que permite que
@@ -103,11 +102,11 @@ Operand TacGenerator::genNew(NewExpression* n) {
 
 Operand TacGenerator::genMemberAccess(MemberAccessExpression* n) {
     if (n->symbol == nullptr) {
-        return todo("parte 2", "acceso a '." + n->member_name + "'");
+        return unsupported("acceso a '." + n->member_name + "'");
     }
     if (dynamic_cast<FunctionSymbol*>(n->symbol) != nullptr) {
         // Los metodos no escapan como valores (supuesto de la seccion 11).
-        return todo("parte 2", "metodo '" + n->member_name + "' usado como valor");
+        return unsupported("metodo '" + n->member_name + "' usado como valor");
     }
 
     Operand object = genExpr(n->object.get());
@@ -117,7 +116,7 @@ Operand TacGenerator::genMemberAccess(MemberAccessExpression* n) {
 
 Operand TacGenerator::genPropertyAssignment(Expression* object, semantic::Symbol* member,
                                             Expression* value) {
-    if (member == nullptr) return todo("parte 2", "asignacion a atributo");
+    if (member == nullptr) return unsupported("asignacion a atributo");
 
     Operand obj = genExpr(object);
     Operand val = genExpr(value);

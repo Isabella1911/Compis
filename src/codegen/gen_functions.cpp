@@ -1,5 +1,4 @@
-// Parte 2: funciones, llamadas, return y closures.
-// Ver el documento de reparto de la parte 2, seccion 2.1 y 2.2.
+// Funciones, llamadas, return y closures.
 
 #include "semantic/type.h"
 #include "tac_generator.h"
@@ -34,7 +33,7 @@ bool callHasResult(Expression* call) {
 void TacGenerator::genFunctionDeclaration(FunctionDeclaration* n) {
     auto* fn = dynamic_cast<FunctionSymbol*>(n->symbol);
     if (fn == nullptr) {
-        todo("parte 2", "funcion '" + n->name + "' sin simbolo");
+        unsupported("funcion '" + n->name + "' sin simbolo");
         return;
     }
     // Abre un `func` nuevo (se apila): una anidada se genera en medio de la
@@ -55,7 +54,7 @@ void TacGenerator::genReturn(ReturnStatement* n) {
 Operand TacGenerator::genCall(CallExpression* n) {
     FunctionSymbol* fn = calleeFunction(n->callee.get());
     if (fn == nullptr) {
-        return todo("parte 2", "llamada a un valor que no es funcion");
+        return unsupported("llamada a un valor que no es funcion");
     }
 
     // 1) Evaluar TODOS los argumentos primero, de izquierda a derecha.

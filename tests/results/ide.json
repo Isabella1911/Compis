@@ -1,0 +1,152 @@
+{
+  "generado": "2026-11-09T17:07:18+00:00",
+  "resumen": {
+    "suite": "ide",
+    "ejecutados": 28,
+    "pass": 28,
+    "fail": 0,
+    "skip": 0
+  },
+  "casos": [
+    {
+      "test_id": "A: genera output/programa.asm",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "A: pestana MIPS con el ensamblador",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "A: la pestana dice de que fuente es",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "A: sin diagnosticos",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "A: pestana TAC llena",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "A: AST y tabla de simbolos generados",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "D: los tres errores en Diagnosticos",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "D: no queda el .asm de la compilacion anterior (A)",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "D: la pestana MIPS avisa que no hay ensamblador",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "D: indicador de no vigencia",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "E: el texto pegado llega al editor",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "E: compila lo pegado sin guardarlo a mano",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "E: MARS ejecuta lo pegado con la salida esperada",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "recompilar: primero el error",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "recompilar: sin .asm mientras hay error",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "recompilar: corregido, hay .asm",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "recompilar: MARS imprime 6",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "archivo vacio: compila (programa vacio)",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "ruta con espacios y tildes: compila",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "archivo que ya no existe: error visible",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "archivo que ya no existe: no queda un proceso colgado",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "F5: make build termina bien",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "F7: resumen con PASS, FAIL y SKIP separados",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "F7: resumen arriba de la salida",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "MARS colgado: se detiene por tiempo",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "MARS colgado: la interfaz sigue respondiendo",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "MARS ausente: error visible",
+      "estado": "PASS",
+      "motivo": ""
+    },
+    {
+      "test_id": "MARS ausente: no queda nada ejecutando",
+      "estado": "PASS",
+      "motivo": ""
+    }
+  ]
+}

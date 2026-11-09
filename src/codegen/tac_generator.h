@@ -126,10 +126,19 @@ private:
     // cuando saltan fuera de un try: si no, el handler quedaria colgado.
     void closeTryHandlers(int depth);
 
-    // Marca una construccion que todavia no se traduce: emite un
-    // comentario `# TODO(<owner>): <what>` y devuelve la constante 0 para
-    // que el resto de la traduccion pueda seguir.
-    ir::Operand todo(const std::string& owner, const std::string& what);
+    // Una construccion que el generador no sabe traducir. No deberia pasar
+    // nunca (el semantico rechaza esos programas), pero si pasa no se
+    // genera codigo: se registra en unsupported() y Compiler::compile lo
+    // convierte en un error CG004. Devuelve la constante 0 solo para que el
+    // recorrido pueda terminar y reportar todos los casos.
+    ir::Operand unsupported(const std::string& what);
+
+public:
+    // Construcciones que no se pudieron traducir en la ultima generacion.
+    const std::vector<std::string>& unsupportedConstructs() const { return unsupported_; }
+
+private:
+    std::vector<std::string> unsupported_;
 
     FunctionContext& current() { return contexts_.back(); }
 
@@ -139,7 +148,7 @@ private:
     ir::Operand genExpr(ast::Expression* expr);
 
     // ---------------------------------------------------------------
-    // Parte 1: expresiones (gen_expressions.cpp)
+    // Expresiones (gen_expressions.cpp)
     // ---------------------------------------------------------------
     ir::Operand genLiteral(ast::LiteralExpression* n);
     ir::Operand genIdentifier(ast::IdentifierExpression* n);
@@ -155,7 +164,7 @@ private:
                  const std::string& falseLabel);
 
     // ---------------------------------------------------------------
-    // Parte 1: sentencias (gen_statements.cpp)
+    // Sentencias (gen_statements.cpp)
     // ---------------------------------------------------------------
     void genBlock(ast::Block* n);
     void genVariableDeclaration(ast::VariableDeclaration* n);
@@ -173,7 +182,7 @@ private:
     void genContinue(ast::ContinueStatement* n);
 
     // ---------------------------------------------------------------
-    // Parte 2: funciones y closures (gen_functions.cpp)
+    // Funciones y closures (gen_functions.cpp)
     // ---------------------------------------------------------------
     void genFunctionDeclaration(ast::FunctionDeclaration* n);
     void genReturn(ast::ReturnStatement* n);

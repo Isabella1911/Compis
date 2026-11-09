@@ -21,7 +21,7 @@ class FunctionSymbol;  // adelante
 enum class SymbolKind { Variable, Constant, Parameter, Function, Class };
 
 // Donde vive el valor en tiempo de ejecucion. Lo fija codegen/FrameLayout
-// (Global/Param/Local) o el layout de clases de la parte 2 (Field).
+// (Global/Param/Local) o el layout de clases (Field).
 enum class StorageKind { None, Global, Param, Local, Field };
 
 class Symbol {
@@ -94,7 +94,7 @@ public:
                                          // (y null para siempre si no hay ':' o si no resolvio)
     Scope* class_scope = nullptr;       // no propietario
 
-    // --- Generacion de codigo (lo llena la parte 2) ---
+    // --- Generacion de codigo (lo llena FrameLayout) ---
     int instance_size = 0;  // bytes de un objeto: palabra 0 (vtable) + atributos, heredados incluidos
     // Tabla de metodos: el metodo que ejecuta un objeto de esta clase en cada
     // slot (heredado o redefinido). La palabra 0 de cada objeto apunta aqui.
