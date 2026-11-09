@@ -23,7 +23,10 @@
 // Heap: alloc usa syscall 9 (sbrk) con tamano alineado a 4. Load/Store
 // revisan que la base no sea null (salvo fp, en closures).
 //
-// Opcodes no implementados en esta fase producen CG001/CG004 y no hay .asm.
+// try/catch: pila de handlers en el runtime; todo error de runtime pasa por
+// __fail, que salta al catch activo o termina con codigo 1.
+//
+// Un opcode o caso no soportado produce CG001/CG004 y no hay .asm.
 
 #include "ir/tac.h"
 #include "mips_result.h"

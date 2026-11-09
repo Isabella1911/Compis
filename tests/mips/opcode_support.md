@@ -4,7 +4,8 @@ Generado y mantenido junto al backend. Estados:
 
 - **ok**: traducido y cubierto por `tests/mips/`
 - **parcial**: traducido con limitaciones (ver notas)
-- **pendiente**: produce `CG001`/`CG004` (no hay `.asm` exitoso)
+- **pendiente**: produce `CG001`/`CG004` (no hay `.asm` exitoso). Hoy no queda
+  ninguno: los 19 casos de `tests/tac/` generan `.asm` y corren en MARS.
 
 | Opcode TAC | Operandos | Lowering MIPS | Estado | Prueba |
 |---|---|---|---|---|
@@ -24,7 +25,8 @@ Generado y mantenido junto al backend. Estados:
 | `Load` `dst = a[b]` | dst, base, offset | `lw` (offset const o en registro); base 0 → `__null_ref` | ok | `valid/listas.cps` |
 | `Store` `dst[a] = b` | base, offset, valor | `sw`; base 0 → `__null_ref` | ok | `valid/listas.cps` |
 | `Alloc` | dst, bytes | `syscall 9` (sbrk), tamaño redondeado a múltiplo de 4 | ok | `valid/lista_vacia_y_objetos_heap.cps` |
-| `TryBegin` / `TryEnd` | — | — | pendiente | `invalid_backend/try_catch.cps` |
+| `TryBegin` | label | apila un handler `{catch, $fp, $sp}` en `__handlers` | ok | `valid/try_catch.cps` |
+| `TryEnd` | — | desapila el último handler | ok | `valid/error_sin_handler.cps` |
 | `Comment` | text | `#` | ok | — |
 
 Runtime emitido: `__concat`, `__str_eq`, `__raise`, `__div_zero`, `__null_ref`,
@@ -52,3 +54,21 @@ Al terminar, `main` compara `$sp` con el valor guardado tras su prólogo
 prueba ejecutada en MARS verifica que todas las llamadas dejaron la pila
 balanceada. Esta verificación detectó que el epílogo original descartaba
 una palabra de más (`addiu $sp, $sp, 8`).
+
+## try/catch
+
+No hay `throw` en Compiscript: al `catch` llegan los errores de runtime
+(`__raise` del TAC, división entre cero, referencia nula). El runtime guarda
+una pila de handlers en `.data` (hasta 256 `try` anidados activos a la vez):
+
+- `try_begin L` apila `{dirección de L, $fp, $sp}` del frame actual.
+- `try_end` la desapila. El TAC también lo emite antes de un `return`,
+  `break` o `continue` que sale del `try`.
+- `__fail` (todo error termina ahí): si hay un handler, lo desapila, guarda
+  el mensaje en `__last_error`, restaura `$fp` y `$sp` y salta al catch. Así
+  descarta los frames de las llamadas que estaban en curso, por profundas
+  que sean. Si no hay handler, imprime el error y sale con código 1.
+- `e = call __error_message, 0` devuelve `__last_error`.
+
+Los errores del simulador (por ejemplo, una dirección desalineada) no pasan
+por `__fail`: no se atrapan en silencio.

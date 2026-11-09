@@ -33,6 +33,10 @@ using semantic::StorageKind;
 //   fp-8-4k  local k
 //   debajo   temps: temp t en fp - (8 + frame_size + 4*t)
 
+// Profundidad maxima de try anidados activos a la vez (no el total de try
+// del programa: cada try_end libera su lugar).
+constexpr int kMaxHandlers = 256;
+
 struct Gen {
     MipsEmitter em;
     std::vector<Diagnostic> diags;
@@ -308,6 +312,44 @@ struct Gen {
         storeOperand(dst, "$v0");
     }
 
+    // try/catch. El runtime mantiene una pila de handlers en .data:
+    //   __handler_top          cantidad de handlers activos
+    //   __handlers[i]          { direccion del catch, $fp, $sp } (12 bytes)
+    // try_begin L apila un handler con la etiqueta del catch y el $fp/$sp
+    // de ESTE frame; try_end lo quita (el TAC lo emite tambien antes de un
+    // return, break o continue que sale del try). Cuando hay un error,
+    // __fail desapila el ultimo handler, restaura su $fp y $sp (descarta
+    // los frames de las llamadas que estaban en curso) y salta al catch.
+    void handlerSlot(const char* countReg, const char* outReg) {
+        // outReg = __handlers + 12 * count
+        em.insn(std::string("sll ") + outReg + ", " + countReg + ", 2");
+        em.insn(std::string("sll $t3, ") + countReg + ", 3");
+        em.insn(std::string("addu ") + outReg + ", " + outReg + ", $t3");
+        em.insn("la $t3, __handlers");
+        em.insn(std::string("addu ") + outReg + ", " + outReg + ", $t3");
+    }
+
+    void emitTryBegin(const std::string& catchLabel) {
+        usedLabels.insert(catchLabel);
+        usedLabels.insert("__try_overflow");
+        em.insn("lw $t0, __handler_top");
+        em.insn("li $t1, " + std::to_string(kMaxHandlers));
+        em.insn("bge $t0, $t1, __try_overflow");
+        handlerSlot("$t0", "$t1");
+        em.insn("la $t2, " + catchLabel);
+        em.insn("sw $t2, 0($t1)");
+        em.insn("sw $fp, 4($t1)");
+        em.insn("sw $sp, 8($t1)");
+        em.insn("addiu $t0, $t0, 1");
+        em.insn("sw $t0, __handler_top");
+    }
+
+    void emitTryEnd() {
+        em.insn("lw $t0, __handler_top");
+        em.insn("addiu $t0, $t0, -1");
+        em.insn("sw $t0, __handler_top");
+    }
+
     void emitPrint(const Instruction& in, int& boolLabel) {
         loadOperand(in.a, "$a0");
         if (in.op == "int") {
@@ -428,8 +470,10 @@ struct Gen {
                 emitAlloc(in.dst, in.a);
                 break;
             case OpCode::TryBegin:
+                emitTryBegin(in.label);
+                break;
             case OpCode::TryEnd:
-                error(codes::CG004, "try/catch aún no soportado en el backend MIPS");
+                emitTryEnd();
                 break;
         }
     }
@@ -470,11 +514,19 @@ struct Gen {
         em.directive("    .asciiz \"referencia nula\"");
         em.label("__runtime_msg");
         em.directive("    .asciiz \"error interno\"");
+        em.label("__try_msg");
+        em.directive("    .asciiz \"demasiados try anidados\"");
         em.label("__stack_msg");
         em.directive("    .asciiz \"pila desbalanceada al terminar main\"");
         em.directive(".align 2");
         em.label("__sp_main");  // $sp de main despues del prologo
         em.directive("    .word 0");
+        em.label("__last_error");  // mensaje del ultimo error (para el catch)
+        em.directive("    .word 0");
+        em.label("__handler_top");
+        em.directive("    .word 0");
+        em.label("__handlers");
+        em.directive("    .space " + std::to_string(kMaxHandlers * 12));
         em.blank();
     }
 
@@ -582,9 +634,37 @@ struct Gen {
         em.insn("j __fail");
         em.insn("nop");
 
-        // Imprime "Error en tiempo de ejecucion: <mensaje>" y termina con
+        em.label("__try_overflow");
+        em.insn("la $a0, __try_msg");
+        em.insn("j __fail");
+        em.insn("nop");
+
+        // e = call __error_message, 0: el mensaje del error que activo el
+        // catch. Hoja: no necesita frame.
+        em.label("__error_message");
+        em.insn("lw $v0, __last_error");
+        em.insn("jr $ra");
+        em.insn("nop");
+
+        // Error con el mensaje en $a0. Si hay un try activo, desapila su
+        // handler, restaura el $fp y $sp que tenia el frame del try y salta
+        // al catch con el mensaje en __last_error. Si no hay ninguno,
+        // imprime "Error en tiempo de ejecucion: <mensaje>" y termina con
         // codigo de salida 1 (syscall 17), distinto del fin normal (0).
         em.label("__fail");
+        em.insn("lw $t0, __handler_top");
+        em.insn("beq $t0, $zero, __fail_uncaught");
+        em.insn("addiu $t0, $t0, -1");
+        em.insn("sw $t0, __handler_top");
+        em.insn("sw $a0, __last_error");
+        handlerSlot("$t0", "$t1");
+        em.insn("lw $t2, 0($t1)");
+        em.insn("lw $fp, 4($t1)");
+        em.insn("lw $sp, 8($t1)");
+        em.insn("jr $t2");
+        em.insn("nop");
+
+        em.label("__fail_uncaught");
         em.insn("move $t0, $a0");
         em.insn("la $a0, __error_prefix");
         em.insn("li $v0, 4");
@@ -664,6 +744,8 @@ struct Gen {
         definedLabels.insert("__null_ref");
         definedLabels.insert("__fail");
         definedLabels.insert("__stack_error");
+        definedLabels.insert("__try_overflow");
+        definedLabels.insert("__error_message");
         definedLabels.insert("__sp_main");
         definedLabels.insert("__true_str");
         definedLabels.insert("__false_str");
