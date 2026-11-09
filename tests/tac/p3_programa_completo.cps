@@ -1,6 +1,20 @@
 // Programa "de clase" que combina todas las construcciones: clases con
 // herencia, recursion, closures, listas, foreach, switch, try/catch y
 // expresiones con temporales.
+// Salida al ejecutarlo en MARS (tests/mips/run_mips_tests.py):
+// expect-out:
+// rectangulo calculada
+// 35
+// 0
+// 1
+// 1
+// 2
+// 3
+// 5
+// correcto
+// indice fuera de rango: indice fuera de rango
+// 16
+// si
 class Figura {
   let nombre: string;
   function constructor(nombre: string) {

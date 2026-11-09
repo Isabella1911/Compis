@@ -1,4 +1,7 @@
 // return dentro de un try: debe emitir try_end antes del return.
+// Salida al ejecutarlo en MARS (tests/mips/run_mips_tests.py):
+// expect-out:
+// 1
 function busca(xs: integer[]): integer {
   try {
     if (xs[0] == 1) {

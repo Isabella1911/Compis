@@ -1,5 +1,12 @@
 // Literales en la tabla de strings (los repetidos comparten etiqueta) y
 // operaciones de contenido delegadas al runtime (__concat, __str_eq).
+// Salida al ejecutarlo en MARS (tests/mips/run_mips_tests.py):
+// expect-out:
+// hola Compi
+// true
+// false
+// hola 
+// null
 let nombre: string = "Compi";
 let saludo: string = "hola " + nombre;
 let igual: boolean = saludo == "hola Compi";

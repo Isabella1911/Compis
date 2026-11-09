@@ -1,5 +1,11 @@
 // && y || con cortocircuito: en condiciones se traducen a saltos, y como
 // valor se materializan en 1 o 0. ! intercambia los destinos.
+// Salida al ejecutarlo en MARS (tests/mips/run_mips_tests.py):
+// expect-out:
+// si
+// distintos
+// true
+// true
 let a: integer = 5;
 let b: integer = 10;
 let enRango: boolean = a > 0 && a < b;

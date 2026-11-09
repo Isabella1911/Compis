@@ -55,7 +55,10 @@ MIPS = Path(__file__).resolve().parent
 RESULTADOS = RAIZ / "tests" / "results"
 
 DIRS_VALIDOS = [MIPS / "valid", MIPS / "e2e"]
-DIRS_INVALIDOS = [MIPS / "invalid", MIPS / "invalid_backend",
+# Los programas de tests/tac (golden files del TAC) tambien se ejecutan en
+# MARS: los que declaran su salida con '// expect-out:'.
+DIR_TAC = RAIZ / "tests" / "tac"
+DIRS_INVALIDOS = [MIPS / "invalid", MIPS / "invalid_backend", MIPS / "e2e" / "invalid",
                   RAIZ / "tests" / "fixtures" / "invalid", RAIZ / "tests" / "tac" / "errores"]
 
 # CG001 tiene 2 letras; SEM/SYN tienen 3.
@@ -119,6 +122,13 @@ def rel(p: Path) -> str:
         return str(p)
 
 
+def casos_validos(filtro):
+    yield from casos(DIRS_VALIDOS, filtro)
+    for cps in sorted(DIR_TAC.glob("*.cps")):
+        if filtro in rel(cps) and salida_esperada(cps.read_text(encoding="utf-8")) is not None:
+            yield cps
+
+
 def casos(dirs, filtro):
     for d in dirs:
         if d.is_dir():
@@ -157,7 +167,7 @@ def registro(cps, suite, comando):
 
 def suite_integracion(binario, filtro):
     out = []
-    for cps in casos(DIRS_VALIDOS, filtro):
+    for cps in casos_validos(filtro):
         with tempfile.TemporaryDirectory(prefix="mips-int-") as tmp:
             asm = Path(tmp) / f"{cps.stem}.asm"
             comando, codigo, salida, dur = compilar(binario, cps, asm)
@@ -209,7 +219,7 @@ def suite_integracion(binario, filtro):
 
 def suite_e2e(binario, filtro, cfg, motivo_sin_mars):
     out = []
-    for cps in casos(DIRS_VALIDOS, filtro):
+    for cps in casos_validos(filtro):
         texto = cps.read_text(encoding="utf-8")
         esperado = salida_esperada(texto) or []
         exit_esp = exit_esperado(texto)

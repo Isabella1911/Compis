@@ -1,4 +1,8 @@
 // if sin else, if/else, y else que contiene otro if.
+// Salida al ejecutarlo en MARS (tests/mips/run_mips_tests.py):
+// expect-out:
+// aprobado
+// C
 let nota: integer = 75;
 if (nota >= 90) {
   print("excelente");

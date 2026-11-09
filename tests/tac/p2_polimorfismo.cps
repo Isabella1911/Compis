@@ -1,6 +1,11 @@
 // Polimorfismo: un objeto de la subclase guardado como la clase base. Los
 // metodos redefinidos se llaman por la vtable del objeto (despacho
 // dinamico); los demas, directo por su etiqueta.
+// Salida al ejecutarlo en MARS (tests/mips/run_mips_tests.py):
+// expect-out:
+// 9
+// 409
+// 0
 class Figura {
   let lados: integer;
   function constructor(lados: integer) {

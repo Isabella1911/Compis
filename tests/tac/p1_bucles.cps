@@ -1,5 +1,8 @@
 // while, do-while y for, con break y continue. continue va a la
 // condicion en do-while y al update en for.
+// Salida al ejecutarlo en MARS (tests/mips/run_mips_tests.py):
+// expect-out:
+// 25
 let i: integer = 0;
 let suma: integer = 0;
 while (i < 10) {

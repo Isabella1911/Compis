@@ -1,5 +1,8 @@
 // Reciclaje de temporales: cada operando se libera en cuanto se consume,
 // asi que la expresion completa usa solo 2 temporales (temps=2).
+// Salida al ejecutarlo en MARS (tests/mips/run_mips_tests.py):
+// expect-out:
+// 215
 let a: integer = 1;
 let b: integer = 2;
 let c: integer = 3;

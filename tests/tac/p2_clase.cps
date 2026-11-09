@@ -1,4 +1,8 @@
 // Clase con constructor, atributo y metodo.
+// Salida al ejecutarlo en MARS (tests/mips/run_mips_tests.py):
+// expect-out:
+// 7
+// 3
 class Punto {
   let x: integer;
   let y: integer;

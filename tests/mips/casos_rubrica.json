@@ -1,0 +1,103 @@
+{
+  "_formato": "Cada caso del plan de pruebas apunta a las pruebas que lo demuestran, como '<suite>:<referencia>'. Suites: e2e e integracion (referencia = ruta del .cps, resultados en tests/results/mips_<suite>.json), unitarias (test_id de tests/results/mips_unitarias.json), runner (prueba de tests/mips/test_mars_runner.py) e ide (prueba de tests/ide/). Un caso pasa solo si TODAS sus pruebas pasaron en la ultima corrida.",
+  "E01": {"titulo": "Aritmetica y expresiones anidadas", "pruebas": [
+    "e2e:tests/mips/valid/aritmetica.cps", "e2e:tests/tac/p1_aritmetica.cps", "e2e:tests/tac/p1_temporales.cps",
+    "unitarias:aritmetica_y_comparaciones"]},
+  "E02": {"titulo": "Comparaciones y booleanos", "pruebas": [
+    "e2e:tests/mips/e2e/E02_comparaciones_booleanos.cps", "e2e:tests/tac/p1_logicos.cps"]},
+  "E03": {"titulo": "if/else, while, for, switch", "pruebas": [
+    "e2e:tests/mips/e2e/E03_control_de_flujo.cps", "e2e:tests/mips/valid/if_else.cps", "e2e:tests/mips/valid/while_and.cps",
+    "e2e:tests/tac/p1_bucles.cps", "e2e:tests/tac/p1_if_else.cps", "e2e:tests/tac/p1_switch.cps", "e2e:tests/tac/p1_ternario.cps",
+    "unitarias:saltos"]},
+  "E04": {"titulo": "&& y || con efectos laterales", "pruebas": [
+    "e2e:tests/mips/e2e/E04_cortocircuito.cps"]},
+  "E05": {"titulo": "Funcion con 0, 1, 4 y 5+ parametros", "pruebas": [
+    "e2e:tests/mips/valid/funciones.cps", "unitarias:frames_params_recursion"]},
+  "E06": {"titulo": "Recursion y llamadas anidadas", "pruebas": [
+    "e2e:tests/mips/valid/funciones.cps", "e2e:tests/tac/p2_recursion.cps", "unitarias:frames_params_recursion"]},
+  "E07": {"titulo": "Mas de 10, 30 y 100 temporales", "pruebas": [
+    "e2e:tests/mips/valid/temporales.cps", "unitarias:presion_temporales", "unitarias:offsets_fuera_de_16_bits"]},
+  "E08": {"titulo": "Strings y salida", "pruebas": [
+    "e2e:tests/mips/valid/strings.cps", "e2e:tests/mips/valid/cadenas_bordes.cps", "e2e:tests/tac/p1_strings.cps",
+    "unitarias:literales_y_strings"]},
+  "E09": {"titulo": "Una clase autonoma valida", "pruebas": [
+    "e2e:tests/mips/e2e/A_clase_completa.cps", "e2e:tests/mips/valid/clase_minima.cps"]},
+  "E10": {"titulo": "Clase con constructor, campos y metodos", "pruebas": [
+    "e2e:tests/mips/e2e/B_clase_ejecutada.cps", "e2e:tests/mips/valid/clases.cps", "e2e:tests/tac/p2_clase.cps"]},
+  "E11": {"titulo": "Dos instancias de la misma clase", "pruebas": [
+    "e2e:tests/mips/e2e/B_clase_ejecutada.cps", "e2e:tests/mips/valid/clases.cps"]},
+  "E12": {"titulo": "Clase base y derivada con override", "pruebas": [
+    "e2e:tests/mips/e2e/C_herencia_polimorfismo.cps", "e2e:tests/mips/valid/herencia_polimorfismo.cps",
+    "e2e:tests/tac/p2_herencia.cps", "e2e:tests/tac/p2_polimorfismo.cps"]},
+  "E13": {"titulo": "Referencia de clase base a un objeto derivado", "pruebas": [
+    "e2e:tests/mips/e2e/C_herencia_polimorfismo.cps", "e2e:tests/mips/valid/herencia_polimorfismo.cps",
+    "e2e:tests/tac/p2_polimorfismo.cps", "unitarias:objetos_y_vtables"]},
+  "E14": {"titulo": "Metodo que llama a otro metodo o funcion", "pruebas": [
+    "e2e:tests/mips/valid/clases.cps", "e2e:tests/mips/e2e/C_herencia_polimorfismo.cps",
+    "e2e:tests/mips/e2e/variantes_clases.cps"]},
+  "E15": {"titulo": "Listas y foreach", "pruebas": [
+    "e2e:tests/mips/valid/listas.cps", "e2e:tests/mips/valid/lista_vacia_y_objetos_heap.cps",
+    "e2e:tests/mips/valid/indice_fuera_de_rango.cps", "e2e:tests/tac/p2_lista.cps", "e2e:tests/tac/p2_foreach.cps"]},
+  "E16": {"titulo": "Closures y capturas", "pruebas": [
+    "e2e:tests/mips/e2e/E16_closures.cps", "e2e:tests/tac/p2_closure.cps"]},
+  "E17": {"titulo": "try/catch y error recuperable de runtime", "pruebas": [
+    "e2e:tests/mips/valid/try_catch.cps", "e2e:tests/mips/valid/error_sin_handler.cps", "e2e:tests/tac/p1_try_catch.cps",
+    "e2e:tests/tac/p2_return_try.cps", "unitarias:try_y_raise", "unitarias:null_sin_handler"]},
+  "E18": {"titulo": "Programa integrado p3_programa_completo.cps", "pruebas": [
+    "e2e:tests/tac/p3_programa_completo.cps"]},
+
+  "N01": {"titulo": "Errores de sintaxis (SYN001, sin ASM)", "pruebas": [
+    "integracion:tests/mips/invalid/syn001.cps", "integracion:tests/mips/invalid/clase_sintaxis.cps",
+    "integracion:tests/fixtures/invalid/falta_llave.cps", "integracion:tests/fixtures/invalid/syn001_expresion_incompleta.cps",
+    "integracion:tests/tac/errores/e_sintaxis.cps"]},
+  "N02": {"titulo": "Nombre no declarado (SEM001)", "pruebas": [
+    "integracion:tests/mips/invalid/sem001.cps", "integracion:tests/fixtures/invalid/no_declarada.cps",
+    "integracion:tests/tac/errores/e_no_declarada_en_metodo.cps"]},
+  "N03": {"titulo": "Redeclaracion (SEM002)", "pruebas": [
+    "integracion:tests/fixtures/invalid/redeclaracion.cps", "integracion:tests/mips/e2e/invalid/D_clase_invalida.cps"]},
+  "N04": {"titulo": "Asignacion u operacion incompatible (SEM003/SEM004)", "pruebas": [
+    "integracion:tests/mips/invalid/sem003.cps", "integracion:tests/mips/invalid/clase_asignacion_campo.cps",
+    "integracion:tests/fixtures/invalid/sem003_tipo_asignacion.cps", "integracion:tests/fixtures/invalid/sem004_tipo_aritmetica.cps",
+    "integracion:tests/fixtures/invalid/sem004_operacion_logica.cps"]},
+  "N05": {"titulo": "Condicion no booleana (SEM005)", "pruebas": [
+    "integracion:tests/fixtures/invalid/sem005_condicion_no_booleana.cps"]},
+  "N06": {"titulo": "break/continue o return ilegal (SEM006/SEM007)", "pruebas": [
+    "integracion:tests/fixtures/invalid/sem006_break_fuera_de_bucle.cps",
+    "integracion:tests/fixtures/invalid/sem006_continue_fuera_de_bucle.cps",
+    "integracion:tests/fixtures/invalid/sem007_return_fuera_de_funcion.cps"]},
+  "N07": {"titulo": "Argumentos o retorno incompatibles (SEM008/SEM009)", "pruebas": [
+    "integracion:tests/fixtures/invalid/sem008_argumentos_metodo.cps", "integracion:tests/fixtures/invalid/sem009_tipo_retorno.cps",
+    "integracion:tests/tac/errores/e_retorno_y_argumentos.cps"]},
+  "N08": {"titulo": "Miembro inexistente (SEM010)", "pruebas": [
+    "integracion:tests/mips/invalid/clase_miembro_inexistente.cps", "integracion:tests/fixtures/invalid/sem010_miembro_inexistente.cps"]},
+  "N09": {"titulo": "Parametro sin tipo (SEM011)", "pruebas": [
+    "integracion:tests/fixtures/invalid/sem011_parametro_sin_tipo.cps"]},
+  "N10": {"titulo": "Tipo o base invalida, herencia circular (SEM013/SEM014)", "pruebas": [
+    "integracion:tests/mips/invalid/clase_tipo_campo.cps", "integracion:tests/mips/invalid/clase_herencia_circular.cps",
+    "integracion:tests/fixtures/invalid/sem013_tipo_invalido.cps", "integracion:tests/fixtures/invalid/sem014_herencia_circular.cps"]},
+  "N11": {"titulo": "this fuera de metodo (SEM015)", "pruebas": [
+    "integracion:tests/mips/invalid/clase_this_fuera.cps", "integracion:tests/fixtures/invalid/sem015_this_fuera_de_clase.cps"]},
+  "N12": {"titulo": "Funcion, metodo o clase usada como valor (SEM016)", "pruebas": [
+    "integracion:tests/fixtures/invalid/sem016_funcion_como_valor.cps", "integracion:tests/fixtures/invalid/sem016_metodo_como_valor.cps",
+    "integracion:tests/fixtures/invalid/sem016_clase_como_valor.cps"]},
+  "N13": {"titulo": "Opcode TAC inexistente o argumentos malformados (CG, sin ASM)", "pruebas": [
+    "unitarias:verificaciones_cpp"]},
+  "N14": {"titulo": "Etiqueta TAC indefinida o duplicada, frame invalido (CG, sin ASM)", "pruebas": [
+    "unitarias:verificaciones_cpp"]},
+  "N15": {"titulo": "Intento fallido sobre la ruta de un .asm anterior: el viejo se borra", "pruebas": [
+    "integracion:tests/mips/invalid/sem001.cps", "integracion:tests/mips/e2e/invalid/D_clase_invalida.cps"]},
+  "N16": {"titulo": "MARS rechaza el .asm: FAIL con el error concreto", "pruebas": [
+    "runner:test_error_de_ensamblado_trae_el_error", "runner:test_excepcion_de_runtime",
+    "runner:test_ciclo_infinito_no_es_exito", "runner:test_caerse_del_codigo_no_es_exito"]},
+
+  "A": {"titulo": "Prueba estrella A: clase completa sola compila y ensambla", "pruebas": [
+    "e2e:tests/mips/e2e/A_clase_completa.cps"]},
+  "B": {"titulo": "Prueba estrella B: dos objetos con estado propio en MARS", "pruebas": [
+    "e2e:tests/mips/e2e/B_clase_ejecutada.cps"]},
+  "C": {"titulo": "Prueba estrella C: herencia y despacho por vtable", "pruebas": [
+    "e2e:tests/mips/e2e/C_herencia_polimorfismo.cps"]},
+  "D": {"titulo": "Prueba estrella D: clase invalida, todos sus errores y sin ASM", "pruebas": [
+    "integracion:tests/mips/e2e/invalid/D_clase_invalida.cps"]},
+  "variantes": {"titulo": "Variantes de clases (orden, atributos, objetos como campo, objeto local)", "pruebas": [
+    "e2e:tests/mips/e2e/variantes_clases.cps"]}
+}

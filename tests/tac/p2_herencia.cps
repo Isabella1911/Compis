@@ -1,4 +1,8 @@
 // Herencia: atributo en la base, metodo en la derivada.
+// Salida al ejecutarlo en MARS (tests/mips/run_mips_tests.py):
+// expect-out:
+// Toby
+// Toby
 class Animal {
   let nombre: string;
 
