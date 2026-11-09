@@ -11,7 +11,10 @@
 #   make test-semantic / make test-tac -> solo una parte
 #   make test-tac-update -> regenera los .tac esperados (revisar el diff!)
 #   make test-symbols -> corre la prueba unitaria de Scope/Symbol (no necesita ANTLR)
-#   make test-mips    -> backend MIPS (generacion .asm; ejecucion MARS si MARS_JAR)
+#   make test-mips    -> backend MIPS: integracion (CLI) + extremo a extremo en
+#                        MARS. Sin MARS, la parte e2e queda en SKIP (desarrollo)
+#   make test-mips-integration / test-mips-e2e -> solo una de las dos
+#   make test-mips-estricto -> validacion de entrega: exige MARS (sin SKIP)
 #   make clean        -> borra los binarios y el codigo generado por ANTLR
 
 DEPS        := .deps
@@ -82,7 +85,7 @@ BIN             := compiscript
 TEST_SYMBOLS_BIN := symbol_table_test
 endif
 
-.PHONY: all build setup generate run test test-semantic test-tac test-tac-update docs-ejemplos test-symbols test-mips clean
+.PHONY: all build setup generate run test test-semantic test-tac test-tac-update docs-ejemplos test-symbols test-mips test-mips-runner test-mips-integration test-mips-e2e test-mips-estricto clean
 
 all: build
 
@@ -115,7 +118,7 @@ test: build $(TEST_SYMBOLS_BIN)
 	@echo "== Prueba unitaria de la tabla de simbolos =="
 	@./$(TEST_SYMBOLS_BIN)
 	@$(PYTHON) tests/run_tests.py --bin ./$(BIN) todo
-	@$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN)
+	@$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN) --suite todo
 
 test-semantic: build
 	@$(PYTHON) tests/run_tests.py --bin ./$(BIN) semantica
@@ -141,8 +144,25 @@ $(TEST_SYMBOLS_BIN): tests/symbol_table_test.cpp $(SYMBOL_TEST_SRC)
 test-symbols: $(TEST_SYMBOLS_BIN)
 	./$(TEST_SYMBOLS_BIN)
 
-test-mips: build
-	@$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN)
+# Backend MIPS (tests/mips/run_mips_tests.py, MARS en tests/mips/mars.py).
+# Los resultados de cada corrida quedan en tests/results/mips_<suite>.json.
+test-mips: build test-mips-runner
+	@$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN) --suite todo
+
+# Clasificador de tests/mips/mars.py contra MARS real (programas a mano que
+# terminan de cada forma posible). Sin MARS: skip con el motivo.
+test-mips-runner:
+	@$(PYTHON) tests/mips/test_mars_runner.py
+
+test-mips-integration: build
+	@$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN) --suite integracion
+
+test-mips-e2e: build
+	@$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN) --suite e2e
+
+test-mips-estricto: build
+	@COMPISCRIPT_ESTRICTO=1 $(PYTHON) tests/mips/test_mars_runner.py
+	@$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN) --suite todo --estricto
 
 clean:
 	rm -f compiscript compiscript.exe symbol_table_test symbol_table_test.exe

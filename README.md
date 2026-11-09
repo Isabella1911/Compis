@@ -108,7 +108,10 @@ Diagnosticos:
 
 ```bash
 make test             # todo: tabla de símbolos + semántica + TAC + MIPS
-make test-mips        # solo el backend MIPS (ejecuta cada caso en MARS)
+make test-mips        # backend MIPS: integración (CLI) + extremo a extremo en MARS
+make test-mips-integration   # solo CLI: .asm generado o rechazado con sus códigos, sin MARS
+make test-mips-e2e    # cada programa válido ejecutado en MARS (SKIP si no hay MARS)
+make test-mips-estricto      # validación de entrega: exige MARS, falla en vez de SKIP
 make test-semantic    # solo los casos semánticos
 make test-tac         # solo el TAC contra los esperados
 make test-tac-update  # regenera los .tac esperados (revisar el diff antes de commitear)
@@ -129,11 +132,21 @@ sin dependencias).
 | `tests/mips/valid/` | Programas que deben generar `.asm` y, **ejecutados en MARS**, imprimir exactamente lo de `// expect-out:` y terminar con el código de `// expect-exit:` (0 si no se indica). |
 | `tests/mips/invalid/` | Programas con errores: los códigos de `// expect:` y ningún `.asm` (el runner deja uno viejo antes y verifica que se borre). |
 
-**MARS** (opcional, pero sin él la ejecución se marca `SKIP`): el runner y
-la IDE buscan el `.jar` en `MARS_JAR`, en `tests/mips/mars.path` (ruta
-local, no se versiona) o en `.deps/Mars4_5.jar`
+**MARS** (opcional en desarrollo, obligatorio en `test-mips-estricto`): el
+runner y la IDE buscan el `.jar` en `MARS_JAR`, en `tests/mips/mars.path`
+(ruta local, no se versiona) o en `.deps/Mars4_5.jar`
 ([descarga](https://github.com/dpetersanderson/MARS/releases)). Java: el
-del `PATH` o el de `.deps/jre17`.
+del `PATH` o el de `.deps/jre17`. Antes de usarlo, el runner comprueba que
+el `.jar` sea un MARS válido ejecutando un programa mínimo.
+
+Cómo se ejecuta y se juzga cada programa está en
+[`tests/mips/mars.py`](tests/mips/mars.py): un caso pasa solo si el
+programa **termina con un syscall de salida**, con la salida y el código
+de salida esperados. Un código 0 no alcanza: MARS también sale con 0 al
+agotar el límite de pasos (`MARS_MAX_PASOS`, 5 000 000) o si el programa se
+cae al final del código. Hay límite de tiempo (`MARS_TIMEOUT`, 30 s). Cada
+corrida deja resultados por caso en `tests/results/mips_integracion.json` y
+`tests/results/mips_e2e.json`.
 
 **Agregar un caso:**
 
