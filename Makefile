@@ -14,6 +14,7 @@
 #   make test-mips    -> backend MIPS: integracion (CLI) + extremo a extremo en
 #                        MARS. Sin MARS, la parte e2e queda en SKIP (desarrollo)
 #   make test-mips-integration / test-mips-e2e -> solo una de las dos
+#   make test-mips-unit -> pruebas unitarias del backend (TAC armado a mano)
 #   make test-mips-estricto -> validacion de entrega: exige MARS (sin SKIP)
 #   make clean        -> borra los binarios y el codigo generado por ANTLR
 
@@ -60,6 +61,8 @@ CODEGEN_SRC := src/ir/tac.cpp \
 # Subconjunto que necesita la prueba unitaria de la tabla de simbolos: no
 # arrastra declaration_collector.cpp (depende del AST) ni printer.cpp.
 SYMBOL_TEST_SRC := src/semantic/scope.cpp
+# Pruebas unitarias del backend MIPS: solo el IR y el generador, sin ANTLR.
+MIPS_UNIT_SRC := src/ir/tac.cpp src/codegen/mips/mips_emitter.cpp                  src/codegen/mips/mips_generator.cpp
 
 SRC        := src/main.cpp \
               src/ast/printer.cpp \
@@ -85,7 +88,7 @@ BIN             := compiscript
 TEST_SYMBOLS_BIN := symbol_table_test
 endif
 
-.PHONY: all build setup generate run test test-semantic test-tac test-tac-update docs-ejemplos test-symbols test-mips test-mips-runner test-mips-integration test-mips-e2e test-mips-estricto clean
+.PHONY: all build setup generate run test test-semantic test-tac test-tac-update docs-ejemplos test-symbols test-mips test-mips-runner test-mips-unit test-mips-integration test-mips-e2e test-mips-estricto clean
 
 all: build
 
@@ -146,8 +149,15 @@ test-symbols: $(TEST_SYMBOLS_BIN)
 
 # Backend MIPS (tests/mips/run_mips_tests.py, MARS en tests/mips/mars.py).
 # Los resultados de cada corrida quedan en tests/results/mips_<suite>.json.
-test-mips: build test-mips-runner
+test-mips: build test-mips-runner test-mips-unit
 	@$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN) --suite todo
+
+MIPS_UNIT_BIN := mips_backend_test
+$(MIPS_UNIT_BIN): tests/mips/unit/test_mips_backend.cpp $(MIPS_UNIT_SRC) $(HEADERS)
+	$(CXX) -std=c++17 -O0 -g -Wall -I src tests/mips/unit/test_mips_backend.cpp $(MIPS_UNIT_SRC) -o $(MIPS_UNIT_BIN)
+
+test-mips-unit: $(MIPS_UNIT_BIN)
+	@$(PYTHON) tests/mips/unit/run_unit.py --bin ./$(MIPS_UNIT_BIN)
 
 # Clasificador de tests/mips/mars.py contra MARS real (programas a mano que
 # terminan de cada forma posible). Sin MARS: skip con el motivo.
@@ -160,10 +170,11 @@ test-mips-integration: build
 test-mips-e2e: build
 	@$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN) --suite e2e
 
-test-mips-estricto: build
+test-mips-estricto: build $(MIPS_UNIT_BIN)
 	@COMPISCRIPT_ESTRICTO=1 $(PYTHON) tests/mips/test_mars_runner.py
+	@COMPISCRIPT_ESTRICTO=1 $(PYTHON) tests/mips/unit/run_unit.py --bin ./$(MIPS_UNIT_BIN)
 	@$(PYTHON) tests/mips/run_mips_tests.py --bin ./$(BIN) --suite todo --estricto
 
 clean:
-	rm -f compiscript compiscript.exe symbol_table_test symbol_table_test.exe
+	rm -f compiscript compiscript.exe symbol_table_test symbol_table_test.exe mips_backend_test
 	rm -rf generated

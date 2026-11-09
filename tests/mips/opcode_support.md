@@ -83,3 +83,25 @@ por `__fail`: no se atrapan en silencio.
 - IDE (`ide/ide_app.py`): grupo *MIPS* con el ensamblador, **Guardar ASM…**
   y **Ejecutar en MARS** (F8): en otro hilo, con `MARS_TIMEOUT` (10 s),
   salida y código de salida separados. MARS es opcional para compilar.
+
+## TAC inválido: errores del backend
+
+Antes de traducir, el generador valida el programa completo; si algo falla
+no emite ningún ensamblador (ni parcial). Los mensajes dicen en qué función
+e instrucción del TAC está el problema (el TAC no tiene posiciones del
+fuente).
+
+| Código | Casos |
+|---|---|
+| `CG001` | Opcode desconocido; operador unario/binario/comparación o `print` no soportado. |
+| `CG002` | Operando ausente o de un tipo imposible (p. ej. destino constante); frame negativo o no múltiplo de 4; temporal fuera de `temps`; local/parámetro fuera de su frame; desplazamiento de `Load`/`Store` no alineado a palabra; `alloc` negativo; `call` con distinto número de `param`; llamada indirecta sin dirección; salto sin etiqueta; programa sin `main`. |
+| `CG003` | Etiqueta usada y no definida; etiqueta, función, global, string o vtable duplicada. |
+| `CG004` | Construcción que el backend todavía no traduce (hoy: acceder a un campo como variable). |
+
+Cada uno tiene su caso en `tests/mips/unit/test_mips_backend.cpp`
+(`make test-mips-unit`), que además ejecuta en MARS programas TAC armados
+a mano: literales y strings con comillas y barra, aritmética y
+comparaciones, saltos, 6 parámetros y recursión, desplazamientos de más de
+16 bits (frame de 40 000 bytes y heap), objetos con vtable y `jalr`, 40
+temporales vivos a través de una llamada, `try` con `__raise` y referencia
+nula sin handler.

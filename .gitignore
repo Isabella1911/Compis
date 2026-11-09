@@ -16,6 +16,7 @@ __pycache__/
 /generated/
 /compiscript
 /symbol_table_test
+/mips_backend_test
 /compilador
 
 # Artefactos de la rama `sql` (interprete SQL). Se generan con `make` en esa

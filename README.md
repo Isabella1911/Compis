@@ -109,6 +109,7 @@ Diagnosticos:
 ```bash
 make test             # todo: tabla de símbolos + semántica + TAC + MIPS
 make test-mips        # backend MIPS: integración (CLI) + extremo a extremo en MARS
+make test-mips-unit   # unitarias del backend: TAC armado a mano, errores CGxxx y ejecución en MARS
 make test-mips-integration   # solo CLI: .asm generado o rechazado con sus códigos, sin MARS
 make test-mips-e2e    # cada programa válido ejecutado en MARS (SKIP si no hay MARS)
 make test-mips-estricto      # validación de entrega: exige MARS, falla en vez de SKIP

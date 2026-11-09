@@ -1,6 +1,7 @@
 #include "mips_generator.h"
 
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -50,14 +51,92 @@ struct Gen {
 
     std::unordered_set<std::string> definedLabels;
     std::unordered_set<std::string> usedLabels;
+    int insnIndex = -1;  // instruccion del TAC que se esta traduciendo
 
+    // El TAC no tiene posiciones del fuente: el diagnostico dice en que
+    // funcion e instruccion del TAC (como lo imprime --tac) esta el problema.
     void error(const char* code, const std::string& message) {
         failed = true;
         Diagnostic d;
         d.severity = Severity::Error;
         d.code = code;
         d.message = message;
+        if (fn != nullptr) {
+            d.message += " (en " + fn->label;
+            if (insnIndex >= 0) d.message += ", instruccion " + std::to_string(insnIndex + 1);
+            d.message += ")";
+        }
         diags.push_back(d);
+    }
+
+    // Validacion del programa completo antes de traducir nada: nombres
+    // repetidos, main ausente y frames imposibles. Si algo falla no se
+    // genera ningun ensamblador.
+    void validateProgram(const TacProgram& program) {
+        std::unordered_map<std::string, std::string> owners;  // etiqueta -> que es
+        auto declare = [&](const std::string& label, const std::string& what) {
+            if (label.empty()) {
+                error(codes::CG002, what + " sin etiqueta");
+                return;
+            }
+            auto [it, inserted] = owners.emplace(label, what);
+            if (!inserted) {
+                error(codes::CG003, "Etiqueta duplicada '" + label + "' (" + it->second +
+                                        " y " + what + ")");
+            }
+        };
+        bool hasMain = false;
+        for (const auto& f : program.functions) {
+            declare(f.label, "funcion");
+            hasMain = hasMain || f.label == "main";
+            if (f.frame_size < 0 || f.frame_size % 4 != 0 || f.max_temps < 0) {
+                error(codes::CG002, "Frame invalido en " + f.label + ": frame=" +
+                                        std::to_string(f.frame_size) + ", temps=" +
+                                        std::to_string(f.max_temps) +
+                                        " (debe ser >= 0 y multiplo de 4)");
+            }
+        }
+        for (const auto& g : program.globals) declare(g.label, "global");
+        for (const auto& str : program.strings) declare(str.label, "string");
+        for (const auto& vt : program.vtables) declare(vt.label, "vtable");
+        for (const auto& f : program.functions) {
+            for (const auto& in : f.code) {
+                if (in.code == OpCode::Label) declare(in.label, "etiqueta de " + f.label);
+            }
+        }
+        if (!hasMain) error(codes::CG002, "El programa TAC no tiene la funcion main");
+    }
+
+    // Etiqueta obligatoria de saltos, llamadas directas y try_begin.
+    bool requireLabel(const Instruction& in, const char* what) {
+        if (!in.label.empty()) return true;
+        error(codes::CG002, std::string(what) + " sin etiqueta destino");
+        return false;
+    }
+
+    // Un temporal tiene que estar dentro del frame que reservo el prologo.
+    bool checkTemp(const Operand& op) {
+        if (op.temp >= 0 && op.temp < fn->max_temps) return true;
+        error(codes::CG002, "Temporal t" + std::to_string(op.temp) + " fuera del frame de " +
+                                fn->label + " (temps=" + std::to_string(fn->max_temps) + ")");
+        return false;
+    }
+
+    // Local: entre fp-8 y fp-(8+frame-4). Param: fp+8 en adelante. Siempre
+    // alineados a palabra.
+    bool checkFrameOffset(const Operand& op) {
+        int off = op.symbol->offset;
+        bool ok = off % 4 == 0;
+        if (op.symbol->storage == StorageKind::Local) {
+            ok = ok && off <= -8 && off >= -(4 + fn->frame_size);
+        } else {
+            ok = ok && off >= 8;
+        }
+        if (!ok) {
+            error(codes::CG002, "Desplazamiento invalido para '" + op.name + "': " +
+                                    std::to_string(off) + "($fp)");
+        }
+        return ok;
     }
 
     int tempOffset(int t) const {
@@ -86,6 +165,7 @@ struct Gen {
                 em.insn(std::string("li ") + reg + ", " + std::to_string(op.value));
                 break;
             case OperandKind::Temp:
+                if (!checkTemp(op)) break;
                 em.insn(std::string("lw ") + reg + ", " + memRef(tempOffset(op.temp), "$fp"));
                 break;
             case OperandKind::Var:
@@ -98,6 +178,7 @@ struct Gen {
                     em.insn(std::string("lw ") + reg + ", " + op.name);
                 } else if (op.symbol->storage == StorageKind::Local ||
                            op.symbol->storage == StorageKind::Param) {
+                    if (!checkFrameOffset(op)) break;
                     em.insn(std::string("lw ") + reg + ", " + memRef(op.symbol->offset, "$fp"));
                 } else {
                     error(codes::CG004,
@@ -121,6 +202,7 @@ struct Gen {
     void storeOperand(const Operand& dst, const char* reg) {
         switch (dst.kind) {
             case OperandKind::Temp:
+                if (!checkTemp(dst)) break;
                 em.insn(std::string("sw ") + reg + ", " + memRef(tempOffset(dst.temp), "$fp"));
                 break;
             case OperandKind::Var:
@@ -132,6 +214,7 @@ struct Gen {
                     em.insn(std::string("sw ") + reg + ", " + dst.name);
                 } else if (dst.symbol->storage == StorageKind::Local ||
                            dst.symbol->storage == StorageKind::Param) {
+                    if (!checkFrameOffset(dst)) break;
                     em.insn(std::string("sw ") + reg + ", " + memRef(dst.symbol->offset, "$fp"));
                 } else {
                     error(codes::CG004,
@@ -255,6 +338,10 @@ struct Gen {
             push("$zero");
         }
         if (in.label.empty()) {
+            if (in.a.isNone()) {
+                error(codes::CG002, "call indirecta sin la direccion del metodo");
+                return;
+            }
             loadOperand(in.a, "$t3");
             em.insn("jalr $t3");
         } else {
@@ -293,7 +380,13 @@ struct Gen {
             usedLabels.insert("__null_ref");
             em.insn("beq $t0, $zero, __null_ref");
         }
-        if (offset.kind == OperandKind::IntConst) return memRef(offset.value, "$t0");
+        if (offset.kind == OperandKind::IntConst) {
+            if (offset.value % 4 != 0) {
+                error(codes::CG002, "Desplazamiento " + std::to_string(offset.value) +
+                                        " no alineado a palabra en un acceso a memoria");
+            }
+            return memRef(offset.value, "$t0");
+        }
         loadOperand(offset, "$t1");
         em.insn("addu $t0, $t0, $t1");
         return "0($t0)";
@@ -303,6 +396,10 @@ struct Gen {
     // para que el siguiente bloque del heap tambien quede alineado a palabra
     // (las cadenas de __concat piden tamanos que no son multiplo de 4).
     void emitAlloc(const Operand& dst, const Operand& size) {
+        if (size.kind == OperandKind::IntConst && size.value < 0) {
+            error(codes::CG002, "alloc de un tamano negativo (" + std::to_string(size.value) + ")");
+            return;
+        }
         loadOperand(size, "$a0");
         em.insn("addiu $a0, $a0, 3");
         em.insn("li $t1, -4");
@@ -386,6 +483,7 @@ struct Gen {
                 em.comment(in.text);
                 break;
             case OpCode::Label:
+                if (!requireLabel(in, "label")) break;
                 definedLabels.insert(in.label);
                 em.label(in.label);
                 break;
@@ -407,11 +505,13 @@ struct Gen {
                 storeOperand(in.dst, "$t0");
                 break;
             case OpCode::Goto:
+                if (!requireLabel(in, "goto")) break;
                 usedLabels.insert(in.label);
                 em.insn("j " + in.label);
                 em.insn("nop");
                 break;
             case OpCode::IfGoto:
+                if (!requireLabel(in, "if goto")) break;
                 if (in.op.empty()) {
                     loadOperand(in.a, "$t0");
                     usedLabels.insert(in.label);
@@ -423,6 +523,7 @@ struct Gen {
                 }
                 break;
             case OpCode::IfFalseGoto:
+                if (!requireLabel(in, "ifFalse goto")) break;
                 if (in.op.empty()) {
                     loadOperand(in.a, "$t0");
                     usedLabels.insert(in.label);
@@ -470,10 +571,15 @@ struct Gen {
                 emitAlloc(in.dst, in.a);
                 break;
             case OpCode::TryBegin:
+                if (!requireLabel(in, "try_begin")) break;
                 emitTryBegin(in.label);
                 break;
             case OpCode::TryEnd:
                 emitTryEnd();
+                break;
+            default:
+                error(codes::CG001, "Opcode TAC desconocido (" +
+                                        std::to_string(static_cast<int>(in.code)) + ")");
                 break;
         }
     }
@@ -713,19 +819,21 @@ struct Gen {
                 em.insn("addiu $sp, $sp, -" + std::to_string(frameBytes));
             }
             em.insn("sw $sp, __sp_main");
-            for (const auto& in : f.code) {
-                if (failed) break;
-                translateInsn(in, boolLabel);
+            for (size_t i = 0; i < f.code.size() && !failed; ++i) {
+                insnIndex = static_cast<int>(i);
+                translateInsn(f.code[i], boolLabel);
             }
+            insnIndex = -1;
             emitMainExit();
         } else {
             emitPrologue();
             bool sawReturn = false;
-            for (const auto& in : f.code) {
-                if (failed) break;
-                if (in.code == OpCode::Return) sawReturn = true;
-                translateInsn(in, boolLabel);
+            for (size_t i = 0; i < f.code.size() && !failed; ++i) {
+                insnIndex = static_cast<int>(i);
+                if (f.code[i].code == OpCode::Return) sawReturn = true;
+                translateInsn(f.code[i], boolLabel);
             }
+            insnIndex = -1;
             if (!sawReturn) emitEpilogue();
         }
         fn = nullptr;
@@ -762,6 +870,12 @@ struct Gen {
 
 MipsResult generateMips(const TacProgram& program) {
     Gen g;
+    g.validateProgram(program);
+    if (g.failed) {
+        MipsResult invalid;
+        invalid.diagnostics = std::move(g.diags);
+        return invalid;  // sin ensamblador: ni siquiera parcial
+    }
     g.emitData(program);
     g.em.directive(".text");
     g.em.directive(".globl main");
