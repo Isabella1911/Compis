@@ -72,3 +72,14 @@ una pila de handlers en `.data` (hasta 256 `try` anidados activos a la vez):
 
 Los errores del simulador (por ejemplo, una dirección desalineada) no pasan
 por `__fail`: no se atrapan en silencio.
+
+## Integración (CLI e IDE)
+
+- El backend corre dentro de `Compiler::compile()` cuando se pide
+  ensamblador (`CompileOptions::mips`); sus errores `CGxxx` se suman a los
+  diagnósticos y en ese caso no hay `.asm`.
+- `--mips -o salida.asm` y el modo completo (`output/programa.asm`) borran
+  el `.asm` anterior si la compilación falla.
+- IDE (`ide/ide_app.py`): grupo *MIPS* con el ensamblador, **Guardar ASM…**
+  y **Ejecutar en MARS** (F8): en otro hilo, con `MARS_TIMEOUT` (10 s),
+  salida y código de salida separados. MARS es opcional para compilar.

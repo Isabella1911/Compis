@@ -73,15 +73,24 @@ Desde la raíz del repositorio:
 make                                            # genera el parser (si hace falta) y compila ./compiscript
 make run FILE=tests/tac/p3_programa_completo.cps
 ./compiscript --tac tests/tac/p1_temporales.cps # solo el TAC
+./compiscript --mips tests/tac/p2_clase.cps -o clase.asm   # ensamblador MIPS
 make clean                                      # borra binarios y código generado
 ```
 
-**Dos modos de salida:**
+**Tres modos de salida:**
 
 | Comando | Muestra |
 |---|---|
-| `./compiscript archivo.cps` | Diagnósticos (si hay), AST, tabla de símbolos extendida y código intermedio. Escribe `output/ast.dot` y `output/programa.tac`. |
+| `./compiscript archivo.cps` | Diagnósticos (si hay), AST, tabla de símbolos extendida y código intermedio. Escribe `output/ast.dot`, `output/programa.tac` y `output/programa.asm`. |
 | `./compiscript --tac archivo.cps` | Solo el TAC, o solo los diagnósticos si hubo errores. Es el modo que usan las pruebas. |
+| `./compiscript --mips archivo.cps [-o salida.asm]` | Solo el ensamblador MIPS (para MARS), o los diagnósticos si hubo errores (incluidos los del backend, `CG001`–`CG004`). |
+
+Todo pasa por `Compiler::compile()`: ANTLR → AST → semántica → TAC → MIPS;
+cada etapa corre solo si las anteriores no tuvieron errores. **Si hay
+cualquier error no queda ningún `.asm`**, ni siquiera uno de una
+compilación anterior. El backend, su convención de llamada, el runtime y
+`try/catch` están documentados en
+[`tests/mips/opcode_support.md`](tests/mips/opcode_support.md).
 
 **Código de salida:** `0` si compiló sin errores, `1` si hubo errores. Si
 hay errores **no se genera TAC** (paso 4 del enunciado).
@@ -98,7 +107,8 @@ Diagnosticos:
 ## 4. Batería de pruebas
 
 ```bash
-make test             # todo: tabla de símbolos + semántica + TAC
+make test             # todo: tabla de símbolos + semántica + TAC + MIPS
+make test-mips        # solo el backend MIPS (ejecuta cada caso en MARS)
 make test-semantic    # solo los casos semánticos
 make test-tac         # solo el TAC contra los esperados
 make test-tac-update  # regenera los .tac esperados (revisar el diff antes de commitear)
@@ -116,6 +126,14 @@ sin dependencias).
 | `tests/tac/*.cps` + `*.tac` | Casos exitosos de TAC (*golden files*): la salida de `--tac` debe ser idéntica al `.tac`. Si difiere, se muestra el `diff`. Hay uno por construcción (`p1_*`, `p2_*`) y un programa completo (`p3_programa_completo`). |
 | `tests/tac/errores/` | Casos fallidos de TAC: no debe aparecer TAC y deben salir los códigos de `// expect:`. |
 | `tests/symbol_table_test.cpp` | Prueba unitaria de `Scope`/`Symbol`. |
+| `tests/mips/valid/` | Programas que deben generar `.asm` y, **ejecutados en MARS**, imprimir exactamente lo de `// expect-out:` y terminar con el código de `// expect-exit:` (0 si no se indica). |
+| `tests/mips/invalid/` | Programas con errores: los códigos de `// expect:` y ningún `.asm` (el runner deja uno viejo antes y verifica que se borre). |
+
+**MARS** (opcional, pero sin él la ejecución se marca `SKIP`): el runner y
+la IDE buscan el `.jar` en `MARS_JAR`, en `tests/mips/mars.path` (ruta
+local, no se versiona) o en `.deps/Mars4_5.jar`
+([descarga](https://github.com/dpetersanderson/MARS/releases)). Java: el
+del `PATH` o el de `.deps/jre17`.
 
 **Agregar un caso:**
 
@@ -143,11 +161,14 @@ que haber corrido `bash tools/setup.sh` una vez.
 |---|---|
 | Abrir / escribir un `.cps` | *Archivo → Cargar archivo .cps…* (Ctrl+O), arrastrar el archivo a la ventana, o *Archivo → Ejemplos* (un ejemplo por construcción, de `tests/tac/`). |
 | Compilar el compilador | **Compilar** (F5): corre `make build`. |
-| Compilar el programa | **Ejecutar** (F6): guarda y corre `./compiscript` sobre el archivo. |
+| Compilar el programa | **Ejecutar** (F6): guarda y corre `./compiscript` sobre el archivo. Si el editor no tiene archivo, compila lo que está escrito. |
 | Ver errores | Pestañas *Diagnósticos* (doble clic salta a la línea) y *Errores*. |
 | Ver AST y tabla de símbolos | Grupo *Análisis*: texto, y *Tabla de símbolos (columnas)* con dirección/etiqueta, tamaño y frame. |
 | Ver el TAC | Grupo *Código intermedio*. Si hubo errores, avisa que no se generó. |
 | Guardar el TAC | **Guardar TAC** (toolbar, o *Archivo → Guardar TAC…*). |
+| Ver el ensamblador MIPS | Grupo *MIPS* → *Ensamblador*. Si hubo errores (también `CGxxx` del backend), avisa que no se generó y no muestra uno viejo. |
+| Guardar el `.asm` | **Guardar ASM…** (grupo *MIPS*, o *Archivo → Guardar ASM (MIPS)…*). |
+| Ejecutar en MARS | **Ejecutar en MARS** (F8, opcional): corre el `.asm` en otro hilo, con límite de tiempo (`MARS_TIMEOUT`, 10 s por defecto), y muestra la salida y el código de salida en *Salida MARS*. **Mars.jar…** elige el `.jar`. |
 | Correr la batería | **Pruebas** (F7): corre `make test` y muestra el resultado en el grupo *Pruebas*. |
 
 ---

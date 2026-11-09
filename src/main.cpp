@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "ast/printer.h"
-#include "codegen/mips/mips_generator.h"
 #include "compiler/compiler.h"
 #include "diagnostics/diagnostic.h"
 #include "ir/tac_printer.h"
@@ -49,9 +48,13 @@ static void usage(const char* argv0) {
 }
 
 // Uso:
-//   compiscript <archivo.cps>              salida completa
+//   compiscript <archivo.cps>              salida completa (la usa la IDE):
+//                                          diagnosticos, AST, tabla de simbolos,
+//                                          TAC y output/programa.asm
 //   compiscript --tac <archivo.cps>        solo TAC (o diagnosticos)
 //   compiscript --mips <archivo.cps> [-o]  solo ensamblador MIPS (o diagnosticos)
+// Si hay cualquier error no queda ningun .asm: tampoco uno viejo de una
+// compilacion anterior, para que nadie lo confunda con el actual.
 int main(int argc, char* argv[]) {
     bool onlyTac = false;
     bool onlyMips = false;
@@ -102,7 +105,9 @@ int main(int argc, char* argv[]) {
     }
 
     using namespace compiscript;
-    compiler::CompilationResult result = compiler::Compiler::compile(source);
+    compiler::CompileOptions options;
+    options.mips = !onlyTac;
+    compiler::CompilationResult result = compiler::Compiler::compile(source, options);
 
     if (onlyTac) {
         if (result.has_tac) {
@@ -114,20 +119,9 @@ int main(int argc, char* argv[]) {
     }
 
     if (onlyMips) {
-        // No generar .asm si el frontend/semantico fallaron.
-        if (!result.has_tac || !result.success()) {
+        if (!result.has_mips) {
             printDiagnostics(result.diagnostics, std::cerr);
-            if (!outAsm.empty() && fs::exists(outAsm)) {
-                std::error_code ec;
-                fs::remove(outAsm, ec);
-            }
-            return 1;
-        }
-
-        codegen::mips::MipsResult mips = codegen::mips::generateMips(result.tac);
-        if (!mips.success) {
-            printDiagnostics(mips.diagnostics, std::cerr);
-            if (!outAsm.empty() && fs::exists(outAsm)) {
+            if (!outAsm.empty()) {
                 std::error_code ec;
                 fs::remove(outAsm, ec);
             }
@@ -135,14 +129,14 @@ int main(int argc, char* argv[]) {
         }
 
         if (outAsm.empty()) {
-            std::cout << mips.assembly;
+            std::cout << result.mips;
         } else {
             std::ofstream out(outAsm, std::ios::binary | std::ios::trunc);
             if (!out) {
                 std::cerr << "Error: no se pudo escribir " << outAsm << "\n";
                 return 1;
             }
-            out << mips.assembly;
+            out << result.mips;
             if (!out) {
                 std::cerr << "Error: fallo al escribir " << outAsm << "\n";
                 fs::remove(outAsm);
@@ -153,6 +147,15 @@ int main(int argc, char* argv[]) {
     }
 
     printDiagnostics(result);
+
+    // El .asm de una compilacion anterior se borra siempre al empezar: si esta
+    // falla (incluso por un error sintactico, que corta antes), la IDE no
+    // debe mostrar un ensamblador que ya no corresponde al fuente.
+    const char* asmPath = "output/programa.asm";
+    {
+        std::error_code ec;
+        fs::remove(asmPath, ec);
+    }
 
     if (result.ast == nullptr) {
         std::cout << "No se genero AST (error sintactico).\n";
@@ -175,6 +178,13 @@ int main(int argc, char* argv[]) {
         std::ofstream tacFile("output/programa.tac");
         tacFile << tac;
         std::cout << "\n[TAC] Exportado a: output/programa.tac\n";
+    }
+
+    // Ensamblador para la IDE (pestana MIPS).
+    if (result.has_mips) {
+        std::ofstream asmFile(asmPath, std::ios::binary | std::ios::trunc);
+        asmFile << result.mips;
+        std::cout << "\n[MIPS] Exportado a: " << asmPath << "\n";
     }
 
     return result.success() ? 0 : 1;

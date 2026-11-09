@@ -1,5 +1,6 @@
 // Un indice invalido detiene el programa con un error de runtime claro
 // (el TAC llama a __raise con "indice fuera de rango").
+// expect-exit: 1
 // expect-out:
 // 1
 // Error en tiempo de ejecucion: indice fuera de rango

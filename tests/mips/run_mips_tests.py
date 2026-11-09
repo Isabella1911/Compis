@@ -2,9 +2,11 @@
 """Pruebas del backend MIPS (Fase 3).
 
 Suites:
-  valid/             deben producir .asm (exit 0). Si hay '// expect-out:' y
-                     MARS_JAR esta definido, se ejecuta en MARS y se compara
-                     la salida. Sin MARS: SKIP de ejecucion (visible).
+  valid/             deben producir .asm (exit 0). Con MARS disponible se
+                     ejecutan TODOS: la salida debe ser exactamente la de
+                     '// expect-out:' (lineas no vacias; sin esa cabecera,
+                     ninguna) y el codigo de salida el de '// expect-exit: N'
+                     (0 si no se indica). Sin MARS: SKIP de ejecucion (visible).
   invalid/           errores de frontend/semantico: exit != 0, sin .asm,
                      codigos '// expect: SEMxxx|SYNxxx'
   invalid_backend/   errores del backend: exit != 0, sin .asm,
@@ -31,6 +33,7 @@ MIPS = Path(__file__).resolve().parent
 # CG001 tiene 2 letras; SEM/SYN tienen 3.
 PATRON_EXPECT = re.compile(r"^\s*//\s*expect:\s*([A-Z]{2,3}\d{3})\s*$")
 PATRON_OUT = re.compile(r"^\s*//\s*expect-out:\s*$")
+PATRON_EXIT = re.compile(r"^\s*//\s*expect-exit:\s*(\d+)\s*$")
 PATRON_DIAG = re.compile(r"^\s*\[([A-Z]{2,3}\d{3})\]\s+(error|warning)")
 
 COLOR = sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
@@ -77,6 +80,14 @@ def expect_out(cps: Path):
     return out
 
 
+def expect_exit(cps: Path):
+    for ln in cps.read_text(encoding="utf-8").splitlines():
+        m = PATRON_EXIT.match(ln)
+        if m:
+            return int(m.group(1))
+    return 0
+
+
 def correr(binario, *args, timeout=30):
     proc = subprocess.run(
         [binario, *args],
@@ -100,6 +111,9 @@ def mars_disponible():
         cfg = RAIZ / "tests" / "mips" / "mars.path"
         if cfg.is_file():
             jar = cfg.read_text(encoding="utf-8").strip()
+    if not jar:
+        local = RAIZ / ".deps" / "Mars4_5.jar"
+        jar = str(local) if local.is_file() else ""
     if not jar or not Path(jar).is_file():
         return None
     java = shutil.which("java") or str(RAIZ / ".deps" / "jre17" / "bin" / "java")
@@ -111,15 +125,19 @@ def mars_disponible():
 def ejecutar_mars(java_jar, asm: Path, timeout=20):
     java, jar = java_jar
     # nc = no copyright; me = MIPS exceptions to console
-    proc = subprocess.run(
-        [java, "-jar", jar, "nc", "me", str(asm)],
-        cwd=asm.parent,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        timeout=timeout,
-    )
+    try:
+        proc = subprocess.run(
+            [java, "-jar", jar, "nc", "me", str(asm)],
+            cwd=asm.parent,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            stdin=subprocess.DEVNULL,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return False, f"MARS supero el limite de {timeout} s", None
     out = (proc.stdout or "") + (proc.stderr or "")
     out = out.replace("\r\n", "\n")
     if "Assembler Error" in out or "Runtime exception" in out or "Error in" in out:
@@ -159,39 +177,34 @@ def main():
             ok(f"{cps.relative_to(RAIZ)} → asm")
             oks += 1
 
+            if mars is None:
+                skip(f"{cps.relative_to(RAIZ)}: ejecucion MARS omitida")
+                skips += 1
+                continue
             esperado = expect_out(cps)
-            if esperado:
-                if mars is None:
-                    skip(f"{cps.relative_to(RAIZ)}: ejecucion MARS omitida")
-                    skips += 1
-                else:
-                    bien, mout, _ = ejecutar_mars(mars, asm)
-                    if not bien:
-                        fallo(f"{cps.relative_to(RAIZ)}: MARS fallo", mout)
-                        fallos += 1
-                    else:
-                        # Comparar lineas no vacias del final de la salida
-                        obtenido = [ln for ln in mout.splitlines() if ln.strip() != ""]
-                        # MARS a veces imprime banners; buscar subsecuencia
-                        matched = False
-                        for i in range(0, max(1, len(obtenido) - len(esperado) + 1)):
-                            if obtenido[i : i + len(esperado)] == esperado:
-                                matched = True
-                                break
-                        if not matched and obtenido[-len(esperado) :] == esperado:
-                            matched = True
-                        if matched:
-                            ok(f"{cps.relative_to(RAIZ)} salida MARS")
-                            oks += 1
-                        else:
-                            fallo(
-                                f"{cps.relative_to(RAIZ)}: salida MARS distinta",
-                                "esperado:\n"
-                                + "\n".join(esperado)
-                                + "\nobtenido:\n"
-                                + "\n".join(obtenido[-20:]),
-                            )
-                            fallos += 1
+            codigo_esperado = expect_exit(cps)
+            bien, mout, codigo = ejecutar_mars(mars, asm)
+            # 'nc' quita el banner de MARS: la salida es solo la del
+            # programa. Se compara EXACTA (lineas no vacias), no buscando
+            # la esperada dentro de la obtenida.
+            obtenido = [ln for ln in mout.splitlines() if ln.strip() != ""]
+            if not bien:
+                fallo(f"{cps.relative_to(RAIZ)}: MARS fallo", mout)
+                fallos += 1
+            elif obtenido != esperado:
+                fallo(
+                    f"{cps.relative_to(RAIZ)}: salida MARS distinta",
+                    "esperado:\n" + "\n".join(esperado)
+                    + "\nobtenido:\n" + "\n".join(obtenido[-30:]),
+                )
+                fallos += 1
+            elif codigo != codigo_esperado:
+                fallo(f"{cps.relative_to(RAIZ)}: codigo de salida {codigo}, "
+                      f"se esperaba {codigo_esperado}")
+                fallos += 1
+            else:
+                ok(f"{cps.relative_to(RAIZ)} salida MARS exacta, exit {codigo}")
+                oks += 1
 
         for carpeta in ("invalid", "invalid_backend"):
             d = MIPS / carpeta
@@ -199,8 +212,10 @@ def main():
                 continue
             for cps in sorted(d.glob("*.cps")):
                 asm = tmp / (cps.stem + ".asm")
-                if asm.exists():
-                    asm.unlink()
+                # Un .asm "viejo" de una compilacion anterior: al fallar, el
+                # compilador tiene que borrarlo para que nadie lo tome por
+                # el resultado actual.
+                asm.write_text("# asm viejo\n", encoding="utf-8")
                 code, out, err = correr(binario, "--mips", str(cps), "-o", str(asm))
                 texto = out + err
                 exp = esperados(cps)
@@ -210,7 +225,7 @@ def main():
                     fallos += 1
                     continue
                 if asm.exists():
-                    fallo(f"{cps.relative_to(RAIZ)}: no debia quedar .asm")
+                    fallo(f"{cps.relative_to(RAIZ)}: no debia quedar .asm (ni el viejo)")
                     fallos += 1
                     continue
                 from collections import Counter

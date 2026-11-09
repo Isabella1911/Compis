@@ -2,6 +2,7 @@
 #define COMPISCRIPT_COMPILER_RESULT_H
 
 #include <algorithm>
+#include <string>
 #include <vector>
 
 #include "ast/nodes.h"
@@ -23,6 +24,10 @@ struct CompilationResult {
     // del enunciado); has_tac dice si `tac` es valido.
     bool has_tac = false;
     ir::TacProgram tac;
+    // Ensamblador MIPS. Solo si se pidio (CompileOptions::mips), si hay TAC
+    // y si el backend no reporto ningun CGxxx; has_mips dice si es valido.
+    bool has_mips = false;
+    std::string mips;
 
     bool success() const {
         return std::none_of(diagnostics.begin(), diagnostics.end(),

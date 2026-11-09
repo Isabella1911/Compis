@@ -1,6 +1,7 @@
 #include "compiler.h"
 
 #include "codegen/frame_layout.h"
+#include "codegen/mips/mips_generator.h"
 #include "codegen/tac_generator.h"
 #include "diagnostics/reporter.h"
 #include "frontend/parser_driver.h"
@@ -14,7 +15,7 @@
 namespace compiscript {
 namespace compiler {
 
-CompilationResult Compiler::compile(const std::string& source) {
+CompilationResult Compiler::compile(const std::string& source, const CompileOptions& options) {
     // Sin estado global: reporter nuevo en cada compilacion, para que un
     // contador que no se reinicia no produzca bugs que solo aparecen en la
     // IDE (donde el mismo proceso compila muchas veces) y nunca en los tests
@@ -54,6 +55,17 @@ CompilationResult Compiler::compile(const std::string& source) {
     }
 
     result.diagnostics = reporter.sorted();
+
+    if (options.mips && result.has_tac && result.success()) {
+        codegen::mips::MipsResult mips = codegen::mips::generateMips(result.tac);
+        if (mips.success) {
+            result.mips = std::move(mips.assembly);
+            result.has_mips = true;
+        } else {
+            result.diagnostics.insert(result.diagnostics.end(), mips.diagnostics.begin(),
+                                      mips.diagnostics.end());
+        }
+    }
     return result;
 }
 

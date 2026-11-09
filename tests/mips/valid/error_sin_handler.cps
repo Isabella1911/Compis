@@ -1,6 +1,7 @@
 // Un try que se cierra con break no deja su handler activo: el error que
 // viene despues, fuera de todo try, termina el programa (codigo 1) con el
 // mensaje claro en lugar de saltar a un catch viejo.
+// expect-exit: 1
 // expect-out:
 // 3
 // Error en tiempo de ejecucion: division entre cero

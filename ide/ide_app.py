@@ -5,12 +5,14 @@ Pipeline cubierto:
     -> pases semanticos (declaraciones, herencia, nombres, tipos,
        flujo de control, closures) -> diagnosticos + AST + tabla de simbolos
     -> FrameLayout + TacGenerator -> codigo intermedio (TAC)
+    -> backend MIPS -> output/programa.asm (opcional: ejecutarlo en MARS)
 
 La IDE NO reimplementa nada: ejecuta `compiscript(.exe)` (compilado vía
 `make build` a partir de `src/main.cpp`) y reparte su salida en pestañas
 agrupadas para inspeccionar cada producto del compilador (diagnosticos con
 codigo SYN/SEM, AST y tabla de simbolos extendida, el AST renderizado con
-Graphviz y el TAC). Tambien corre la bateria de pruebas (`make test`).
+Graphviz, el TAC y el ensamblador MIPS). Tambien corre la bateria de
+pruebas (`make test`) y, si MARS esta disponible, ejecuta el .asm (F8).
 
 El layout conserva el rediseño original:
     Menú superior + toolbar compacta + panel Proyecto + editor con tabs
@@ -178,6 +180,9 @@ def normalizar_ruta_arrastrada(raw):
 AST_DOT_PATH      = OUTPUT_DIR / "ast.dot"
 AST_PNG_PATH      = OUTPUT_DIR / "ast.png"
 TAC_PATH          = OUTPUT_DIR / "programa.tac"
+ASM_PATH          = OUTPUT_DIR / "programa.asm"
+# Si el editor no tiene archivo, su contenido se compila desde aqui.
+FUENTE_TEMPORAL   = OUTPUT_DIR / "_editor.cps"
 EJEMPLOS_DIR      = PROJECT_ROOT / "tests" / "tac"
 ESTADO_IDE_PATH   = PROJECT_ROOT / ".ide_state.json"
 
@@ -186,6 +191,35 @@ ESTADO_IDE_PATH   = PROJECT_ROOT / ".ide_state.json"
 COMANDO_COMPILACION = ["make", "build"]
 # La bateria completa (tabla de simbolos + semantica + TAC), ver Makefile.
 COMANDO_PRUEBAS = ["make", "test"]
+# Segundos que puede correr un programa en MARS antes de detenerlo (un
+# programa con un ciclo infinito no debe colgar la IDE). Configurable con
+# la variable de entorno MARS_TIMEOUT.
+MARS_TIMEOUT_S = int(os.environ.get("MARS_TIMEOUT", "10"))
+
+
+def resolver_mars(configurado=None):
+    """Devuelve (java, jar) para ejecutar MARS, o None si no esta.
+
+    Busca el .jar en este orden: el elegido en la IDE, la variable de
+    entorno MARS_JAR, tests/mips/mars.path (el mismo que usa
+    `make test-mips`) y .deps/Mars4_5.jar. Java: el del PATH o el de
+    .deps/jre17 que instala tools/setup.sh. MARS es opcional: sin el, la
+    IDE compila y muestra el .asm igual."""
+    candidatos = [configurado, os.environ.get("MARS_JAR")]
+    cfg = PROJECT_ROOT / "tests" / "mips" / "mars.path"
+    if cfg.is_file():
+        candidatos.append(cfg.read_text(encoding="utf-8").strip())
+    candidatos.append(str(PROJECT_ROOT / ".deps" / "Mars4_5.jar"))
+    jar = next((c for c in candidatos if c and Path(c).is_file()), None)
+    if jar is None:
+        return None
+    java = shutil.which("java")
+    if java is None:
+        local = PROJECT_ROOT / ".deps" / "jre17" / "bin" / "java"
+        java = str(local) if local.exists() else None
+    if java is None:
+        return None
+    return java, jar
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -263,6 +297,10 @@ EMPTY_STATES = {
     "errores":     "  ✓  Sin errores.",
     "tac":         "  ▷  Ejecutá un análisis (F6) para ver el código de tres\n"
                     "      direcciones generado.",
+    "mips":        "  ▷  Ejecutá un análisis (F6) para ver el ensamblador\n"
+                    "      MIPS generado.",
+    "mars":        "  ▷  Con un .asm generado, presioná 'Ejecutar en MARS' (F8)\n"
+                    "      para ver aquí la salida del programa.",
     "pruebas":     "  ▷  Presioná 'Correr pruebas' (F7) para ejecutar la\n"
                     "      batería completa (make test).",
 }
@@ -979,6 +1017,9 @@ class IDE:
         self._ultimo_stderr = ""
         self._ultimo_codigo = None
         self._ultimos_diagnosticos = []
+        self._ruta_compilada = None   # archivo .cps de la ultima compilacion
+        self._mars_jar = None         # .jar elegido en la IDE (opcional)
+        self._mars_activo = False
         self._ast_imagen = None
         self.proceso_activo = False
 
@@ -1191,6 +1232,8 @@ class IDE:
         m_archivo.add_separator()
         m_archivo.add_command(label="Guardar TAC…",
                               command=self.guardar_tac)
+        m_archivo.add_command(label="Guardar ASM (MIPS)…",
+                              command=self.guardar_asm)
         m_archivo.add_separator()
         m_archivo.add_command(label="Guardar",
                               accelerator="Ctrl+S",
@@ -1237,6 +1280,11 @@ class IDE:
         m_comp.add_command(label="Correr pruebas", accelerator="F7",
                             command=self.correr_pruebas)
         m_comp.add_separator()
+        m_comp.add_command(label="Ejecutar en MARS", accelerator="F8",
+                            command=self.ejecutar_mars)
+        m_comp.add_command(label="Elegir Mars.jar…",
+                            command=self.elegir_mars)
+        m_comp.add_separator()
         m_comp.add_command(label="Limpiar consola", accelerator="Ctrl+L",
                             command=self.limpiar_salida)
         menubar.add_cascade(label="Compilar", menu=m_comp)
@@ -1263,6 +1311,8 @@ class IDE:
                                "tabla_simbolos"))
         m_vis.add_command(label="Mostrar código intermedio",
                            command=lambda: self._seleccionar_seccion("tac"))
+        m_vis.add_command(label="Mostrar ensamblador MIPS",
+                           command=lambda: self._seleccionar_seccion("mips"))
         menubar.add_cascade(label="Visualizar", menu=m_vis)
 
         # Herramientas
@@ -1467,7 +1517,12 @@ class IDE:
         self._grupos.add(g4, text=" Código intermedio ")
         self._construir_panel_tac(g4)
 
-        # Grupo 5: Batería de pruebas (make test)
+        # Grupo 5: Ensamblador MIPS (y su ejecucion en MARS)
+        g_mips = ttk.Frame(self._grupos, style="Card.TFrame")
+        self._grupos.add(g_mips, text=" MIPS ")
+        self._construir_panel_mips(g_mips)
+
+        # Grupo 6: Batería de pruebas (make test)
         g5 = ttk.Frame(self._grupos, style="Card.TFrame")
         self._grupos.add(g5, text=" Pruebas ")
         self._construir_panel_pruebas(g5)
@@ -1495,6 +1550,35 @@ class IDE:
         panel.tag_configure("tac_call", foreground=Tema.OK)
         panel.tag_configure("tac_com", foreground=Tema.FG_MUTED)
         self._escribir("tac", "")
+
+    def _construir_panel_mips(self, grupo):
+        cabecera = ttk.Frame(grupo, style="Card.TFrame", padding=(10, 10))
+        cabecera.pack(side="top", fill="x")
+        self._mips_estado = ttk.Label(
+            cabecera, text="Ensamblador MIPS (output/programa.asm).",
+            style="Card.TLabel")
+        self._mips_estado.pack(side="left")
+        ttk.Button(cabecera, text="▶  Ejecutar en MARS",
+                    style="Accent.TButton",
+                    command=self.ejecutar_mars).pack(side="right", padx=2)
+        ttk.Button(cabecera, text="Mars.jar…",
+                    command=self.elegir_mars).pack(side="right", padx=2)
+        ttk.Button(cabecera, text="Guardar ASM…",
+                    command=self.guardar_asm).pack(side="right", padx=2)
+        self._mips_nb = ttk.Notebook(grupo)
+        self._mips_nb.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        self.paneles["mips"] = self._panel_texto(self._mips_nb, "Ensamblador")
+        self.paneles["mars"] = self._panel_texto(self._mips_nb, "Salida MARS")
+        panel = self.paneles["mips"]
+        panel.tag_configure("asm_dir", foreground=Tema.SYN_DIRECT)
+        panel.tag_configure("asm_label", foreground=Tema.WARN,
+                             font=(FUENTE_MONO_NAME, FUENTE_MONO_SIZE, "bold"))
+        panel.tag_configure("asm_com", foreground=Tema.FG_MUTED)
+        panel.tag_configure("asm_salto", foreground=Tema.INFO)
+        self.paneles["mars"].tag_configure("err", foreground=Tema.ERR)
+        self.paneles["mars"].tag_configure("ok", foreground=Tema.OK)
+        self._escribir("mips", "")
+        self._escribir("mars", "")
 
     def _construir_panel_pruebas(self, grupo):
         cabecera = ttk.Frame(grupo, style="Card.TFrame", padding=(10, 10))
@@ -1695,6 +1779,7 @@ class IDE:
         self.root.bind_all("<F5>",       lambda _ev: self.compilar())
         self.root.bind_all("<F6>",       lambda _ev: self.ejecutar())
         self.root.bind_all("<F7>",       lambda _ev: self.correr_pruebas())
+        self.root.bind_all("<F8>",       lambda _ev: self.ejecutar_mars())
         self.root.bind_all("<Control-l>", lambda _ev: self.limpiar_salida())
         self.root.bind_all("<Control-f>", lambda _ev: self.abrir_buscar())
 
@@ -2100,14 +2185,14 @@ class IDE:
                                   "Ya hay un proceso en ejecucion.")
             return
         editor = self._editores["fuente"]
-        if editor.ruta is None:
-            self._reportar_error(
-                "Cargá o guardá un archivo .cps antes de ejecutar.")
-            return
-        if not Path(editor.ruta).exists():
+        if editor.ruta is not None and not Path(editor.ruta).exists():
             self._reportar_error(
                 f"El archivo {editor.ruta} no existe en disco.\n"
                 "Guardá antes de ejecutar.")
+            return
+        if editor.ruta is None and editor.vacio():
+            self._reportar_error(
+                "Escribí un programa en el editor o cargá un archivo .cps.")
             return
         ejecutable = obtener_ejecutable_real()
         if not ejecutable.exists():
@@ -2118,12 +2203,28 @@ class IDE:
                 "Presioná Compilar antes de ejecutar.")
             return
         try:
-            editor.guardar()
+            if editor.ruta is None:
+                # Editor sin archivo: se compila lo que tiene escrito.
+                OUTPUT_DIR.mkdir(exist_ok=True)
+                FUENTE_TEMPORAL.write_text(
+                    editor.text.get("1.0", "end-1c"), encoding="utf-8")
+                self._ruta_compilada = FUENTE_TEMPORAL
+            else:
+                editor.guardar()
+                self._ruta_compilada = Path(editor.ruta)
         except OSError as exc:
             self._reportar_error(
                 f"No se pudieron guardar los cambios antes de ejecutar:\n"
                 f"{exc}")
             return
+
+        # El .asm anterior ya no corresponde al fuente: se borra antes de
+        # compilar para que nunca se muestre como si fuera el actual.
+        try:
+            ASM_PATH.unlink()
+        except OSError:
+            pass
+        self._escribir("mips", "(compilando…)")
 
         self.proceso_activo = True
         self._set_toolbar("Ejecutando análisis…", Tema.WARN)
@@ -2131,8 +2232,7 @@ class IDE:
         threading.Thread(target=self._ejecutar_thread, daemon=True).start()
 
     def _ejecutar_thread(self):
-        argv = [str(obtener_ejecutable_real()),
-                str(self._editores["fuente"].ruta)]
+        argv = [str(obtener_ejecutable_real()), str(self._ruta_compilada)]
         try:
             proc = subprocess.run(
                 argv, cwd=str(PROJECT_ROOT),
@@ -2176,6 +2276,7 @@ class IDE:
 
         # Código intermedio: el compilador solo lo genera si no hubo errores.
         self._refrescar_panel_tac(stdout, errores)
+        self._refrescar_panel_mips(errores)
         if codigo == 0 and errores == 0:
             if warnings:
                 self._set_toolbar(
@@ -2430,6 +2531,162 @@ class IDE:
             return
         self._set_toolbar(f"TAC guardado: {Path(destino).name}", Tema.OK)
 
+    # ── Ensamblador MIPS y MARS ───────────────────────────────────────
+
+    def _refrescar_panel_mips(self, errores):
+        if errores or not ASM_PATH.exists():
+            motivo = (f"hay {errores} error(es) del frontend o del backend "
+                      "(códigos CGxxx)" if errores
+                      else "el compilador no generó ensamblador")
+            self._escribir(
+                "mips",
+                f"No se genera MIPS porque {motivo}.\n\n"
+                "Corregilos (ver la pestaña Diagnósticos) y volvé a ejecutar "
+                "el análisis.")
+            self._mips_estado.configure(text="Sin ensamblador.")
+            return
+        texto = ASM_PATH.read_text(encoding="utf-8", errors="replace")
+        self._escribir("mips", texto)
+        self._colorizar_asm(self.paneles["mips"])
+        n = sum(1 for l in texto.splitlines() if l.strip())
+        fuente = self._ruta_compilada.name if self._ruta_compilada else "?"
+        self._mips_estado.configure(
+            text=f"{n} líneas de ensamblador de {fuente} — output/programa.asm")
+
+    def _colorizar_asm(self, widget):
+        widget.configure(state="normal")
+        for idx, linea in enumerate(widget.get("1.0", "end-1c").splitlines(),
+                                     start=1):
+            s = linea.strip()
+            if not s:
+                continue
+            ini, fin = f"{idx}.0", f"{idx}.end"
+            if s.startswith("#"):
+                widget.tag_add("asm_com", ini, fin)
+            elif s.startswith("."):
+                widget.tag_add("asm_dir", ini, fin)
+            elif s.endswith(":"):
+                widget.tag_add("asm_label", ini, fin)
+            elif s.split()[0] in ("j", "jal", "jalr", "jr", "beq", "bne",
+                                  "beqz", "bnez", "blt", "ble", "bgt", "bge"):
+                widget.tag_add("asm_salto", ini, fin)
+        widget.configure(state="disabled")
+
+    def guardar_asm(self):
+        if not ASM_PATH.exists():
+            self._reportar_error(
+                "Todavía no hay ensamblador MIPS.\n\n"
+                "Ejecutá un análisis (F6) de un programa sin errores primero.")
+            return
+        fuente = self._ruta_compilada
+        sugerido = (fuente.stem + ".asm") if fuente else "programa.asm"
+        destino = self._dialogo_archivo(
+            filedialog.asksaveasfilename,
+            title="Guardar ensamblador MIPS",
+            initialfile=sugerido,
+            defaultextension=".asm",
+            filetypes=(("Ensamblador MIPS", "*.asm *.s"), ("Todos", "*.*")),
+        )
+        if not destino:
+            return
+        try:
+            shutil.copyfile(ASM_PATH, destino)
+        except OSError as exc:
+            self._reportar_error(f"No se pudo guardar el ensamblador:\n{exc}")
+            return
+        self._set_toolbar(f"ASM guardado: {Path(destino).name}", Tema.OK)
+
+    def elegir_mars(self):
+        ruta = self._dialogo_archivo(
+            filedialog.askopenfilename,
+            title="Elegir Mars.jar",
+            filetypes=(("MARS (jar)", "*.jar"), ("Todos", "*.*")),
+        )
+        if not ruta:
+            return
+        self._mars_jar = ruta
+        self._set_toolbar(f"MARS: {Path(ruta).name}", Tema.OK)
+
+    def ejecutar_mars(self):
+        if self._mars_activo:
+            messagebox.showinfo("Compis IDE", "MARS ya está ejecutando un programa.")
+            return
+        if not ASM_PATH.exists():
+            self._reportar_error(
+                "No hay ensamblador para ejecutar.\n\n"
+                "Ejecutá un análisis (F6) de un programa sin errores primero.")
+            return
+        mars = resolver_mars(self._mars_jar)
+        if mars is None:
+            self._reportar_error(
+                "No se encontró MARS (o Java).\n\n"
+                "Elegí el .jar con 'Mars.jar…', definí MARS_JAR o guardá su "
+                "ruta en tests/mips/mars.path. MARS es opcional: el .asm se "
+                "genera igual.")
+            return
+        # Copia del .asm: si mientras MARS corre se vuelve a compilar, el
+        # programa que se ejecuta no cambia a la mitad.
+        copia = OUTPUT_DIR / "_mars_programa.asm"
+        try:
+            shutil.copyfile(ASM_PATH, copia)
+        except OSError as exc:
+            self._reportar_error(f"No se pudo preparar el .asm:\n{exc}")
+            return
+        self._mars_activo = True
+        self._escribir("mars", f"(ejecutando en MARS, límite {MARS_TIMEOUT_S} s…)")
+        self._grupos.select(self._indice_grupo("mips"))
+        self._mips_nb.select(1)
+        self._set_toolbar("Ejecutando en MARS…", Tema.WARN)
+        threading.Thread(target=self._mars_thread, args=(mars, copia),
+                          daemon=True).start()
+
+    def _mars_thread(self, mars, asm):
+        java, jar = mars
+        try:
+            proc = subprocess.run(
+                [java, "-jar", jar, "nc", "me", str(asm)],
+                cwd=str(OUTPUT_DIR), capture_output=True, text=True,
+                encoding="utf-8", errors="replace",
+                stdin=subprocess.DEVNULL, timeout=MARS_TIMEOUT_S)
+            resultado = (proc.stdout + proc.stderr, proc.returncode, False)
+        except subprocess.TimeoutExpired as exc:
+            salida = exc.stdout or ""
+            if isinstance(salida, bytes):
+                salida = salida.decode("utf-8", errors="replace")
+            resultado = (salida, None, True)
+        except OSError as exc:
+            resultado = (f"No se pudo ejecutar MARS:\n{exc}", None, False)
+        self.root.after(0, lambda: self._fin_mars(*resultado))
+
+    def _fin_mars(self, salida, codigo, timeout):
+        self._mars_activo = False
+        salida = salida.replace("\r\n", "\n").rstrip("\n")
+        if timeout:
+            pie = f"\n\n[detenido: superó {MARS_TIMEOUT_S} s]"
+            self._set_toolbar("MARS: programa detenido por tiempo", Tema.ERR)
+        elif codigo == 0:
+            pie = "\n\n[terminó con código 0]"
+            self._set_toolbar("MARS: programa terminado (código 0)", Tema.OK)
+        else:
+            pie = f"\n\n[terminó con código {codigo}]"
+            self._set_toolbar(f"MARS: terminó con código {codigo}", Tema.ERR)
+        self._escribir("mars", (salida or "(sin salida)") + pie)
+        panel = self.paneles["mars"]
+        panel.configure(state="normal")
+        for idx, linea in enumerate(panel.get("1.0", "end-1c").splitlines(), start=1):
+            if (linea.startswith("Error") or "Runtime exception" in linea
+                    or linea.startswith("[detenido")
+                    or (linea.startswith("[terminó") and "código 0" not in linea)):
+                panel.tag_add("err", f"{idx}.0", f"{idx}.end")
+            elif linea.startswith("[terminó"):
+                panel.tag_add("ok", f"{idx}.0", f"{idx}.end")
+        panel.configure(state="disabled")
+
+    def _indice_grupo(self, clave):
+        return {"salida": 0, "diagnosticos": 0, "errores": 0,
+                "ast": 1, "tabla_simbolos": 1,
+                "tac": 3, "mips": 4, "mars": 4, "pruebas": 5}.get(clave, 0)
+
     def cargar_ejemplo(self, ruta):
         editor = self._editores["fuente"]
         try:
@@ -2572,14 +2829,13 @@ class IDE:
     # Mapa de claves -> notebook donde vive, para selección rápida
     def _seleccionar_seccion(self, clave):
         """Selecciona la pestaña adecuada en el notebook que la contiene."""
-        mapeo_grupo = {
-            "salida": 0, "diagnosticos": 0, "errores": 0,
-            "ast": 1, "tabla_simbolos": 1,
-            "tac": 3, "pruebas": 4,
-        }
-        if clave not in mapeo_grupo:
+        if clave not in ("salida", "diagnosticos", "errores", "ast",
+                         "tabla_simbolos", "tac", "mips", "mars", "pruebas"):
             return
-        self._grupos.select(mapeo_grupo[clave])
+        self._grupos.select(self._indice_grupo(clave))
+        if clave in ("mips", "mars"):
+            self._mips_nb.select(0 if clave == "mips" else 1)
+            return
 
         if clave in ("salida", "errores"):
             panel = self.paneles[clave]
@@ -2718,6 +2974,7 @@ class IDE:
             },
             "editor_tab_activo": self._editor_actual_clave(),
             "grupo_resultados":  self._grupos.index("current"),
+            "mars_jar":          self._mars_jar,
         }
         try:
             ESTADO_IDE_PATH.write_text(
@@ -2743,6 +3000,10 @@ class IDE:
                 self.root.geometry(geo)
             except tk.TclError:
                 pass
+
+        jar = datos.get("mars_jar")
+        if isinstance(jar, str) and Path(jar).is_file():
+            self._mars_jar = jar
 
         # Archivos
         archivos = datos.get("archivos") or {}
@@ -2795,7 +3056,8 @@ class IDE:
             "Ctrl+F          Buscar en el editor\n"
             "F5              Compilar\n"
             "F6              Ejecutar análisis\n"
-            "F7              Correr pruebas (make test)"
+            "F7              Correr pruebas (make test)\n"
+            "F8              Ejecutar el .asm en MARS (opcional)"
         )
 
     def _mostrar_acerca(self):
