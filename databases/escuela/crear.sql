@@ -129,4 +129,23 @@ INSERT INTO inscripciones (estudiante_id, curso_id, nota, fecha) VALUES
     (25, 1, 83.0, DATE '2024-01-20'),
     (25, 20, 100.0, DATE '2024-01-20');
 
+-- Asistencias: tabla hija de estudiantes, para demostrar DROP/DELETE CASCADE.
+CREATE TABLE asistencias (
+    id INT PRIMARY KEY,
+    estudiante_id INT NOT NULL,
+    fecha DATE NOT NULL,
+    presente BOOLEAN NOT NULL,
+    FOREIGN KEY (estudiante_id) REFERENCES estudiantes (id) ON DELETE CASCADE
+);
+
+INSERT INTO asistencias (id, estudiante_id, fecha, presente) VALUES
+    (1, 1, DATE '2024-01-22', TRUE),
+    (2, 1, DATE '2024-01-23', TRUE),
+    (3, 1, DATE '2024-01-24', FALSE),
+    (4, 3, DATE '2024-01-22', TRUE),
+    (5, 5, DATE '2025-01-16', TRUE),
+    (6, 7, DATE '2023-01-18', FALSE),
+    (7, 10, DATE '2021-07-12', TRUE),
+    (8, 21, DATE '2024-07-11', TRUE);
+
 CREATE INDEX idx_estudiantes_edad ON estudiantes (edad);

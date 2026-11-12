@@ -35,6 +35,17 @@
       "index": 2,
       "kind": "DROP TABLE",
       "line": 6,
+      "message": "Tabla 'asistencias' eliminada",
+      "plan": "",
+      "rows": [],
+      "status": "ok"
+    },
+    {
+      "affected": 0,
+      "columns": [],
+      "index": 3,
+      "kind": "DROP TABLE",
+      "line": 7,
       "message": "Tabla 'estudiantes' eliminada",
       "plan": "",
       "rows": [],

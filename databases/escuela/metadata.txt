@@ -1,14 +1,6 @@
 # Generado por sqlint. No editar a mano mientras el intérprete corre.
 VERSION 1
 
-TABLE estudiantes
-  COLUMN id INT NOT NULL PRIMARY KEY
-  COLUMN nombre VARCHAR(50) NOT NULL
-  COLUMN edad INT
-  COLUMN fecha_ingreso DATE
-  COLUMN becado BOOLEAN
-END
-
 TABLE cursos
   COLUMN id INT NOT NULL PRIMARY KEY
   COLUMN nombre VARCHAR(60) NOT NULL
@@ -22,8 +14,12 @@ TABLE inscripciones
   COLUMN curso_id INT NOT NULL
   COLUMN nota FLOAT
   COLUMN fecha DATE
-  FOREIGN KEY (estudiante_id) REFERENCES estudiantes (id) ON DELETE CASCADE
   FOREIGN KEY (curso_id) REFERENCES cursos (id) ON DELETE CASCADE
 END
 
-INDEX idx_estudiantes_edad ON estudiantes (edad) FILE indices/idx_estudiantes_edad.idx
+TABLE asistencias
+  COLUMN id INT NOT NULL PRIMARY KEY
+  COLUMN estudiante_id INT NOT NULL
+  COLUMN fecha DATE NOT NULL
+  COLUMN presente BOOLEAN NOT NULL
+END

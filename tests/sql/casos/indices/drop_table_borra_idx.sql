@@ -3,4 +3,5 @@
 -- archivos: metadata.txt, indices/idx_estudiantes_edad.idx, indices/idx_nombre.idx
 CREATE INDEX idx_nombre ON estudiantes (nombre);
 DROP TABLE inscripciones;
+DROP TABLE asistencias;
 DROP TABLE estudiantes;

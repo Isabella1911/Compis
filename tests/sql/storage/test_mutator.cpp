@@ -113,7 +113,7 @@ void testEscuela() {
     CHECK(o.error.empty());
     if (!o.error.empty()) std::printf("        crear.sql: %s en %d:%d\n", o.error.c_str(), o.loc.line, o.loc.col);
     for (const char* f : {"metadata.txt", "estudiantes.csv", "cursos.csv", "inscripciones.csv",
-                          "indices/idx_estudiantes_edad.idx"}) {
+                          "asistencias.csv", "indices/idx_estudiantes_edad.idx"}) {
         bool same = slurp(joinPath(dir, f)) == slurp(joinPath("databases/escuela", f));
         CHECK(same);
         if (!same) std::printf("        databases/escuela/%s no coincide con crear.sql\n", f);
@@ -281,7 +281,8 @@ void testIndexMaintenance() {
 int main(int argc, char* argv[]) {
     if (argc == 3 && std::string(argv[1]) == "--generar-escuela") {
         std::string dir = argv[2];
-        for (const char* f : {"metadata.txt", "estudiantes.csv", "cursos.csv", "inscripciones.csv"}) {
+        for (const char* f : {"metadata.txt", "estudiantes.csv", "cursos.csv", "inscripciones.csv",
+                              "asistencias.csv"}) {
             removeFile(joinPath(dir, f));
         }
         fs::remove_all(joinPath(dir, "indices"));
